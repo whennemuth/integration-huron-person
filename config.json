@@ -1,0 +1,30 @@
+{
+  "dataSource": {
+    "endpointConfig": {
+      "baseUrl": "https://prod-budev-fm.snaplogic.io",
+      "apiKey": "ae7220cfe721d02feb98c2795c740b28",
+      "timeout": 300000
+    },
+    "fetchPersonsEndpoint": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
+  },
+  "dataTarget": {
+    "endpointConfig": {
+      "baseUrl": "https://target-api.huron.example.com",
+      "authTokenUrl": "https://target-auth.huron.example.com/auth/token",
+      "username": "target_user", 
+      "password": "target_password_from_env"
+    },
+    "pushPersonsEndpoint": "/api/v1/persons/batch"
+  },
+  "integration": {
+    "clientId": "huron-person-integration",
+    "batchSize": 100,
+    "timeout": 30000
+  },
+  "storage": {
+    "type": "file",
+    "config": {
+      "path": "./data/delta-storage"
+    }
+  }
+}

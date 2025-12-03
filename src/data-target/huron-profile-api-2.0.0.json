@@ -1,0 +1,4090 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Profile",
+    "version": "2.0.0",
+    "description": "# Overview\n  The Profile Service is used to store person and organization profile data along with the relationships between people and organizations. It also stores the relationship between roles/rights and users to enable application data security.\n\n  The Profile Service API is implemented to offer the necessary tools to access and manipulate data related to organizations and persons in the Huron Research Suite (HRS). It offers the following features:\n\n ### Features\n\n  * Single service to store person and organization profile data.\n  * Store relationships between persons and organizations.\n  * Store relationship between roles/rights and users to enable application data security.\n  * Define organization hierarchy.\n  * Provides tagging and categorization.\n  * Query and update records for organization and person.\n"
+  },
+  "paths": {
+    "/api/v2/organizations": {
+      "options": {
+        "operationId": "preflightorganizations",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) (Cross-Origin Resource Sharing) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "List organizations",
+        "description": "Returns a list of organizations.",
+        "operationId": "getOrganizations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Pagination"
+          },
+          {
+            "$ref": "#/components/parameters/Filter"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeFields"
+          }
+        ],
+        "x-hrs-get-param-defaults": {
+          "sort": [
+            "name"
+          ],
+          "filter": {
+            "field": "active",
+            "value": "true"
+          },
+          "include": "*"
+        },
+        "x-hrs-filter-fields": [
+          "id",
+          "active",
+          "name",
+          "tags",
+          "functions",
+          "functions.hrn",
+          "category",
+          "alias",
+          "parent.name",
+          "parent.id",
+          "parent.hrn",
+          "hrn",
+          "isForeign",
+          "isPubliclyTraded",
+          "sourceIdentifier"
+        ],
+        "x-hrs-sort-fields": [
+          "id",
+          "name",
+          "category",
+          "parent",
+          "dateModified",
+          "dateCreated"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGSGET.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      },
+      "post": {
+        "summary": "Create an organization",
+        "description": "Creates the organization record as specified in the request body and returns a system generated identifier HRN (Huron Resource Number).  \n\n This operation is not idempotent (i.e., if it is executed multiple times with the same values supplied for the ID and Name attributes, it will generate an error on subsequent executions).",
+        "operationId": "createOrganization",
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for all required fields and any desired optional fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Organization"
+              },
+              "example": {
+                "name": "DAST-Org-Name-20003",
+                "id": "DAST-Org-ID-20003",
+                "alias": [],
+                "sourceIdentifier": "",
+                "notes": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "category": {
+                  "hrn": "hrn:hrs:lists:org-categories/default~BIImportorgCategory_202403051829153205",
+                  "name": "QA_CS_SK_005_ORGANIZATIONCATEGORYLST_DateStamp_Updated"
+                },
+                "functions": [
+                  {
+                    "hrn": "hrn:hrs:lists:org-functions/additional-unit",
+                    "name": "Additional Unit"
+                  }
+                ],
+                "active": true,
+                "isInternal": false,
+                "isForeign": false,
+                "isPubliclyTraded": false,
+                "customProperties": {},
+                "tags": [],
+                "parent": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organization created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+                      "example": "hrn:hrs:orgs:271301"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGPOST.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      }
+    },
+    "/api/v2/organizations/{hrn}": {
+      "options": {
+        "operationId": "preflightgeorganizationsForHR",
+        "summary": "CORS support",
+        "description": "Enable CORS (Cross-Origin Resource Sharing) by returning correct headers to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:orgs:271301"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve an organization by HRN",
+        "description": "Returns a JSON object representing the organization record specified by `hrn`.\n\nThe Huron Resource Name (\"HRN\") is the system generated identifier for the organization, and is not a user specified ID.\n",
+        "operationId": "getOrganizationForHRN",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:orgs:271301"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Organization Not Found: The system will throw this error if the HRN provided does not correspond with an Organization record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGGETBYHRN.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      },
+      "put": {
+        "summary": "Replace entire state of an organization",
+        "description": "Updates the organization record specified by `hrn` to reflect all values included in the request body, which must be a complete record in the appropriate JSON format, including all fields that are normally optional for the POST operation. All fields are updated. \n\n This operation is idempotent (i.e., if it is submitted multiple times, it will have the same effect as it did the first time).",
+        "operationId": "replaceOrganization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:orgs:271301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object with all fields supplied.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Organization"
+              },
+              "example": {
+                "name": "DAST-Org-Name-1234-updated",
+                "id": "DAST-Org-ID-1234-updated",
+                "alias": [],
+                "sourceIdentifier": "",
+                "notes": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "category": {
+                  "hrn": "hrn:hrs:lists:org-categories/default~BIImportorgCategory_202403051829153205",
+                  "name": "QA_CS_SK_005_ORGANIZATIONCATEGORYLST_DateStamp_Updated"
+                },
+                "functions": [
+                  {
+                    "hrn": "hrn:hrs:lists:org-functions/additional-unit",
+                    "name": "Additional Unit"
+                  }
+                ],
+                "active": true,
+                "isInternal": false,
+                "isForeign": false,
+                "isPubliclyTraded": false,
+                "customProperties": {},
+                "tags": [],
+                "parent": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                },
+                "hrn": "hrn:hrs:orgs:271301"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organization created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Organization replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Organization Not Found: The system will throw this error if the HRN provided does not correspond with an Organization record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: Error indicates duplicates were encountered such as a unique key violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGPUT.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      },
+      "patch": {
+        "summary": "Replace one or more properties of an organization",
+        "description": "Updates the organization record specified by `hrn` to reflect any values included in the request body.  The JSON request body must include required fields, but any optional fields not included will remain unchanged by this operation. \n\n **NOTE**: If the `dateModified` value in the request body is earlier than what is currently in the Organization record, the request will fail. \n\n This operation is idempotent (i.e., if it is submitted multiple times, it will have the same effect as it did the first time).",
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:orgs:271301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains required fields like name, id - must be unique",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationPatch"
+              },
+              "example": {
+                "name": "DAST-Org-Name-1234-Patched",
+                "id": "DAST-Org-ID-1234-Patched",
+                "alias": [],
+                "sourceIdentifier": "",
+                "notes": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "category": {
+                  "hrn": "hrn:hrs:lists:org-categories/default~BIImportorgCategory_202403051829153205",
+                  "name": "QA_CS_SK_005_ORGANIZATIONCATEGORYLST_DateStamp_Updated"
+                },
+                "functions": [
+                  {
+                    "hrn": "hrn:hrs:lists:org-functions/additional-unit",
+                    "name": "Additional Unit"
+                  }
+                ],
+                "active": true,
+                "isInternal": false,
+                "isForeign": false,
+                "isPubliclyTraded": false,
+                "customProperties": {},
+                "tags": [],
+                "parent": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                },
+                "dateModified": "2024-11-04T02:32:30.7598450Z",
+                "hrn": "hrn:hrs:orgs:271301"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Organization updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Organization Not Found: The system will throw this error if the HRN provided does not correspond with an Organization record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGPATCH.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "204"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      }
+    },
+    "/api/v2/organizations/{hrn}/customProperties/sets/{name}": {
+      "options": {
+        "operationId": "preflightgeorganizationscustomPropertiesname",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:orgs:301"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "post": {
+        "summary": "Add set member",
+        "description": "Used to add a member to a set specified by `name` in customProperties of organization specified by `hrn`.\n",
+        "operationId": "addMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:orgs:301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains the HRN for the set member that is to be added.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              "example": {
+                "hrn": "hrn:hrs:orgs:271301",
+                "name": "partner-organization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found: The system will return this error if the organization [hrn], or set [name] cannot be found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGCUSTOMPROPSETSADD.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      },
+      "delete": {
+        "summary": "Delete set member",
+        "description": "Used to remove a member from  a set specified by `name` in customProperties of organization specified by `hrn`.\n",
+        "operationId": "deleteMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:orgs:301"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Set member removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found: The system will return this error if the organization [hrn], or set [name] cannot be found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error: There is an internal problem with the service that prevents the requested data from being removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ORGCUSTOMPROPSETSDELETE.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "204"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Organization"
+        ]
+      }
+    },
+    "/api/v2/persons": {
+      "options": {
+        "operationId": "preflightpersons",
+        "summary": "CORS support",
+        "description": "Enable CORS (Cross-Origin Resource Sharing) by returning correct headers to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "List persons",
+        "operationId": "getPersons",
+        "description": "Returns a list of persons with all the available data for each person. This list includes only active users, unless overridden with the `includeInactive` filter. This data can be filtered, sorted, and paginated as specified.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Pagination"
+          },
+          {
+            "$ref": "#/components/parameters/Filter"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeFields"
+          }
+        ],
+        "x-hrs-get-param-defaults": {
+          "sort": [
+            "lastName",
+            "firstName"
+          ],
+          "filter": {
+            "field": "active",
+            "value": "true"
+          },
+          "include": "*"
+        },
+        "x-hrs-filter-fields": [
+          "firstName",
+          "lastName",
+          "userid",
+          "employer",
+          "employer.hrn",
+          "organization",
+          "organization.hrn",
+          "additionalUnit",
+          "additionalUnit.hrn",
+          "secondaryUnit",
+          "secondaryUnit.hrn",
+          "active",
+          "tags",
+          "contact_Information",
+          "rights",
+          "roles",
+          "hrn",
+          "sourceIdentifier",
+          "newUser",
+          "showLoginTips",
+          "allowLogin",
+          "externalToken",
+          "externalTokenExpiresOn",
+          "openPaymentsId"
+        ],
+        "x-hrs-sort-fields": [
+          "firstName",
+          "lastName",
+          "userid",
+          "dateModified",
+          "dateCreated",
+          "openPaymentsId",
+          "contactInformation.email"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONSGET.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      },
+      "post": {
+        "summary": "Create a person",
+        "description": "Creates the person record as specified in the request body and returns the system generated identifier HRN (Huron Resource Number).  \n\nThis operation is not idempotent (i.e., if it is executed multiple times with the same values supplied for the ID and Name attributes, it will generate an error on subsequent executions).",
+        "operationId": "createPerson",
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for required and optional fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Person"
+              },
+              "example": {
+                "id": "DAST-Person-ID-20003",
+                "firstName": "DAST-Person-firstName-20003",
+                "lastName": "DAST-Person-lastName-20003",
+                "employer": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "organization": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "additionalUnit": {
+                  "hrn": "hrn:hrs:orgs:447331409",
+                  "name": "3M Company"
+                },
+                "secondaryUnit": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                },
+                "sourceIdentifier": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "active": true,
+                "isInternal": false,
+                "newUser": true,
+                "showLoginTips": false,
+                "allowLogin": true,
+                "earnedDegrees": "",
+                "employeeId": "",
+                "customProperties": {},
+                "tags": [],
+                "roles": [
+                  {
+                    "hrn": "hrn:hrs:lists:roles/site-user",
+                    "name": "Site User"
+                  }
+                ],
+                "openPaymentsId": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Person created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+                      "example": "hrn:hrs:persons:271301"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: Error indicates duplicates were encountered such as a unique key violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONPOST.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      }
+    },
+    "/api/v2/persons/{hrn}": {
+      "options": {
+        "operationId": "preflightgetpersonsForHRN",
+        "summary": "CORS support",
+        "description": "Enable CORS (Cross-Origin Resource Sharing) by returning correct headers to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:persons:271301"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve a person by HRN",
+        "description": "Returns a JSON object representing the person record specified by the specified `hrn`.  \n\nHere, the HRN is the system generated identifier for the person, and is not a user specified ID.\n",
+        "operationId": "getPersonForHRN",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:persons:271301"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A person with limited details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person Not Found: The system will throw this error if the HRN provided does not correspond with a Person record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONGETBYHRN.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      },
+      "put": {
+        "summary": "Update entire state of a person",
+        "description": "Updates the person record specified by `hrn` to reflect all values included in the request body, which must be a complete record in the appropriate JSON format, including all fields that are normally optional for the POST operation. \n\nThis operation is idempotent (i.e., if it is submitted multiple times, it will have the same effect as it did the first time).\n",
+        "operationId": "replacePerson",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:persons:271301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object with all fields supplied.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Person"
+              },
+              "example": {
+                "id": "DAST-Person-ID-1234-updated",
+                "firstName": "DAST-Person-firstName-1234-updated",
+                "lastName": "DAST-Person-lastName-1234-updated",
+                "employer": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "organization": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "additionalUnit": {
+                  "hrn": "hrn:hrs:orgs:447331409",
+                  "name": "3M Company"
+                },
+                "secondaryUnit": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                },
+                "sourceIdentifier": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "active": true,
+                "isInternal": false,
+                "newUser": true,
+                "showLoginTips": false,
+                "allowLogin": true,
+                "earnedDegrees": "",
+                "employeeId": "",
+                "customProperties": {},
+                "tags": [],
+                "roles": [
+                  {
+                    "hrn": "hrn:hrs:lists:roles/site-user",
+                    "name": "Site User"
+                  }
+                ],
+                "openPaymentsId": "",
+                "hrn": "hrn:hrs:persons:271301"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Person replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Person replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person Not Found: The system will throw this error if the HRN provided does not correspond with a Person record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: Error indicates duplicates were encountered such as a unique key violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONPUT.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      },
+      "patch": {
+        "summary": "Replace one or more properties of a person",
+        "description": "Updates the person record specified by the HRN to reflect any values included in the request body.  The JSON request body must include required fields, but any optional fields not included will remain unchanged by this operation. \n\n**NOTE**: If the dateModified value in the request body is earlier than what is currently in the Person record, the request will fail.\n\n This operation is idempotent (i.e., if it is submitted multiple times, it will have the same effect as it did the first time.)",
+        "operationId": "updatePerson",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:persons:271301"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains required fields like name, id - must be unique",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonPatch"
+              },
+              "example": {
+                "id": "DAST-Person-ID-1234-Patched",
+                "firstName": "DAST-Person-firstName-1234-Patched",
+                "lastName": "DAST-Person-lastName-1234-Patched",
+                "employer": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "organization": {
+                  "hrn": "hrn:hrs:orgs:301",
+                  "name": "Huron Consulting Group"
+                },
+                "additionalUnit": {
+                  "hrn": "hrn:hrs:orgs:447331409",
+                  "name": "3M Company"
+                },
+                "secondaryUnit": {
+                  "hrn": "hrn:hrs:orgs:447332038",
+                  "name": "Aalborg University"
+                },
+                "sourceIdentifier": "",
+                "contactInformation": {
+                  "city": "",
+                  "email": "",
+                  "phone": "",
+                  "country": {
+                    "hrn": "hrn:hrs:lists:countries/usa",
+                    "name": "United States"
+                  },
+                  "website": "",
+                  "postalCode": "",
+                  "addressLine1": "",
+                  "addressLine2": "",
+                  "stateProvince": {
+                    "hrn": "hrn:hrs:lists:states/new-york",
+                    "name": "New York"
+                  }
+                },
+                "active": true,
+                "isInternal": false,
+                "newUser": true,
+                "showLoginTips": false,
+                "allowLogin": true,
+                "earnedDegrees": "",
+                "employeeId": "",
+                "customProperties": {},
+                "tags": [],
+                "roles": [
+                  {
+                    "hrn": "hrn:hrs:lists:roles/site-user",
+                    "name": "Site User"
+                  }
+                ],
+                "openPaymentsId": "",
+                "dateModified": "2024-11-04T02:32:30.7598450Z",
+                "hrn": "hrn:hrs:persons:271301"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Person replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person Not Found: The system will throw this error if the HRN provided does not correspond with a Person record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONPATCH.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "204"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      }
+    },
+    "/api/v2/persons/{hrn}/customProperties/sets/{name}": {
+      "options": {
+        "operationId": "preflightpersonscustomPropertiessets",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:persons:38"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "post": {
+        "summary": "Add set member",
+        "description": "Used to add a member to a set with `name` in customProperties of person specified by `hrn`.\n",
+        "operationId": "addMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:persons:38"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains the HRN for the set member that is to be added.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              "example": {
+                "hrn": "hrn:hrs:persons:14187",
+                "name": "family-member"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found: The system will return this error if the person [hrn], or set [name] cannot be found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONCUSTOMPROPSETSADD.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      },
+      "delete": {
+        "summary": "Delete set member",
+        "description": "Used to remove a member from  a set with `name` in customProperties of person specified by `hrn`.\n",
+        "operationId": "deleteSetMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the set which the member belongs to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CollectionPerson"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:orgs:301"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Set member removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found: The system will return this error if the person [hrn], or set [name] cannot be found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error: There is an internal problem with the service that prevents the requested data from being removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONCUSTOMPROPSETSDELETE.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "204"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      }
+    },
+    "/api/v2/currentuser": {
+      "options": {
+        "operationId": "preflightcurrentuser",
+        "summary": "CORS support",
+        "description": "Enable CORS (Cross-Origin Resource Sharing) by returning correct headers to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve person for the current user",
+        "description": "Returns a JSON object representing the person record for the current user as defined by the user ID in the JWT token.",
+        "operationId": "getPersonForCurrentUser",
+        "responses": {
+          "200": {
+            "description": "A person with limited details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden: The system will return this error if the provided credentials do not have access to the requested data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person Not Found: The system will throw this error if the current user provided does not correspond with a Person record in the data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error: There is an internal problem with the service that prevents the requested data from being returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "tokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PERSONGETCURRENTUSER.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Person"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "Http Status code (e.g., 500)."
+          },
+          "detail": {
+            "type": "array",
+            "description": "Information about the error (e.g., Internal Server Error).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "code": {
+            "type": "integer",
+            "description": "Application/service specific error code."
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the error, should be the name of the area of the code path/system where the error occurred  (e.g., Action service POST)."
+          },
+          "internalErrorMessage": {
+            "type": "string",
+            "description": "To be used when Http Status code is 500 (InternalServerError). Not to be displayed to user in UI."
+          },
+          "incidentId": {
+            "type": "string",
+            "description": "To specify a token such as RequestID which can help identify all other log messages associated with the request."
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "about": {
+                "type": "string"
+              },
+              "help": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "OrganizationsListResponse": {
+        "type": "object",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "data": {
+            "type": "array",
+            "description": "Set of Organization records corresponding with any pagination and filter parameters supplied.",
+            "items": {
+              "$ref": "#/components/schemas/Organization"
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "next": {
+                "description": "Reserved for future use.",
+                "type": "string"
+              },
+              "prev": {
+                "description": "Reserved for future use.",
+                "type": "string"
+              },
+              "nextWithContinuationToken": {
+                "description": "Reserved for future use.",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "OrganizationResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Organization"
+          }
+        }
+      },
+      "Pagination": {
+        "description": "Describes pagination support.",
+        "type": "object",
+        "properties": {
+          "offset": {
+            "description": "The start index to return results.",
+            "type": "integer",
+            "default": 1
+          },
+          "pageSize": {
+            "description": "The total number of entries in a single page.",
+            "type": "integer",
+            "default": 25
+          },
+          "total": {
+            "description": "The total number of pages to return in a single call.",
+            "type": "integer"
+          },
+          "next": {
+            "description": "Reserved for future use."
+          },
+          "prev": {
+            "description": "Reserved for future use."
+          },
+          "nextWithContinuationToken": {
+            "description": "Reserved for future use."
+          }
+        }
+      },
+      "HRN": {
+        "type": "string",
+        "description": "Huron Resource Name (HRN), a system generated unique value with the following structure: `hrn:hrs:resource_type:resource_id`.    \n",
+        "pattern": "^((hrn:hrs)(:persons:[0-9]|:orgs:[0-9]|:lists:[a-zA-Z][/a-zA-z-~]+))|(lookup(:id|:sourceIdentifier):[0-9a-zA-Z-_/:~]+)$",
+        "additionalProperties": false
+      },
+      "HRNREF": {
+        "type": "object",
+        "required": [
+          "hrn"
+        ],
+        "properties": {
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name associated to the record. The name can be empty or contain a value.",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "IdFieldName": {
+        "description": "Describes name of the field in the request body used for finding the resource. Cannot be anything other than `Id` or `sourceIdentifier`.",
+        "type": "string",
+        "pattern": "^(id|sourceIdentifier)$"
+      },
+      "ImportPerson": {
+        "description": "Import one or more Persons.",
+        "type": "object",
+        "properties": {
+          "idFieldName": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IdFieldName"
+              },
+              {
+                "description": "If missing then defaulted to sourceIdentifier"
+              }
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "correlationId"
+              ],
+              "properties": {
+                "correlationId": {
+                  "description": "The field helps corelate client maintained tracking record (if any) and result of Person/Organization being imported. Value of this field is not store or interpreted by the API but returned in response as is along with the result.",
+                  "type": "string"
+                },
+                "item": {
+                  "$ref": "#/components/schemas/Person"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportOrganization": {
+        "description": "Import one or more Persons",
+        "type": "object",
+        "properties": {
+          "idFieldName": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IdFieldName"
+              },
+              {
+                "description": "If missing then defaulted to sourceIdentifier"
+              }
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "correlationId"
+              ],
+              "properties": {
+                "correlationId": {
+                  "description": "The field help corelate client maintained tracking record (if any) and result of Person/Organization being imported. Value of this field is not stored or interpreted by the API but returned in response as is along with the result. This field is required.",
+                  "type": "string"
+                },
+                "item": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportResponse": {
+        "type": "object",
+        "properties": {
+          "hrn": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRN"
+              },
+              {
+                "description": "Provided only if new Person or Organization is created."
+              }
+            ]
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Unique key for each and every record."
+          },
+          "httpStatus": {
+            "type": "integer",
+            "description": "The three digit HTTP status code."
+          },
+          "errors": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "properties": {
+          "hrn": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRN"
+              },
+              {
+                "description": "System generated unique value, which is unique within tenant."
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Name of the Organization.  Must consist of a valid string value.\nThe maximum allowed length is 255 characters.\n",
+            "x-searchindex": true,
+            "x-filter": true
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "maxLength": 150,
+            "description": "A unique ID for the Organization. Must consist only of letters, numbers and the \"-\" or \"_\" characters.\nThe maximum allowed length  is 150 characters.\n"
+          },
+          "sourceIdentifier": {
+            "type": "string",
+            "maxLength": 75,
+            "description": "Unique Identifier of the organization in the source system. The value must be a valid string.\nThe maximum allowed length  is 75 characters.\n"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Controls the visibility to users. Set to FALSE for Organization records that need to be referenced, but which are no longer active.",
+            "default": true
+          },
+          "isInternal": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is system internal. If TRUE, the Organization is normally hidden. \n\n **Note:** This flag is for Huron-internal use only.",
+            "default": false
+          },
+          "isForeign": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is Foreign. If TRUE, the Organization is legally based outside the United States.",
+            "default": false
+          },
+          "isPubliclyTraded": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is publicly traded. If TRUE, the Organization is a publicly-traded entity.",
+            "default": false
+          },
+          "dateCreated": {
+            "type": "string",
+            "description": "The date and time the Organization record was created (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "dateModified": {
+            "type": "string",
+            "description": "The date and time the Organization record was modified (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "parent": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "description": "The parent organization (if any)."
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "description": "The category of this organization."
+              },
+              {
+                "x-hrs-type": "hrn:hrs:lists:org-categories"
+              }
+            ]
+          },
+          "alias": {
+            "type": "array",
+            "description": "Alternate names, acronyms, or abbreviations that users might enter in searching for the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "links": {
+            "type": "array",
+            "description": "Reserved for future use.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HRNREF"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes about organization. The value must be a valid string."
+          },
+          "contactInformation": {
+            "$ref": "#/components/schemas/ContactInformation"
+          },
+          "customProperties": {
+            "type": "object",
+            "description": "An object of customized properties for the organization. \n\n ** NOTE: The `id` field is required only if a `customproperty` is of the type collection of objects. Here, `id` defines a field that uniquely identifies an item in a collection.** "
+          },
+          "tags": {
+            "type": "array",
+            "description": "Collection of tags used to group and filter organizations.",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:tags"
+                }
+              ]
+            }
+          },
+          "__arrayFieldOperations": {
+            "description": "Intended operation for handling array fields when PUT/PATCH request is made to API.",
+            "type": "object",
+            "properties": {
+              "append": {
+                "description": "Values for following fields will be appended instead of replacing existing collection with values from requests. Note: These fields are not included in response of GET request. It also supports the Organization PUT and PATCH operations from the API, along with BulkImport Append functionality.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "functions",
+                    "tags"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "x-hrs-causes-changes-events": [
+          "name",
+          "contactInformation",
+          "active"
+        ]
+      },
+      "OrganizationPatch": {
+        "type": "object",
+        "properties": {
+          "hrn": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRN"
+              },
+              {
+                "description": "System generated unique value, which is unique within tenant."
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Name of the Organization.  Must consist of a valid string value.\nThe maximum allowed length is 255 characters.\n",
+            "x-searchindex": true,
+            "x-filter": true
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "maxLength": 150,
+            "description": "A unique ID for the Organization. Must consist only of letters, numbers and the \"-\" or \"_\" characters.\nThe maximum allowed length  is 150 characters.\n"
+          },
+          "sourceIdentifier": {
+            "type": "string",
+            "maxLength": 75,
+            "description": "Unique Identifier of the organization in the source system. The value must be a valid string.\nThe maximum allowed length  is 75 characters.\n"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Controls the visibility to users. Set to FALSE for Organization records that need to be referenced, but which are no longer active.",
+            "default": true
+          },
+          "isInternal": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is system internal. If TRUE, the Organization is normally hidden. \n\n **Note:** This flag is for Huron-internal use only.",
+            "default": false
+          },
+          "isForeign": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is Foreign. If TRUE, the Organization is legally based outside the United States.",
+            "default": false
+          },
+          "isPubliclyTraded": {
+            "type": "boolean",
+            "description": "Indicates whether the Organization is publicly traded. If TRUE, the Organization is a publicly-traded entity.",
+            "default": false
+          },
+          "dateCreated": {
+            "type": "string",
+            "description": "The date and time the Organization record was created (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "dateModified": {
+            "type": "string",
+            "description": "The date and time the Organization record was modified (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "parent": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              },
+              {
+                "description": "The parent organization (if any)."
+              }
+            ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:lists:org-categories"
+              },
+              {
+                "description": "The category of this organization."
+              }
+            ]
+          },
+          "alias": {
+            "type": "array",
+            "description": "Alternate names, acronyms, or abbreviations that users might enter in searching for the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "links": {
+            "type": "array",
+            "description": "Reserved for future use.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "functions": {
+            "description": "The functions of the Organization. This is a collection of HRNs that reference the functions that the Organization performs.\nThe value must be a valid HRN.\n",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HRNREF",
+              "x-hrs-type": "hrn:hrs:lists:org-functions"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes about organization. The value must be a valid string."
+          },
+          "contactInformation": {
+            "$ref": "#/components/schemas/ContactInformation"
+          },
+          "customProperties": {
+            "type": "object",
+            "description": "An object of customized properties for the organization. \n\n ** NOTE: The `id` field is required only if a `customproperty` is of the type collection of objects. Here, `id` defines a field that uniquely identifies an item in a collection.** ",
+            "example": {
+              "personflexProperty": "lorem ipsum"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Collection of tags used to group and filter organizations.",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:lists:tags"
+                }
+              ]
+            }
+          },
+          "__arrayFieldOperations": {
+            "description": "Intended operation for handling array fields when PUT/PATCH request is made to API.",
+            "type": "object",
+            "properties": {
+              "append": {
+                "description": "Values for following fields will be appended instead of replacing existing collection with values from requests. Note: These fields are not included in response of GET request. It also supports the Organization PUT and PATCH operations from the API, along with BulkImport Append functionality.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "functions",
+                    "tags"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "x-hrs-causes-changes-events": [
+          "name",
+          "contactInformation",
+          "active"
+        ]
+      },
+      "OrganizationAuthz": {
+        "type": "object",
+        "required": [
+          "resourceType",
+          "action"
+        ],
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "description": "The type of resource being accessed, which is always \"organization\" for this endpoint."
+          },
+          "requestingService": {
+            "type": "string",
+            "description": "The name of the service that is requesting access to the resource."
+          },
+          "action": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The actions that the service is requesting permission to perform on the resource. This can include actions like \"read\"."
+          },
+          "additionalCheck": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "users": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ContactInformation": {
+        "type": "object",
+        "properties": {
+          "addressLine1": {
+            "type": "string",
+            "description": "Street number and name.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "addressLine2": {
+            "type": "string",
+            "description": "Address line 2 (e.g., Apartment, Building, or Unit number).\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "city": {
+            "type": "string",
+            "description": "The name of the city.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "stateProvince": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:lists:states"
+              }
+            ]
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "The ZIP or the postal code of the address.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "country": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:lists:countries"
+              }
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "description": "The preferred phone number for contacting the person or organization.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "email": {
+            "type": "string",
+            "description": "The email address associated with the person or organization for communication.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "website": {
+            "type": "string",
+            "description": "The URL of the official website associated with the organization.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersonsListResponse": {
+        "type": "object",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "data": {
+            "type": "array",
+            "description": "Set of Person records corresponding with any pagination and filter parameters supplied.",
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "next": {
+                "description": "Reserved for future use",
+                "type": "string"
+              },
+              "prev": {
+                "description": "Reserved for future use",
+                "type": "string"
+              },
+              "nextWithContinuationToken": {
+                "description": "Reserved for future use",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "PersonResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "next": {
+                "description": "Reserved for future use",
+                "type": "string"
+              },
+              "prev": {
+                "description": "Reserved for future use",
+                "type": "string"
+              },
+              "nextWithContinuationToken": {
+                "description": "Reserved for future use",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Person": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "employer",
+          "organization"
+        ],
+        "properties": {
+          "hrn": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRN"
+              },
+              {
+                "description": "System generated unique value, which is unique within tenant."
+              }
+            ]
+          },
+          "honorific": {
+            "type": "string",
+            "description": "The honorific prefix of the user (e.g., Dr., Hon.).\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "maxLength": 75,
+            "description": "A unique ID for the Person. The value must be a string and it should consist only of letters, numbers and the \"-\" or \"_\" characters.\nThe maximum length allowed is 75 characters.\n"
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": true,
+            "description": "Indicates whether the Person is active. The values are true or false. Set to FALSE for contact records that need to be referenced, but which are no longer active."
+          },
+          "isInternal": {
+            "type": "boolean",
+            "description": "Indicates whether the Person is system internal. If TRUE, the Person is normally hidden. \n\n **Note:** This flag is for Huron-internal use only.",
+            "default": false
+          },
+          "firstName": {
+            "type": "string",
+            "description": "The first name of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "description": "The last name of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "middleName": {
+            "type": "string",
+            "description": "The middle name(s) of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "title": {
+            "type": "string",
+            "description": "The job title of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "userId": {
+            "type": "string",
+            "maxLength": 75,
+            "description": "ID used to authenticate a Person as a user. The value must be a valid string.\nFor Person records that correspond to system users, this must match the identifier supplied by the user authentication system, including the assigned Single Sign-On (SSO) provider name.  \nThe maximum length allowed is 75 characters.\n"
+          },
+          "ORCID": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The Open Researcher and Contributor ID (ORCID) for the contact. The value must be a valid string. For more information, see the [ORCiD.org](https://orcid.org/) web site.\nThe maximum length allowed is 255 characters.\n"
+          },
+          "sourceIdentifier": {
+            "type": "string",
+            "description": "The unique ID assigned to the contact within external systems. External source systems use this field to locate records by the identifier they supplied.  If the contact is created in the user interface, this field is null.\nThe maximum length allowed is 75 characters.\n",
+            "maxLength": 75
+          },
+          "contactInformation": {
+            "$ref": "#/components/schemas/ContactInformation"
+          },
+          "earnedDegrees": {
+            "type": "string",
+            "description": "Degrees earned by the contact."
+          },
+          "employeeId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The ID used by the institution to specify the individual. This ID is primarily provided for filtering and reporting purposes.\nThe maximum length allowed is 255 characters.\n"
+          },
+          "employer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "description": "HRNREF that represents the specific employing organizational unit to which the person is assigned (e.g.,`lookup:id:<Organization ID>` or `hrn:hrs:orgs:<system generated id>` )."
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "organization": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "description": "HRNREF that represents the primary organization that the contact is associated with, such as campus, institution, or hospital system. (e.g.,`lookup:id:<Organization ID>` or `hrn:hrs:orgs:<system generated id>` )."
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "secondaryUnit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "description": "HRNREF that represents an organization associated with the contact. Does not have to be in hierarchical unit of employing unit (e.g., `lookup:id:<Organization ID>`)."
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "additionalUnit": {
+            "allOf": [
+              {
+                "description": "HRNREF that represents an organization associated with the contact. Does not have to be in hierarchical unit of employing unit (e.g., `lookup:id:<Organization ID>`)."
+              },
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "customProperties": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "An object of customized properties for the Person. \n\n **NOTE: The `id` field is required only if a `customproperty` is of the type collection of objects. Here, `id` defines a field that uniquely identifies an item in a collection.**"
+          },
+          "tags": {
+            "type": "array",
+            "description": "Collection of tags used to group and filter Person records.",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:tags"
+                }
+              ]
+            }
+          },
+          "roles": {
+            "type": "array",
+            "description": "HRNREFs of the roles held by the Person as a user of the Huron Research Suite (e.g., `lookup:id:<Role ID>`).",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:lists:roles"
+                }
+              ]
+            }
+          },
+          "newUser": {
+            "type": "boolean",
+            "description": "Indicates that the user has never logged in before. If TRUE, this is a new user record.",
+            "default": true
+          },
+          "allowLogin": {
+            "type": "boolean",
+            "description": "Indicates whether the user is allowed to log in to the system. If TRUE, the user is allowed to log in.",
+            "default": true
+          },
+          "showLoginTips": {
+            "type": "boolean",
+            "description": "Deprecated property. No longer in use.",
+            "default": false,
+            "deprecated": true
+          },
+          "dateCreated": {
+            "type": "string",
+            "description": "The date and time the data was created  (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "dateModified": {
+            "type": "string",
+            "description": "The date and time the data was modified (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "externalTokenIssueDate": {
+            "type": "string",
+            "description": "The date and time when the external token was issued to the user.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "format": "date-time"
+          },
+          "externalToken": {
+            "description": "If the user has an external token defined, it can be stored in this attribute.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenName": {
+            "maxLength": 255,
+            "description": "If the user has an external token defined, its name can be stored in this attribute.  \nThe maximum length allowed is 255 characters.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenCreatedBy": {
+            "maxLength": 255,
+            "description": "If the user has an external token defined, its creator can be stored in this attribute.  \nThe maximum length allowed is 255 characters.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenExpiresOn": {
+            "description": "If the user has an external token defined, its expiration can be stored in this attribute.  \n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string",
+            "format": "date-time"
+          },
+          "rights": {
+            "description": "The rights assigned to this person. These are computed at run time and only returned from the currentUser endpoint.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "cognitoGroups": {
+            "description": "The Cognito groups this person is part of. These are computed at run time and only returned from the currentUser endpoint.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "dismissedWelcomeTips": {
+            "description": "The list of welcome tip message IDs dismissed by the user. Requires use of the 'include' querystring to be included in the response and to be used only by our own UI.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Id": {
+                  "type": "string",
+                  "description": "ID of the welcome tip message dismissed by the user."
+                },
+                "dateDismissed": {
+                  "type": "string",
+                  "description": "The date and time at which the user dismissed this welcome tip message.",
+                  "format": "date-time"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "__arrayFieldOperations": {
+            "description": "Intended operation for handling array fields when PUT/PATCH request is made to API.",
+            "type": "object",
+            "properties": {
+              "append": {
+                "description": "Values for following fields will appended instead of replacing existing collection with values from requests. Note: This fields is not included in response of GET request. It also supports the Person PUT and PATCH operations from the API, along with BulkImport Append functionality.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "roles",
+                    "tags"
+                  ]
+                }
+              }
+            }
+          },
+          "openPaymentsId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The unique identifier assigned to each financial transaction record within the Open Payments system.\nThe maximum length allowed is 255 characters.\n"
+          }
+        },
+        "additionalProperties": false,
+        "x-hrs-causes-changes-events": [
+          "firstName",
+          "lastName",
+          "contactInformation",
+          "active"
+        ]
+      },
+      "PersonPatch": {
+        "type": "object",
+        "properties": {
+          "hrn": {
+            "$ref": "#/components/schemas/HRN",
+            "description": "This property is ignored by POST. PUT or PATCH requests use it for validation with path value"
+          },
+          "honorific": {
+            "type": "string",
+            "description": "The honorific prefix of the user (e.g., Dr., Hon.).\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "maxLength": 75,
+            "description": "A unique ID for the Person. The value must be a string and it should consist only of letters, numbers and the \"-\" or \"_\" characters.\nThe maximum length allowed is 75 characters.\n"
+          },
+          "active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": true,
+            "description": "Indicates whether the Person is active. The values are true or false. Set to FALSE for contact records that need to be referenced, but which are no longer active."
+          },
+          "isInternal": {
+            "type": "boolean",
+            "description": "Indicates whether the Person is system internal. If TRUE, the Person is normally hidden. \n\n **Note:** This flag is for Huron-internal use only.",
+            "default": false
+          },
+          "firstName": {
+            "type": "string",
+            "description": "The first name of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "description": "The last name of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "middleName": {
+            "type": "string",
+            "description": "The middle name(s) of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "title": {
+            "type": "string",
+            "description": "The job title of the Person.  Must consist of a valid string value.\nThe maximum length allowed is 255 characters.\n",
+            "maxLength": 255
+          },
+          "userId": {
+            "type": "string",
+            "maxLength": 75,
+            "description": "ID used to authenticate a Person as a user. The value must be a valid string.\nFor Person records that correspond to system users, this must match the identifier supplied by the user authentication system, including the assigned Single Sign-On (SSO) provider name.  \nThe maximum length allowed is 75 characters.\n"
+          },
+          "ORCID": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The Open Researcher and Contributor ID (ORCID) for the contact. The value must be a valid string. For more information, see the [ORCiD.org](https://orcid.org/) web site.\nThe maximum length allowed is 255 characters.\n"
+          },
+          "sourceIdentifier": {
+            "type": "string",
+            "description": "The unique ID assigned to the contact within external systems. External source systems use this field to locate records by the identifier they supplied.  If the contact is created in the user interface, this field is null.\nThe maximum length allowed is 75 characters.\n",
+            "maxLength": 75
+          },
+          "contactInformation": {
+            "$ref": "#/components/schemas/ContactInformation"
+          },
+          "earnedDegrees": {
+            "type": "string",
+            "description": "Degrees earned by the contact."
+          },
+          "employeeId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The ID used by the institution to specify the individual. This ID is primarily provided for filtering and reporting purposes.\nThe maximum length allowed is 255 characters.\n"
+          },
+          "employer": {
+            "allOf": [
+              {
+                "description": "HRNREF that represents the specific employing organizational unit to which the person is assigned (e.g.,`lookup:id:<Organization ID>` or `hrn:hrs:orgs:<system generated id>` )."
+              },
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "organization": {
+            "allOf": [
+              {
+                "description": "HRNREF that represents the primary organization that the contact is associated with, such as campus, institution, or hospital system. (e.g.,`lookup:id:<Organization ID>` or `hrn:hrs:orgs:<system generated id>` )."
+              },
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "secondaryUnit": {
+            "allOf": [
+              {
+                "description": "HRNREF that represents an organization associated with the contact. Does not have to be in hierarchical unit of employing unit (e.g., `lookup:id:<Organization ID>`)."
+              },
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "additionalUnit": {
+            "allOf": [
+              {
+                "description": "HRNREF that represents an organization associated with the contact. Does not have to be in hierarchical unit of employing unit (e.g., `lookup:id:<Organization ID>`)."
+              },
+              {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              {
+                "x-hrs-type": "hrn:hrs:orgs"
+              }
+            ]
+          },
+          "customProperties": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "An object of customized properties for the Person. \n\n **NOTE: The `id` field is required only if a `customproperty` is of the type collection of objects. Here, `id` defines a field that uniquely identifies an item in a collection.**"
+          },
+          "tags": {
+            "type": "array",
+            "description": "Collection of tags used to group and filter Person records.",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:lists:tags"
+                }
+              ]
+            }
+          },
+          "roles": {
+            "type": "array",
+            "description": "HRNREFs of the roles held by the Person as a user of the Huron Research Suite (e.g., `lookup:id:<Role ID>`).",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/HRNREF"
+                },
+                {
+                  "x-hrs-type": "hrn:hrs:lists:roles"
+                }
+              ]
+            }
+          },
+          "newUser": {
+            "type": "boolean",
+            "description": "Indicates that the user has never logged in before. If TRUE, this is a new user record.",
+            "default": true
+          },
+          "allowLogin": {
+            "type": "boolean",
+            "description": "Indicates whether the user is allowed to log in to the system. If TRUE, the user is allowed to log in.",
+            "default": true
+          },
+          "showLoginTips": {
+            "type": "boolean",
+            "description": "Deprecated property. No longer in use.",
+            "default": false,
+            "deprecated": true
+          },
+          "dateCreated": {
+            "type": "string",
+            "description": "The date and time the data was created  (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "dateModified": {
+            "type": "string",
+            "description": "The date and time the data was modified (e.g., 2021-03-30T10:05:30Z).",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "externalTokenIssueDate": {
+            "type": "string",
+            "description": "The date and time when the external token was issued to the user.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "format": "date-time"
+          },
+          "externalToken": {
+            "description": "If the user has an external token defined, it can be stored in this attribute.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenName": {
+            "maxLength": 255,
+            "description": "If the user has an external token defined, its name can be stored in this attribute.  \nThe maximum length allowed is 255 characters.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenCreatedBy": {
+            "maxLength": 255,
+            "description": "If the user has an external token defined, its creator can be stored in this attribute.  \nThe maximum length allowed is 255 characters.\n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string"
+          },
+          "externalTokenExpiresOn": {
+            "description": "If the user has an external token defined, its expiration can be stored in this attribute.  \n\n*NOTE*: This information is likely to be stored in Cognito for security.\n",
+            "type": "string",
+            "format": "date-time"
+          },
+          "rights": {
+            "description": "The rights assigned to this person. These are computed at run time and only returned from the currentUser endpoint.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "cognitoGroups": {
+            "description": "The Cognito groups this person is part of. These are computed at run time and only returned from the currentUser endpoint.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "dismissedWelcomeTips": {
+            "description": "The list of welcome tip message IDs dismissed by the user. Requires use of the 'include' querystring to be included in the response and to be used only by our own UI.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Id": {
+                  "type": "string",
+                  "description": "ID of the welcome tip message dismissed by the user."
+                },
+                "dateDismissed": {
+                  "type": "string",
+                  "description": "The date and time at which the user dismissed this welcome tip message.",
+                  "format": "date-time"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "__arrayFieldOperations": {
+            "description": "Intended operation for handling array fields when PUT/PATCH request is made to API.",
+            "type": "object",
+            "properties": {
+              "append": {
+                "description": "Values for following fields will appended instead of replacing existing collection with values from requests. Note: This fields is not included in response of GET request. It also supports the Person PUT and PATCH operations from the API, along with BulkImport Append functionality.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "roles",
+                    "tags"
+                  ]
+                }
+              }
+            }
+          },
+          "openPaymentsId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The unique identifier assigned to each financial transaction record within the Open Payments system.\nThe maximum length allowed is 255 characters.\n"
+          }
+        },
+        "additionalProperties": false,
+        "x-hrs-causes-changes-events": [
+          "firstName",
+          "lastName",
+          "contactInformation",
+          "active"
+        ]
+      },
+      "PersonAuthz": {
+        "type": "object",
+        "required": [
+          "resourceType",
+          "action"
+        ],
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "description": "The type of resource being accessed, which is always \"person\" for this endpoint."
+          },
+          "requestingService": {
+            "type": "string",
+            "description": "The name of the service that is requesting access to the resource."
+          },
+          "action": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The actions that the service is requesting permission to perform on the resource. This can include actions like \"read\"."
+          },
+          "additionalCheck": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "users": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Pagination": {
+        "name": "pagination",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "offset": {
+              "type": "integer",
+              "default": 0,
+              "description": "The start index to return results."
+            },
+            "pageSize": {
+              "type": "integer",
+              "default": 25,
+              "description": "The total number of entries to include in a page."
+            },
+            "total": {
+              "type": "integer",
+              "description": "The total number of pages to return in a single call."
+            },
+            "continuationToken": {
+              "description": "Continuation token is used instead of offset, this technique is expected to provide reliable and stable pagination.",
+              "type": "string"
+            },
+            "next": {
+              "description": "Reserved for future use."
+            },
+            "prev": {
+              "description": "Reserved for future use."
+            },
+            "nextWithContinuationToken": {
+              "description": "Reserved for future use."
+            }
+          }
+        },
+        "example": "",
+        "explode": true
+      },
+      "Sort": {
+        "name": "sort",
+        "description": "The field name to sort the items. The results can be sorted in ascending or decending order. By default, the sorting order is descending. To specify ascending sort order, prefix the field name with a dash (e.g., `-dateModified`).\n\n`sort`- one of the following fields can be sorted  `firstName`, `lastName`, `userid`, `dateModified`, `dateCreated`, `openPaymentsId`, `contactInformation.email`.\n\n**Note**: For Email address, all contacts with non-null email addresses will be prioritized and sorted.\n",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "dateModified",
+          "example": "firstName"
+        }
+      },
+      "Filter": {
+        "name": "filter",
+        "in": "query",
+        "description": "The field name to filter the items.\n\nFilter, in the format:\n\nfilter[`priority`!`fieldname`!`logicalOperator`]=`comparisonOperator`:`value`      \n\n* `priority`—integer value indicating the sequence in which the filters should be applied\n* `fieldName`—filterable field name for one of the following `active`, `allowLogin` `contactInformation.phone`, `contactInformation.email`, `additionalUnit`, `additionalUnit.hrn`, `secondaryUnit`, `secondaryUnit.hrn`, `employer`, `employer.hrn`, `organization`, `organization.hrn`, `externalToken`, `externalTokenExpiresOn`, `firstName`, `hrn`, `isInternal`, `id`, `lastName`, `newUser`, `openPaymentId`, `roles`, `rights`, `showLoginTips`, `sourceIdentifier`, `tags`, `userId`\n* `logicalOperator`—one of the following:\n  * **or**—Or\n  * **and**—And\n* `comparisonOperator`—one of the following:\n  * **eq**—Equal to\n  * **neq**—Not equal\n  * **lt**—Less than\n  * **lte**—Less than or equal to\n  * **gte**—Greater than or equal to\n  * **null**—Is null\n  * **in**-In Matches any value in the specified list\n* `value`—The value to compare\n\n**Note**:\n  * To add multiple filters, include multiple instances of this query parameter, with the `priority` set.\n  * To filter inactive users, use **filter[includeInactive]=eq:true.**\n\n The `externalTokenExpiresOn` field supports filtering using **filter[externalTokenExpiresOn]=gt:'today' ** syntax.\n",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "filter[0!firstName!and]=eq:Peter"
+      },
+      "IncludeFields": {
+        "name": "include",
+        "description": "The list of fields on the resource record that are included in the response, if specified in the request.",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "example": "name"
+        }
+      }
+    },
+    "x-hrs-events": {
+      "DeactivateOrganization": {
+        "schema": {
+          "$ref": "#/components/schemas/Organization"
+        }
+      },
+      "RefreshState": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "hrn": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "tokenAuthorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "custom",
+        "x-amazon-apigateway-authorizer": {
+          "type": "request",
+          "authorizerUri": "${Authorizer.Uri}",
+          "authorizerResultTtlInSeconds": 0,
+          "identitySource": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "models",
+      "x-displayName": "All Models",
+      "description": "## Organization\n<SchemaDefinition schemaRef=\"#/components/schemas/Organization\" />\n\n## Person\n<SchemaDefinition schemaRef=\"#/components/schemas/Person\" />\n"
+    },
+    {
+      "name": "CoreModels",
+      "x-displayName": "Core Models",
+      "description": "## Organization\n<SchemaDefinition schemaRef=\"#/components/schemas/Organization\" />\n\n## Person\n<SchemaDefinition schemaRef=\"#/components/schemas/Person\" />\n"
+    },
+    {
+      "name": "Organization",
+      "description": "Organization records provide a context for all records in the Huron Research Suite (HRS). They represent all the internal and external entities that relate to the data in an implementation. Organizations can be categorized by type, and they can be related to each other and to contact records. "
+    },
+    {
+      "name": "Person",
+      "description": "Contact records represent all the different types of people who are involved in the research process, including HRS users, Researchers, Reviewers, and Key personnel at external organizations. These records help in both user identification and references to people who are not users of HRS."
+    },
+    {
+      "name": "CORS",
+      "description": "This API features Cross-Origin Resource Sharing (CORS) implemented in compliance with  [W3C spec](https://www.w3.org/TR/cors/). Implementation of this standard in the ProfileService API allows cross-domain communication from the browser. All responses have a wildcard same-origin which makes them completely public and accessible to everyone, including any code on any site."
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "API",
+      "tags": [
+        "Organization",
+        "Person",
+        "CORS"
+      ]
+    },
+    {
+      "name": "Models",
+      "tags": [
+        "models",
+        "CoreModels"
+      ]
+    }
+  ]
+}

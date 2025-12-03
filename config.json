@@ -1,0 +1,38 @@
+{
+  "dataSource": {
+    "endpointConfig": {
+      "baseUrl": "https://prod-budev-fm.snaplogic.io",
+      "apiKey": "ae7220cfe721d02feb98c2795c740b28",
+      "timeout": 300000
+    },
+    "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+    "fieldsToKeep": [
+      "personid",
+      "personBasic.names[*].firstName",
+      "personBasic.names[*].lastName",
+      "personBasic.names[*].middleName"
+    ]
+  },
+  "dataTarget": {
+    "endpointConfig": {
+      "baseUrl": "https://bu.hrs-staging.com",
+      "authMethod": "externalToken",
+      "externalToken": "your-external-token-here",
+      "userId": "your-user-id-here",
+      "loginSvcPath": "/loginsvc/api/v1/token/",
+      "timeout": 30000
+    },
+    "personsPath": "/api/v2/persons"
+  },
+  "integration": {
+    "clientId": "huron-person-integration",
+    "batchSize": 100,
+    "timeout": 30000
+  },
+  "storage": {
+    "type": "file",
+    "config": {
+      "path": "./data/delta-storage"
+    }
+  }
+}

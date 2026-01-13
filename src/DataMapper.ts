@@ -1,4 +1,4 @@
-import { Input } from 'integration-core';
+import { Input, DataMapper as CoreDataMapper } from 'integration-core';
 
 /**
  * DataMapper class for:
@@ -7,7 +7,15 @@ import { Input } from 'integration-core';
  *      with the Huron target api endpoint, and structured integration-core Input format.
  *   2) Cherry-picking out only "fields of interest" that the target endpoint is interested in.
  */
-export class DataMapper {
+export class DataMapper implements CoreDataMapper {
+  /**
+   * Convert raw person data to Input format (implementing core interface)
+   * @param rawData Array of person data objects from Boston University CDM API
+   */
+  map(rawData: any[]): Input {
+    return this.getMappedData(rawData);
+  }
+
   /**
    * Convert raw person data to Input format
    * @param rawData Array of person data objects from Boston University CDM API

@@ -120,8 +120,7 @@ describe('SinglePersonSync', () => {
 
     // Mock BuCdmPersonDataSource
     mockDataSource = {
-      fetchRaw: jest.fn().mockResolvedValue(mockRawData),
-      convertRawToInput: jest.fn().mockReturnValue(mockInput)
+      fetchRaw: jest.fn().mockResolvedValue(mockRawData)
     } as any;
     (BuCdmPersonDataSource as jest.Mock).mockImplementation(() => mockDataSource);
 
@@ -138,8 +137,11 @@ describe('SinglePersonSync', () => {
     (HuronPersonDataTarget as jest.Mock).mockImplementation(() => mockDataTarget);
 
     // Mock DataMapper
-    mockDataMapper = {} as any;
-    (DataMapper as jest.Mock).mockReturnValue(mockDataMapper);
+    mockDataMapper = {
+      getMappedData: jest.fn().mockReturnValue(mockInput),
+      map: jest.fn().mockReturnValue(mockInput)
+    } as any;
+    (DataMapper as jest.Mock).mockImplementation(() => mockDataMapper);
 
     singlePersonSync = new SinglePersonSync({ buid: 'U12345678', crudOperation: CrudOperation.CREATE});
   });
@@ -180,7 +182,6 @@ describe('SinglePersonSync', () => {
       await singlePersonSync.sync();
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
-      expect(mockDataSource.convertRawToInput).toHaveBeenCalledWith(mockRawData);
       expect(mockDataTarget.pushOne).toHaveBeenCalledWith({
         data: mockInput.fieldSets[0],
         crud: CrudOperation.CREATE
@@ -201,7 +202,6 @@ describe('SinglePersonSync', () => {
       await singlePersonSync.sync();
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
-      expect(mockDataSource.convertRawToInput).not.toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
       
       expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
@@ -221,7 +221,7 @@ describe('SinglePersonSync', () => {
     });
 
     it('should handle no valid field sets', async () => {
-      mockDataSource.convertRawToInput.mockReturnValue({
+      mockDataMapper.getMappedData.mockReturnValue({
         fieldDefinitions: mockInput.fieldDefinitions,
         fieldSets: []
       });
@@ -230,7 +230,6 @@ describe('SinglePersonSync', () => {
       await singlePersonSync.sync();
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
-      expect(mockDataSource.convertRawToInput).toHaveBeenCalledWith(mockRawData);
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
       
       expect(consoleSpy).toHaveBeenCalledWith('No valid field sets generated for BUID: U12345678');
@@ -253,7 +252,7 @@ describe('SinglePersonSync', () => {
           }
         ]
       };
-      mockDataSource.convertRawToInput.mockReturnValue(multipleFieldSetsInput);
+      mockDataMapper.getMappedData.mockReturnValue(multipleFieldSetsInput);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       await singlePersonSync.sync();
@@ -314,7 +313,7 @@ describe('SinglePersonSync', () => {
 
     it('should propagate conversion errors', async () => {
       const conversionError = new Error('Data conversion failed');
-      mockDataSource.convertRawToInput.mockImplementation(() => {
+      mockDataMapper.getMappedData.mockImplementation(() => {
         throw conversionError;
       });
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();

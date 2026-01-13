@@ -60,7 +60,7 @@ class SinglePersonSync {
       }
 
       // Convert data to integration format
-      const input: Input = this.dataSource.convertRawToInput(rawData);
+      const input: Input = this.dataMapper.getMappedData(rawData);
       
       // Bail out if no field sets generated
       if (!input.fieldSets || input.fieldSets.length === 0) {

@@ -38,6 +38,7 @@ class HuronPersonIntegration {
     // Initialize EndToEnd integration
     this.endToEnd = new EndToEnd({
       dataSource,
+      dataMapper,
       dataTarget,
       deltaStrategy
     });

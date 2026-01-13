@@ -42,6 +42,7 @@ class MockApiClient implements IApiClient {
 describe('BuCdmPersonDataSource', () => {
   let dataSource: BuCdmPersonDataSource;
   let mockApiClient: MockApiClient;
+  let dataMapper: DataMapper;
   
   const mockConfig: Config = {
     dataSource: {
@@ -182,7 +183,8 @@ describe('BuCdmPersonDataSource', () => {
   beforeEach(() => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] });
-    dataSource = new BuCdmPersonDataSource({ config: mockConfig, dataMapper: new DataMapper(), responseFilter: mockResponseFilter });
+    dataMapper = new DataMapper();
+    dataSource = new BuCdmPersonDataSource({ config: mockConfig, dataMapper, responseFilter: mockResponseFilter });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;
   });
@@ -308,15 +310,15 @@ describe('BuCdmPersonDataSource', () => {
     });
   });
 
-  describe('convertRawToInput', () => {
-    it('should convert raw data to Input format correctly', () => {
-      const result = dataSource.convertRawToInput(mockRawPersonData);
+  describe('DataMapper integration', () => {
+    it('should convert raw data to Input format correctly via DataMapper', () => {
+      const result = dataMapper.getMappedData(mockRawPersonData);
 
       expect(result.fieldDefinitions).toBeDefined();
       expect(result.fieldSets).toHaveLength(3);
       
       // Check field definitions are properly set
-      const idField = result.fieldDefinitions.find(f => f.name === 'id');
+      const idField = result.fieldDefinitions.find((f: any) => f.name === 'id');
       expect(idField?.isPrimaryKey).toBe(true);
       expect(idField?.required).toBe(true);
       
@@ -325,7 +327,7 @@ describe('BuCdmPersonDataSource', () => {
     });
 
     it('should handle empty raw data', () => {
-      const result = dataSource.convertRawToInput([]);
+      const result = dataMapper.getMappedData([]);
 
       expect(result.fieldSets).toEqual([]);
       expect(result.fieldDefinitions).toBeDefined();
@@ -367,7 +369,7 @@ describe('BuCdmPersonDataSource', () => {
         }
       }];
 
-      const result = dataSource.convertRawToInput(incompleteData);
+      const result = dataMapper.getMappedData(incompleteData);
 
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();
@@ -399,7 +401,7 @@ describe('BuCdmPersonDataSource', () => {
 
       // This should either throw an error or handle gracefully
       // depending on your validation strategy
-      const result = dataSource.convertRawToInput(invalidData);
+      const result = dataMapper.getMappedData(invalidData);
       
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();
@@ -441,7 +443,7 @@ describe('BuCdmPersonDataSource', () => {
         }
       }];
 
-      const result = dataSource.convertRawToInput(malformedData);
+      const result = dataMapper.getMappedData(malformedData);
 
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();

@@ -1,11 +1,11 @@
-import { DataSource, Input } from 'integration-core';
+import { DataSource } from 'integration-core';
 import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { Timer } from '../utils/Timer';
 import { DataMapper } from '../DataMapper';
 import { ResponseProcessor, AxiosResponseStreamFilter } from '../stream/AxiosResponseStreamFilter';
-import axios from 'axios';
+import * as fs from 'fs';
 
 /**
  * DataSource implementation for fetching person data from Boston University CRM API
@@ -56,14 +56,6 @@ class BuCdmPersonDataSource implements DataSource {
       throw new Error(`Failed to fetch person data from Boston University CRM API: ${error}`);
     }
   }
-
-  /**
-   * Convert raw person data to integration-core Input format
-   */
-  convertRawToInput(rawData: any[]): Input {
-    console.log('Converting raw person data to integration format...');
-    return this.dataMapper.getMappedData(rawData);
-  }
 }
 
 
@@ -98,7 +90,6 @@ async function main() {
     console.log('Fetched Person Data:', JSON.stringify(rawData, null, 2));
 
     // Output the first element of the rawData array to a file as formatted JSON.
-    const fs = require('fs');
     fs.writeFileSync('fetchedPersonData.json', JSON.stringify(rawData[0], null, 2));
 
     process.exit(0);

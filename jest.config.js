@@ -8,6 +8,7 @@ module.exports = {
   },
   collectCoverageFrom: [
     'src/**/*.ts',
-    '!src/**/*.d.ts',
+    '!src/**/*.d.ts',,
+    '!**/dist/**'
   ],
 };

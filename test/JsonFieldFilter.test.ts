@@ -52,7 +52,7 @@ describe('JsonFieldFilter', () => {
     filter.end();
   });
 
-  it('should handle empty fieldsToKeep array', (done) => {
+  it('should handle empty fieldsOfInterest array', (done) => {
     const filter = new JsonFieldFilter([]);
     const inputObject = {
       personid: 'U21967744',
@@ -87,9 +87,9 @@ describe('JsonFieldFilter', () => {
   });
 
   it('should filter complex nested object from test data', (done) => {
-    const fieldsToKeep = ['personid', 'personBasic'];
+    const fieldsOfInterest = ['personid', 'personBasic'];
 
-    filter = new JsonFieldFilter(fieldsToKeep);
+    filter = new JsonFieldFilter(fieldsOfInterest);
 
     filter.on('data', (filteredObj: any) => {
       // Verify only specified fields are kept
@@ -112,9 +112,9 @@ describe('JsonFieldFilter', () => {
   });
 
   it('should handle fields that do not exist in input', (done) => {
-    const fieldsToKeep = ['personid', 'nonexistentField'];
+    const fieldsOfInterest = ['personid', 'nonexistentField'];
 
-    filter = new JsonFieldFilter(fieldsToKeep);
+    filter = new JsonFieldFilter(fieldsOfInterest);
 
     filter.on('data', (filteredObj: any) => {
       expect(filteredObj).toHaveProperty('personid');

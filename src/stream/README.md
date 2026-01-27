@@ -64,7 +64,7 @@ A Node.js Transform stream that filters fields from JSON objects during streamin
 
 - Removes unwanted fields from objects in-flight
 - Reduces memory footprint by filtering before storage
-- Configurable field selection via `fieldsToKeep` parameter
+- Configurable field selection via `fieldsOfInterest` parameter
 - **Advanced filtering** via optional `customFilterCase` callback for complex logic
 
 #### Basic Field Filtering
@@ -125,7 +125,7 @@ import { AxiosResponseStreamFilter } from './AxiosResponseStreamFilter';
 
 // Configure filter to keep only essential fields
 const filter = new AxiosResponseStreamFilter({
-  fieldsToKeep: ['id', 'name', 'email']
+  fieldsOfInterest: ['id', 'name', 'email']
 });
 
 // Process streaming response
@@ -136,7 +136,7 @@ const filteredData = await filter.processResponse(axiosResponse);
 
 The `AxiosResponseStreamFilterConfig` interface supports:
 
-- `fieldsToKeep`: Array of field names to retain in filtered objects
+- `fieldsOfInterest`: Array of field names to retain in filtered objects
 - Additional configuration options can be added as needed
 
 ## Dependencies

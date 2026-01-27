@@ -37,8 +37,8 @@ class SinglePersonSync {
     // Create integration components
     this.dataMapper = new DataMapper();
     let responseFilter: ResponseProcessor | undefined;
-    if (this.config.dataSource.fieldsToKeep) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsToKeep: this.config.dataSource.fieldsToKeep });
+    if (this.config.dataSource.fieldsOfInterest) {
+      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.fieldsOfInterest });
     }
     this.dataSource = new BuCdmPersonDataSource({ 
       config: this.config, 

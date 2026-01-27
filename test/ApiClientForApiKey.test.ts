@@ -92,7 +92,7 @@ describe('ApiClientForApiKey', () => {
 
     it('should handle GET requests', async () => {
       const params = { buid: 'U12345678' };
-      const responseFilter = new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] });
+      const responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
       
       // Create mock response with stream data
       const mockStream = new PassThrough();

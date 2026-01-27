@@ -6,7 +6,7 @@ import { Transform } from 'stream';
  */
 export class JsonFieldFilter extends Transform {
   constructor(
-    private fieldsToKeep: string[], 
+    private fieldsOfInterest: string[], 
     private customFilterCase?: (source: any, target?: any) => void
 ) {
     super({ objectMode: true });
@@ -15,7 +15,7 @@ export class JsonFieldFilter extends Transform {
   _transform(obj: any, encoding: string, callback: Function): void {
     if (typeof obj === 'object' && obj !== null) {
       const filtered: any = {};
-      this.fieldsToKeep.forEach(fieldPath => {
+      this.fieldsOfInterest.forEach(fieldPath => {
         this.extractField(obj, fieldPath, filtered);
       });
       if(this.customFilterCase) {

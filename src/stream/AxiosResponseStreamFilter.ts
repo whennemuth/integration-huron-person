@@ -20,7 +20,7 @@ export interface ResponseProcessor {
  * Configuration for AxiosResponseStreamFilterConfig
  */
 export interface AxiosResponseStreamFilterConfig {
-  fieldsToKeep: string[];
+  fieldsOfInterest: string[];
   customFilterCase?: (source: any, target?: any) => void
 }
 
@@ -35,7 +35,7 @@ export interface AxiosResponseStreamFilterConfig {
  * @example
  * ```typescript
  * const filter = new AxiosResponseStreamFilter({
- *   fieldsToKeep: ['id', 'name', 'email']
+ *   fieldsOfInterest: ['id', 'name', 'email']
  * });
  *
  * // Use with API client
@@ -60,11 +60,11 @@ export class AxiosResponseStreamFilter implements ResponseProcessor {
   async processResponse<T>(response: AxiosResponse<T>): Promise<AxiosResponse<T>> {
     return new Promise((resolve, reject) => {
       const filteredObjects: any[] = [];
-      const { fieldsToKeep, customFilterCase } = this.config;
+      const { fieldsOfInterest, customFilterCase } = this.config;
       
       (response.data as any)
         .pipe(new JsonParser({ extractPath: 'response[*]' }))  // Extract objects from response array
-        .pipe(new JsonFieldFilter(fieldsToKeep, customFilterCase))   // Filter fields from each object
+        .pipe(new JsonFieldFilter(fieldsOfInterest, customFilterCase))   // Filter fields from each object
         .on('data', (filteredObject: any) => {
           filteredObjects.push(filteredObject);  // Collect filtered items
         })

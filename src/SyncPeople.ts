@@ -28,10 +28,10 @@ class HuronPersonIntegration {
     let responseFilter: ResponseProcessor | undefined;
 
     // Destructure for easier access
-    const { config, config: { dataSource: { fieldsToKeep } } } = this;
+    const { config, config: { dataSource: { fieldsOfInterest } } } = this;
 
-    if (fieldsToKeep) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsToKeep });
+    if (fieldsOfInterest) {
+      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
     const dataSource = new BuCdmPersonDataSource({ config, dataMapper, responseFilter });
     const dataTarget = new HuronPersonDataTarget(config, cache);

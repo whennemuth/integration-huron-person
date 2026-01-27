@@ -77,10 +77,10 @@ async function main() {
     let responseFilter: ResponseProcessor | undefined;
 
     // Destructure for easier access
-    const { dataSource: { fieldsToKeep } } = config;
+    const { dataSource: { fieldsOfInterest } } = config;
 
-    if (fieldsToKeep) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsToKeep });
+    if (fieldsOfInterest) {
+      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
     const dataSource = new BuCdmPersonDataSource({ config, dataMapper, responseFilter, buid: 'U21967744' });
 

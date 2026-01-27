@@ -216,7 +216,7 @@ describe('ApiClientForJWT', () => {
       
       mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
-      const result = await apiClient.get({ url: '/users/1', responseFilter: new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] }) });
+      const result = await apiClient.get({ url: '/users/1', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) });
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users/1', { params: undefined, responseType: 'stream' });
       expect(result.status).toBe(200);
@@ -304,7 +304,7 @@ describe('ApiClientForJWT', () => {
       
       mockAxiosInstance.get.mockRejectedValue(networkError);
 
-      await expect(apiClient.get({ url: '/test', responseFilter: new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] }) })).rejects.toThrow('Network Error');
+      await expect(apiClient.get({ url: '/test', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toThrow('Network Error');
     });
 
     it('should handle HTTP error responses', async () => {
@@ -323,7 +323,7 @@ describe('ApiClientForJWT', () => {
       
       mockAxiosInstance.get.mockRejectedValue(httpError);
 
-      await expect(apiClient.get({ url: '/nonexistent', responseFilter: new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] }) })).rejects.toEqual(httpError);
+      await expect(apiClient.get({ url: '/nonexistent', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toEqual(httpError);
     });
   });
 });

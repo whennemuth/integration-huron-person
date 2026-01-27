@@ -13,7 +13,7 @@ export interface Config {
     /** Endpoint for fetching person data */
     fetchPersonsPath: string;
     /** Optional fields to keep during response filtering */
-    fieldsToKeep?: string[];
+    fieldsOfInterest?: string[];
   };
   
   /** DataTarget configuration (where we push data to) - uses JWT authentication */

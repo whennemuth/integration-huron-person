@@ -33,6 +33,16 @@ export class ConfigManager {
     return this;
   }
 
+  fromPartial(partial: Partial<Config>): ConfigManager {
+    try {
+      this.config = this.deepMerge(partial, this.config);
+      this.isValidated = false;
+      return this;
+    } catch (error) {
+      throw new Error(`Failed to load configuration from partial config: ${error}`);
+    }
+  }
+
   /**
    * Load configuration from file system and merge with existing config
    * Earlier sources take precedence over later sources

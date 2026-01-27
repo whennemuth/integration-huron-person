@@ -13,7 +13,7 @@ describe('ApiClientForApiKey', () => {
   
   const mockConfig: EndpointConfigForApiKey = {
     baseUrl: 'https://test-api.example.com',
-    apiKey: 'ae7220cfe721d02feb98c2795c740b28',
+    apiKey: 'test-api-key',
     timeout: 5000
   };
 

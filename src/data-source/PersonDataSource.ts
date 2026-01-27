@@ -66,7 +66,8 @@ async function main() {
   try {
     // Load configuration
     const configManager = ConfigManager.getInstance();
-    const config = configManager.reset().fromFileSystem().fromEnvironment().getConfig();
+
+    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig();
 
     // Output the loaded config to console.
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

@@ -2,7 +2,7 @@
   "dataSource": {
     "endpointConfig": {
       "baseUrl": "https://prod-budev-fm.snaplogic.io",
-      "apiKey": "ae7220cfe721d02feb98c2795c740b28",
+      "apiKey": "your-api-key-here",
       "timeout": 300000
     },
     "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
@@ -18,7 +18,7 @@
       "baseUrl": "https://bu.hrs-staging.com",
       "authMethod": "externalToken",
       "externalToken": "your-external-token-here",
-      "userId": "your-user-id-here",
+      "userId": "bu-sso_wrh@bu.edu",
       "loginSvcPath": "/loginsvc/api/v1/token/",
       "timeout": 30000
     },

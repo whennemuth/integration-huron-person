@@ -35,16 +35,18 @@ describe('ConfigFromEnvironment', () => {
 
   beforeEach(() => {
     // Clear any existing environment variables
-    delete process.env.DATASOURCE_ENDPOINTCONFIG_BASE_URL;
-    delete process.env.DATASOURCE_ENDPOINTCONFIG_API_KEY;
-    delete process.env.DATASOURCE_ENDPOINT_PERSON_PATH;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_BASE_URL;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_USERNAME;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_PASSWORD;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID;
-    delete process.env.DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN;
-    delete process.env.CLIENT_ID;
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_BASE_URL];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_PASSWORD];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH];
   });
 
   describe('getConfig', () => {
@@ -55,8 +57,8 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataSource API key configuration', () => {
-      process.env.DATASOURCE_ENDPOINTCONFIG_BASE_URL = 'https://prod-datasource.example.com';
-      process.env.DATASOURCE_ENDPOINTCONFIG_API_KEY = 'prod-api-key-123';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL] = 'https://prod-datasource.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'prod-api-key-123';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -66,7 +68,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataSource fetchPersonsPath', () => {
-      process.env.DATASOURCE_ENDPOINT_PERSON_PATH = '/api/v2/prod/persons';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH] = '/api/v2/prod/persons';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -75,10 +77,10 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataTarget JWT configuration', () => {
-      process.env.DATATARGET_ENDPOINTCONFIG_BASE_URL = 'https://prod-datatarget.example.com';
-      process.env.DATATARGET_ENDPOINTCONFIG_USERNAME = 'prod-user';
-      process.env.DATATARGET_ENDPOINTCONFIG_PASSWORD = 'prod-password';
-      process.env.DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH = '/prod/auth/token';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_BASE_URL] = 'https://prod-datatarget.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME] = 'prod-user';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_PASSWORD] = 'prod-password';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH] = '/prod/auth/token';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -90,7 +92,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataTarget userId configuration', () => {
-      process.env.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID = 'override-user-id';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID] = 'override-user-id';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -99,7 +101,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override integration clientId', () => {
-      process.env.CLIENT_ID = 'prod-client-id';
+      process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID] = 'prod-client-id';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -108,8 +110,8 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should handle partial overrides correctly', () => {
-      process.env.DATASOURCE_ENDPOINTCONFIG_API_KEY = 'new-api-key';
-      process.env.DATATARGET_ENDPOINTCONFIG_USERNAME = 'new-username';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'new-api-key';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME] = 'new-username';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -122,8 +124,8 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should handle multiple environment variables for same section', () => {
-      process.env.DATASOURCE_ENDPOINTCONFIG_BASE_URL = 'https://new-base.example.com';
-      process.env.DATASOURCE_ENDPOINTCONFIG_API_KEY = 'new-key-456';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL] = 'https://new-base.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'new-key-456';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -133,7 +135,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should preserve existing endpointConfig when adding overrides', () => {
-      process.env.DATATARGET_ENDPOINTCONFIG_PASSWORD = 'override-password';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_PASSWORD] = 'override-password';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -143,8 +145,8 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should work without base config', () => {
-      process.env.CLIENT_ID = 'standalone-client-id';
-      process.env.DATASOURCE_ENDPOINTCONFIG_API_KEY = 'standalone-api-key';
+      process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID] = 'standalone-client-id';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'standalone-api-key';
 
       const configFromEnv = new ConfigFromEnvironment();
       const result = configFromEnv.getConfig();
@@ -154,14 +156,52 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should handle external token configuration', () => {
-      process.env.DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN = 'test-external-token';
-      process.env.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID = 'test-user-id';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN] = 'test-external-token';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID] = 'test-user-id';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
       expect((result.dataTarget?.endpointConfig as any)?.externalToken).toBe('test-external-token');
       expect((result.dataTarget?.endpointConfig as any)?.userId).toBe('test-user-id');
+    });
+
+    it('should override cache enabled configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED] = 'true';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.cache?.enabled).toBe(true);
+    });
+
+    it('should override cache path configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH] = '/tmp/cache';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.cache?.path).toBe('/tmp/cache');
+    });
+
+    it('should override both cache enabled and path configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED] = 'false';
+      process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH] = './custom-cache';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.cache?.enabled).toBe(false);
+      expect(result.cache?.path).toBe('./custom-cache');
+    });
+
+    it('should handle cache enabled as false', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED] = 'false';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.cache?.enabled).toBe(false);
     });
   });
 });

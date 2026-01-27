@@ -5,6 +5,7 @@ import { DataMapper } from './DataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
+import { Cache } from './Cache';
 
 /**
  * Single person synchronization between Boston University CRM and Huron systems.
@@ -18,13 +19,20 @@ class SinglePersonSync {
   private buid: string;
   private crudOperation: CrudOperation;
 
-  constructor(params: { buid: string, crudOperation: CrudOperation, configPath?: string }) {
-    this.buid = params.buid;
-    this.crudOperation = params.crudOperation;
+  constructor(params: { 
+    buid: string, 
+    crudOperation: CrudOperation, 
+    configPath?: string, 
+    cache?: Cache<string, string> 
+  }) {
+
+    const { configPath, cache, crudOperation, buid } = params;
+    this.buid = buid;
+    this.crudOperation = crudOperation;
     
     // Load configuration
     const configManager = ConfigManager.getInstance();
-    this.config = configManager.reset().fromFileSystem(params.configPath).fromEnvironment().getConfig();
+    this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig();
 
     // Create integration components
     this.dataMapper = new DataMapper();
@@ -39,7 +47,7 @@ class SinglePersonSync {
       buid: this.buid 
     });
 
-    this.dataTarget = new HuronPersonDataTarget(this.config);
+    this.dataTarget = new HuronPersonDataTarget(this.config, cache);
   }
 
   /**

@@ -41,4 +41,12 @@ export interface Config {
     /** Storage-specific configuration */
     config: FileConfig | DatabaseConfig | S3Config;
   };
+
+  /** Filesystem path for cache storage of JWT tokens */
+  cache?: {
+    /** Enable or disable caching */
+    enabled: boolean;
+    /** Cache TTL in seconds */
+    path?: string;
+  };
 }

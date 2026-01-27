@@ -1,16 +1,17 @@
-import { 
-  DataTarget, 
-  PushOneParms, 
-  PushAllParms, 
-  SinglePushResult, 
-  BatchPushResult, 
-  Status,
+import {
+  BatchPushResult,
   BatchStatus,
-  CrudOperation
+  CrudOperation,
+  DataTarget,
+  PushAllParms,
+  PushOneParms,
+  SinglePushResult,
+  Status
 } from 'integration-core';
-import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
+import { Cache } from '../Cache';
 import { Config } from '../config/Config';
 import { Timer } from '../utils/Timer';
+import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 
 /**
@@ -38,13 +39,15 @@ export class HuronPersonDataTarget implements DataTarget {
   private apiClient: ApiClientForJWT;
   private config: Config;
 
-  constructor(config: Config) {
+  constructor(config: Config, cache?: Cache<string, string>) {
     this.config = config;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
     };
-    this.apiClient = new ApiClientForJWT(endpointConfig);
+    
+    // Create cache instance if caching is enabled
+    this.apiClient = new ApiClientForJWT(endpointConfig, cache);
   }
 
   /**

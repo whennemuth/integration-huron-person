@@ -2,7 +2,7 @@
 import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
 import { Config } from '../../config/Config';
 import { SchemaPath } from '../SchemaBroker';
-import { ConfigManager } from '../../config/ConfigManager';
+import { BasicCache } from '../../Cache';
 
 /**
  * Response structure for person retrieval
@@ -27,7 +27,8 @@ class ReadPerson {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
     };
-    this.apiClient = new ApiClientForJWT(endpointConfig);
+    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+    this.apiClient = new ApiClientForJWT(endpointConfig, cache);
   }
 
   /**

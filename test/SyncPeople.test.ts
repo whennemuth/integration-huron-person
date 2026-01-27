@@ -93,7 +93,7 @@ describe('Package Exports', () => {
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
       expect(() => new HuronPersonDataSource({ config: mockConfig, dataMapper: new DataMapper(), responseFilter: new AxiosResponseStreamFilter({ fieldsToKeep: ['id'] }) })).not.toThrow();
       expect(() => new HuronPersonDataTarget(mockConfig)).not.toThrow();
-      expect(() => new HuronPersonIntegration('./config.json')).not.toThrow();
+      expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
     });
   });
 

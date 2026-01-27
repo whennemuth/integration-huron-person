@@ -47,5 +47,8 @@ delta-storage/
 # Configuration overrides (keep template)
 config.local.json
 
+# Cache files
+*-cache.json
+
 questions.txt
 RESUME-NEXT.txt

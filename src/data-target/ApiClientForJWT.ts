@@ -1,8 +1,9 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as jwt from 'jsonwebtoken';
 import { IApiClient } from '../ApiClient';
+import { Cache } from '../Cache';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
-import { BasicAuthConfig, AuthBasic } from './AuthBasic';
+import { AuthBasic, BasicAuthConfig } from './AuthBasic';
 import type { TokenAuthConfig } from './AuthToken';
 import { AuthToken } from './AuthToken';
 
@@ -14,6 +15,7 @@ export type EndpointConfigForJWT = {
   timeout?: number;
 } & (BasicAuthConfig | TokenAuthConfig);
 
+
 /**
  * HTTP client for JWT-authenticated APIs
  */
@@ -22,8 +24,12 @@ export class ApiClientForJWT implements IApiClient {
   private endpointConfig: EndpointConfigForJWT;
   private jwtToken: string | null = null;
   private tokenExpiry: number = 0;
+  private cache?: Cache<string, string>;
 
-  constructor(endpointConfig: EndpointConfigForJWT) {
+  public static JWT_BASIC_TOKEN_CACHE_KEY = 'jwt-basic-token-cache';
+  public static JWT_EXTERNAL_TOKEN_CACHE_KEY = 'jwt-external-token-cache';
+
+  constructor(endpointConfig: EndpointConfigForJWT, cache?:Cache<string,string>) {
     this.endpointConfig = endpointConfig;
     this.axiosInstance = axios.create({
       baseURL: endpointConfig.baseUrl,
@@ -32,6 +38,9 @@ export class ApiClientForJWT implements IApiClient {
         'Content-Type': 'application/json',
       },
     });
+
+    // Store cache instance - if provided, caching is enabled
+    this.cache = cache;
 
     // Add request interceptor for URL logging
     this.axiosInstance.interceptors.request.use(
@@ -88,7 +97,7 @@ export class ApiClientForJWT implements IApiClient {
   /**
    * Decode token expiry from JWT payload
    */
-  private decodeTokenExpiry(token: string): number {
+  private decodeTokenExpiry = (token: string): number => {
     try {
       const decoded = jwt.decode(token) as any;
       return decoded.exp ? decoded.exp * 1000 : Date.now() + (60 * 60 * 1000); // Default 1 hour
@@ -104,10 +113,43 @@ export class ApiClientForJWT implements IApiClient {
   private async ensureValidToken(): Promise<void> {
     const now = Date.now();
     const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+    const { endpointConfig: { authMethod }, decodeTokenExpiry } = this;
+    const { JWT_BASIC_TOKEN_CACHE_KEY, JWT_EXTERNAL_TOKEN_CACHE_KEY } = ApiClientForJWT;
 
+    // Check cache first if caching is enabled
+    if (this.cache) {
+      const cacheKey = authMethod === 'basic' ? JWT_BASIC_TOKEN_CACHE_KEY : JWT_EXTERNAL_TOKEN_CACHE_KEY;
+      const cachedJwt = this.cache.get(cacheKey);
+      const cachedJwtExpiry = cachedJwt ? decodeTokenExpiry(cachedJwt) : 0;
+      if (cachedJwt && now < (cachedJwtExpiry - bufferTime)) {
+        console.log(`Using cached JWT token with ${Math.round((cachedJwtExpiry - now) / 60000)} minutes until expiry`);
+        this.jwtToken = cachedJwt;
+        this.tokenExpiry = cachedJwtExpiry;
+        return;
+      }
+    }
+
+    this.tokenExpiry = this.jwtToken ? decodeTokenExpiry(this.jwtToken) : 0;
+    const expiryMinutes = Math.round((this.tokenExpiry - now) / 60000);
+
+    // If no token or expired, authenticate for new token
     if (!this.jwtToken || now >= (this.tokenExpiry - bufferTime)) {
-      console.log('Token expired or missing, refreshing...');
+      console.log('JWT token expired or missing, refreshing...');
+
       await this.authenticate();
+      
+      // Cache the new token if caching is enabled
+      if (this.jwtToken && this.cache) {
+        console.log(`Caching new JWT token with ${expiryMinutes} minutes until expiry`);
+        const cacheKey = authMethod === 'basic' ? JWT_BASIC_TOKEN_CACHE_KEY : JWT_EXTERNAL_TOKEN_CACHE_KEY;
+        this.cache.set(cacheKey, this.jwtToken);
+      }
+      else {
+        console.log(`Caching disabled.Acquired new JWT token with ${expiryMinutes} minutes until expiry`);
+      }
+    }
+    else {
+      console.log(`Existing JWT token is still valid with ${expiryMinutes} minutes until expiry`);
     }
   }
 

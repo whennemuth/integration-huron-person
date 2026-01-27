@@ -6,6 +6,7 @@ import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
+import { Cache } from './Cache';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 /**
@@ -16,7 +17,8 @@ class HuronPersonIntegration {
   private config: Config;
   private endToEnd: EndToEnd;
 
-  constructor(configPath?: string) {
+  constructor(params: { configPath?: string, cache?: Cache<string, string> }) {
+    const { configPath, cache } = params;
     // Load configuration with chaining API
     const configManager = ConfigManager.getInstance();
     this.config = configManager.reset().fromFileSystem(configPath).fromEnvironment().getConfig();
@@ -32,7 +34,7 @@ class HuronPersonIntegration {
       responseFilter = new AxiosResponseStreamFilter({ fieldsToKeep });
     }
     const dataSource = new BuCdmPersonDataSource({ config, dataMapper, responseFilter });
-    const dataTarget = new HuronPersonDataTarget(config);
+    const dataTarget = new HuronPersonDataTarget(config, cache);
     const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
 
     // Initialize EndToEnd integration
@@ -75,7 +77,7 @@ class HuronPersonIntegration {
  */
 async function main() {
   try {
-    const integration = new HuronPersonIntegration();
+    const integration = new HuronPersonIntegration({ configPath: undefined, cache: undefined });
     await integration.run();
     process.exit(0);
   } catch (error) {

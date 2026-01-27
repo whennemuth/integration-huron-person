@@ -1,88 +1,10 @@
 import { BasicCache } from '../../Cache';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
 import { Config } from '../../config/Config';
-import { SchemaPath } from '../SchemaBroker';
 import { ConfigManager } from '../../config/ConfigManager';
-
-/**
- * Pagination parameters for bulk person retrieval
- */
-interface PaginationParams {
-  offset?: number;
-  pageSize?: number;
-  continuationToken?: string;
-}
-
-/**
- * Sort options for person retrieval
- */
-type SortField = 'firstName' | 'lastName' | 'userid' | 'dateModified' | 'dateCreated' | 'openPaymentsId' | 'contactInformation.email';
-
-/**
- * Sort direction
- */
-type SortDirection = 'asc' | 'desc';
-
-/**
- * Sort specification
- */
-interface SortSpec {
-  field: SortField;
-  direction?: SortDirection;
-}
-
-/**
- * Filter field names supported by the API
- */
-type FilterField =
-  | 'active'
-  | 'allowLogin'
-  | 'contactInformation.phone'
-  | 'contactInformation.email'
-  | 'additionalUnit'
-  | 'additionalUnit.hrn'
-  | 'secondaryUnit'
-  | 'secondaryUnit.hrn'
-  | 'employer'
-  | 'employer.hrn'
-  | 'organization'
-  | 'organization.hrn'
-  | 'externalToken'
-  | 'externalTokenExpiresOn'
-  | 'firstName'
-  | 'hrn'
-  | 'isInternal'
-  | 'id'
-  | 'lastName'
-  | 'newUser'
-  | 'openPaymentId'
-  | 'roles'
-  | 'rights'
-  | 'showLoginTips'
-  | 'sourceIdentifier'
-  | 'tags'
-  | 'userId';
-
-/**
- * Logical operators for filters
- */
-type LogicalOperator = 'and' | 'or';
-
-/**
- * Comparison operators for filters
- */
-type ComparisonOperator = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null' | 'in';
-
-/**
- * Individual filter specification
- */
-interface FilterSpec {
-  field: FilterField;
-  logicalOperator: LogicalOperator;
-  comparisonOperator: ComparisonOperator;
-  value: string;
-  priority: number;
-}
+import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
+import { SchemaPath } from '../SchemaBroker';
+import { FilterFields, SortFields, HuronPerson } from './Person';
 
 /**
  * Response structure for bulk person retrieval
@@ -97,7 +19,7 @@ interface PeopleListResponse {
     prev?: string;
     nextWithContinuationToken?: string;
   };
-  data: any[];
+  data: HuronPerson[];
   links?: {
     next?: string;
     prev?: string;
@@ -108,26 +30,23 @@ interface PeopleListResponse {
 /**
  * Options for bulk person retrieval
  */
-interface ReadPeopleOptions {
-  pagination?: PaginationParams;
-  sort?: SortSpec;
-  filters?: FilterSpec[];
-  includeFields?: string[];
-}
+type ReadPeopleOptions = BuildQueryOptions;
 
 /**
  * Class for reading multiple Person records from the Huron API with filtering and sorting
  */
 class ReadPeople {
   private apiClient: ApiClientForJWT;
+  private queryBuilder: QueryBuilder;
 
-  constructor(config: Config) {
+  constructor(config: Config, queryBuilder?: QueryBuilder) {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;    
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
+    this.queryBuilder = queryBuilder || new QueryBuilder(FilterFields, SortFields);
   }
 
   /**
@@ -135,9 +54,9 @@ class ReadPeople {
    * @param options Configuration options for the query
    * @returns Promise resolving to the PeopleListResponse containing paginated results
    */
-  async readPeople(options: ReadPeopleOptions = {}): Promise<PeopleListResponse> {
+  public async readPeople(options: ReadPeopleOptions = {}): Promise<PeopleListResponse> {
     try {
-      const queryParams = this.buildQueryParams(options);
+      const queryParams = this.queryBuilder.buildQueryParams(options);
 
       const response = await this.apiClient.get<PeopleListResponse>({
         url: SchemaPath.PERSONS,
@@ -160,8 +79,8 @@ class ReadPeople {
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Person records
    */
-  async readAllPeople(options: Omit<ReadPeopleOptions, 'pagination'> = {}): Promise<any[]> {
-    const allPeople: any[] = [];
+  public async readAllPeople(options: Omit<ReadPeopleOptions, 'pagination'> = {}): Promise<HuronPerson[]> {
+    const allPeople: HuronPerson[] = [];
     let continuationToken: string | undefined;
 
     do {
@@ -182,71 +101,74 @@ class ReadPeople {
     return allPeople;
   }
 
-  /**
-   * Build query parameters object from options
-   * @param options The read options
-   * @returns Object containing query parameters for Axios
-   */
-  private buildQueryParams(options: ReadPeopleOptions): Record<string, any> {
-    const params: Record<string, any> = {};
-
-    // Add pagination parameters
-    if (options.pagination) {
-      if (options.pagination.offset !== undefined) {
-        params['pagination[offset]'] = options.pagination.offset;
-      }
-      if (options.pagination.pageSize !== undefined) {
-        params['pagination[pageSize]'] = options.pagination.pageSize;
-      }
-      if (options.pagination.continuationToken) {
-        params['pagination[continuationToken]'] = options.pagination.continuationToken;
-      }
+  public async readPeopleByFullName(firstName: string, lastName: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      const filters: FilterSpec[] = [
+        ReadPeople.createFilter({ field: 'firstName', value: firstName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' }),
+        ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 1, logicalOperator: 'and', comparisonOperator: 'eq' })
+      ];
+      const persons: HuronPerson[] = await this.readAllPeople({
+        filters,
+        includeFields
+      });
+      return persons;
+    } catch (error) {
+      console.error(`Failed to read person with name ${firstName} ${lastName}:`, error);
+      throw new Error(`Failed to read person with name ${firstName} ${lastName}: ${error}`);
     }
+  }
 
-    // Add sort parameter
-    if (options.sort) {
-      params.sort = options.sort.direction === 'asc' ? `-${options.sort.field}` : options.sort.field;
+  public async readPeopleByNamePart(namePart: string, value: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      const persons: HuronPerson[] = await this.readAllPeople({
+        filters: [
+          ReadPeople.createFilter({ field: namePart, value, priority: 0, logicalOperator: 'or', comparisonOperator: 'eq' }),
+        ],
+        sort: ReadPeople.createSort({ 
+          field: namePart.includes('first') ? 'lastName' : 'firstName', 
+          direction: 'desc' 
+        }),
+        includeFields
+      });
+      return persons;
+    } catch (error) {
+      console.error(`Failed to read person with name part ${namePart}:`, error);
+      throw new Error(`Failed to read person with name part ${namePart}: ${error}`);
     }
+  }
 
-    // Add filter parameters
-    if (options.filters && options.filters.length > 0) {
-      for (const filter of options.filters) {
-        const filterKey = `filter[${filter.priority}!${filter.field}!${filter.logicalOperator}]`;
-        params[filterKey] = `${filter.comparisonOperator}:${filter.value}`;
-      }
+  public async readPeopleByFirstName(firstName: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    return this.readPeopleByNamePart('firstName', firstName, includeFields);
+  }
+
+  public async readPeopleByLastName(lastName: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      const persons: HuronPerson[] = await this.readAllPeople({
+        filters: [
+          ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' })
+        ],
+        includeFields
+      });
+      return persons;
+    } catch (error) {
+      console.error(`Failed to read person with last name ${lastName}:`, error);
+      throw new Error(`Failed to read person with last name ${lastName}: ${error}`);
     }
-
-    // Add include fields parameter
-    if (options.includeFields && options.includeFields.length > 0) {
-      params.include = options.includeFields.join(',');
-    }
-
-    return params;
   }
 
   /**
    * Helper method to create a simple filter specification
-   * @param field The field to filter on
-   * @param value The value to match
-   * @param priority The filter priority (for multiple filters)
-   * @param logicalOperator The logical operator (default: 'and')
-   * @param comparisonOperator The comparison operator (default: 'eq')
+   * @param filter The filter parameters
    * @returns FilterSpec object
    */
-  static createFilter(
-    field: FilterField,
+  static createFilter(filter: {
+    field: string,
     value: string,
-    priority: number = 0,
-    logicalOperator: LogicalOperator = 'and',
-    comparisonOperator: ComparisonOperator = 'eq'
-  ): FilterSpec {
-    return {
-      field,
-      logicalOperator,
-      comparisonOperator,
-      value,
-      priority
-    };
+    priority?: number,
+    logicalOperator?: 'and' | 'or',
+    comparisonOperator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null'
+  }): FilterSpec {
+    return QueryBuilder.createFilter(filter);
   }
 
   /**
@@ -255,9 +177,7 @@ class ReadPeople {
    * @param direction The sort direction (default: 'desc')
    * @returns SortSpec object
    */
-  static createSort(field: SortField, direction: SortDirection = 'desc'): SortSpec {
-    return { field, direction };
-  }
+  static createSort = QueryBuilder.createSort;
 }
 
 async function main() {
@@ -269,48 +189,66 @@ async function main() {
 
   const reader = new ReadPeople(config);
 
-  /**
-   * Example 1: Read active users sorted by first name
-   */
-  const example1 = async () => {
-    const options: ReadPeopleOptions = {
-      filters: [
-        ReadPeople.createFilter('active', 'true', 0, 'and', 'eq')
-      ],
-      sort: ReadPeople.createSort('lastName', 'asc'),
-      pagination: { pageSize: 50 },
-      includeFields: ['id', 'userId', 'firstName', 'lastName', 'organization']
-    };
-    const peopleResponse = await reader.readPeople(options);
-    console.log(`Retrieved ${peopleResponse.data.length} people`);
-    peopleResponse.data.forEach((person, index) => {
-      const { firstName, lastName, id, userId, organization } = person;
-      console.log(`${index + 1}. ${firstName} ${lastName} ${JSON.stringify({id, userId, organization})}`);
-    });
-    console.log('Pagination info:', peopleResponse.pagination);
-  }
-
-  /**
-   * Example 2: Read all people with a specific last name
-   */
-  const example2 = async (lastName:string) => {
-    const allPeople = await reader.readAllPeople({
-      filters: [
-        ReadPeople.createFilter('lastName', lastName, 0, 'and', 'eq')
-      ],
-      includeFields: ['id', 'userId', 'firstName', 'lastName', 'organization']
-    });
-    allPeople.forEach((person, index) => {
-      const { firstName, lastName, id, userId, organization } = person;
-      console.log(`${index + 1}. ${firstName} ${lastName} ${JSON.stringify({id, userId, organization})}`);
-    });
-  }
-
+  const { HURON_NAME_FILTER, HURON_FNAME, HURON_LNAME } = process.env;
+  
   try {
-    // await example1();
+    let personData: HuronPerson | HuronPerson[];
+    switch (HURON_NAME_FILTER) {
+      case 'full':
+        if( ! HURON_FNAME || ! HURON_LNAME ) {
+          console.error('Please set both HURON_FNAME and HURON_LNAME for full name filter');
+          return;
+        }
+        personData = await reader.readPeopleByFullName(
+          HURON_FNAME!, 
+          HURON_LNAME!, 
+          ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
+        );
+        console.log(`Reading people by full name: ${HURON_FNAME} ${HURON_LNAME}`);
+        break;
+      case 'first': case 'last':
+        if(HURON_NAME_FILTER === 'first' && ! HURON_FNAME) {
+          console.error('Please set HURON_FNAME for first name filter');
+          return;
+        }
+        if(HURON_NAME_FILTER === 'last' && ! HURON_LNAME) {
+          console.error('Please set HURON_LNAME for last name filter');
+          return;
+        }
+        const options: ReadPeopleOptions = {
+          filters: [
+            ReadPeople.createFilter({ 
+              field: 'active', 
+              value: 'true', 
+              priority: 0, 
+              logicalOperator: 'and', 
+              comparisonOperator: 'eq' 
+            }),
+            ReadPeople.createFilter({ 
+              field: HURON_NAME_FILTER === 'first' ? 'firstName' : 'lastName', 
+              value: HURON_NAME_FILTER === 'first' ? HURON_FNAME! : HURON_LNAME!, 
+              priority: 1, 
+              logicalOperator: 'and', 
+              comparisonOperator: 'eq' 
+            })
+          ],
+          sort: ReadPeople.createSort({ 
+            field: HURON_NAME_FILTER === 'first' ? 'lastName' : 'firstName', 
+            direction: 'desc' 
+          }),
+          pagination: { pageSize: 50 },
+          includeFields: ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
+        };
+        personData = await reader.readAllPeople(options);
+        console.log(`Reading people by: ${HURON_NAME_FILTER === 'first' ? HURON_FNAME : HURON_LNAME}`);
 
-    await example2('Hennemuth');
-
+        break;
+      default:
+        console.error('Please set HURON_NAME_FILTER to one of: full, first, last');
+        return;
+    }
+    console.log(`Retrieved ${Array.isArray(personData) ? personData.length : 1} person records.`);
+    console.log(JSON.stringify(personData, null, 2));
   } catch (error) {
     console.error('Error retrieving people data:', error);
   }
@@ -322,14 +260,6 @@ if (require.main === module) {
 }
 
 export {
-  ReadPeople,
-  ReadPeopleOptions,
-  FilterSpec,
-  SortSpec,
-  PaginationParams,
-  PeopleListResponse,
-  FilterField,
-  SortField,
-  LogicalOperator,
-  ComparisonOperator
+  PeopleListResponse, ReadPeople,
+  ReadPeopleOptions
 };

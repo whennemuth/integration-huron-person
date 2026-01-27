@@ -1,6 +1,7 @@
-import { ReadPeople, ReadPeopleOptions, FilterSpec, SortSpec } from '../src/data-target/crud/ReadPeople';
+import { ReadPeople, ReadPeopleOptions } from '../src/data-target/crud/ReadPeople';
 import { ConfigManager } from '../src/config/ConfigManager';
 import { ApiClientForJWT } from '../src/data-target/ApiClientForJWT';
+import { QueryBuilder } from '../src/data-target/QueryBuilder';
 
 // Mock the ApiClientForJWT
 jest.mock('../src/data-target/ApiClientForJWT');
@@ -8,6 +9,7 @@ jest.mock('../src/data-target/ApiClientForJWT');
 describe('ReadPeople', () => {
   let readPeople: ReadPeople;
   let mockApiClient: jest.Mocked<ApiClientForJWT>;
+  let mockQueryBuilder: jest.Mocked<QueryBuilder>;
 
   beforeAll(() => {
     const config = ConfigManager
@@ -16,9 +18,12 @@ describe('ReadPeople', () => {
       .fromFileSystem()
       .getConfig();
 
-    // Create a mock instance
+    // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;
-    readPeople = new ReadPeople(config);
+    mockQueryBuilder = new QueryBuilder(new Set(['firstName', 'lastName', 'active']), new Set(['firstName', 'lastName'])) as jest.Mocked<QueryBuilder>;
+    mockQueryBuilder.buildQueryParams = jest.fn();
+
+    readPeople = new ReadPeople(config, mockQueryBuilder);
 
     // Replace the private apiClient with our mock
     (readPeople as any).apiClient = mockApiClient;
@@ -38,7 +43,7 @@ describe('ReadPeople', () => {
 
   describe('createFilter', () => {
     it('should create a filter specification with default values', () => {
-      const filter = ReadPeople.createFilter('firstName', 'John');
+      const filter = ReadPeople.createFilter({ field: 'firstName', value: 'John' });
 
       expect(filter).toEqual({
         field: 'firstName',
@@ -50,7 +55,7 @@ describe('ReadPeople', () => {
     });
 
     it('should create a filter specification with custom values', () => {
-      const filter = ReadPeople.createFilter('lastName', 'Doe', 1, 'or', 'neq');
+      const filter = ReadPeople.createFilter({ field: 'lastName', value: 'Doe', priority: 1, logicalOperator: 'or', comparisonOperator: 'neq' });
 
       expect(filter).toEqual({
         field: 'lastName',
@@ -64,7 +69,7 @@ describe('ReadPeople', () => {
 
   describe('createSort', () => {
     it('should create a sort specification with default direction', () => {
-      const sort = ReadPeople.createSort('firstName');
+      const sort = ReadPeople.createSort({ field: 'firstName' });
 
       expect(sort).toEqual({
         field: 'firstName',
@@ -73,7 +78,7 @@ describe('ReadPeople', () => {
     });
 
     it('should create a sort specification with custom direction', () => {
-      const sort = ReadPeople.createSort('lastName', 'asc');
+      const sort = ReadPeople.createSort({ field: 'lastName', direction: 'asc' });
 
       expect(sort).toEqual({
         field: 'lastName',
@@ -82,105 +87,44 @@ describe('ReadPeople', () => {
     });
   });
 
-  describe('buildQueryParams', () => {
-    it('should build empty params for empty options', async () => {
-      await readPeople.readPeople({});
-
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {}
-      });
+  describe('readPeople', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockQueryBuilder.buildQueryParams.mockReturnValue({});
+      // Mock successful API response
+      mockApiClient.get.mockResolvedValue({
+        data: { pagination: { offset: 0, pageSize: 25, total: 0 }, data: [] },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
     });
 
-    it('should build pagination parameters', async () => {
-      const options: ReadPeopleOptions = {
-        pagination: {
-          offset: 10,
-          pageSize: 50,
-          continuationToken: 'token123'
-        }
-      };
-
+    it('should call queryBuilder.buildQueryParams with options', async () => {
+      const options: ReadPeopleOptions = { pagination: { pageSize: 10 } };
       await readPeople.readPeople(options);
 
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {
-          'pagination[offset]': 10,
-          'pagination[pageSize]': 50,
-          'pagination[continuationToken]': 'token123'
-        }
-      });
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(options);
     });
 
-    it('should build sort parameters', async () => {
-      const options: ReadPeopleOptions = {
-        sort: ReadPeople.createSort('firstName', 'asc')
+    it('should return the response data from apiClient.get', async () => {
+      const mockResponseData = {
+        pagination: { offset: 0, pageSize: 25, total: 100 },
+        data: [{ id: 'person1', firstName: 'John' }],
+        links: { next: 'http://example.com/next' }
       };
+      mockApiClient.get.mockResolvedValue({
+        data: mockResponseData,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
 
-      await readPeople.readPeople(options);
+      const result = await readPeople.readPeople();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {
-          sort: '-firstName'
-        }
-      });
-    });
-
-    it('should build filter parameters', async () => {
-      const options: ReadPeopleOptions = {
-        filters: [
-          ReadPeople.createFilter('firstName', 'John', 0, 'and', 'eq'),
-          ReadPeople.createFilter('lastName', 'Doe', 1, 'or', 'neq')
-        ]
-      };
-
-      await readPeople.readPeople(options);
-
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {
-          'filter[0!firstName!and]': 'eq:John',
-          'filter[1!lastName!or]': 'neq:Doe'
-        }
-      });
-    });
-
-    it('should build include fields parameters', async () => {
-      const options: ReadPeopleOptions = {
-        includeFields: ['firstName', 'lastName', 'contactInformation.email']
-      };
-
-      await readPeople.readPeople(options);
-
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {
-          include: 'firstName,lastName,contactInformation.email'
-        }
-      });
-    });
-
-    it('should build combined parameters', async () => {
-      const options: ReadPeopleOptions = {
-        pagination: { pageSize: 25 },
-        sort: ReadPeople.createSort('lastName', 'desc'),
-        filters: [ReadPeople.createFilter('active', 'true')],
-        includeFields: ['firstName', 'lastName']
-      };
-
-      await readPeople.readPeople(options);
-
-      expect(mockApiClient.get).toHaveBeenCalledWith({
-        url: '/api/v2/persons',
-        params: {
-          'pagination[pageSize]': 25,
-          sort: 'lastName',
-          'filter[0!active!and]': 'eq:true',
-          include: 'firstName,lastName'
-        }
-      });
+      expect(result).toEqual(mockResponseData);
     });
   });
 

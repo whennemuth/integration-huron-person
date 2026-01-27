@@ -1,14 +1,17 @@
 
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
 import { Config } from '../../config/Config';
+import { ConfigManager } from '../../config/ConfigManager';
+import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
 import { SchemaPath } from '../SchemaBroker';
+import { ReadPeople } from './ReadPeople';
+import { HuronPerson } from './Person';
 import { BasicCache } from '../../Cache';
 
 /**
  * Response structure for person retrieval
  */
 interface PersonResponse {
-  data: any;
+  data: HuronPerson;
   links?: {
     next?: string;
     prev?: string;
@@ -22,7 +25,7 @@ interface PersonResponse {
 class ReadPerson {
   private apiClient: ApiClientForJWT;
 
-  constructor(config: Config) {
+  constructor(private config: Config) {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
@@ -36,10 +39,10 @@ class ReadPerson {
    * @param hrn The Huron Resource Name of the person to retrieve
    * @returns Promise resolving to the Person data
    */
-  async readPerson(hrn: string): Promise<any> {
+  public readPersonByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronPerson> => {
     try {
       const endpoint = SchemaPath.PERSONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
-      const response = await this.apiClient.get<PersonResponse>({ url: endpoint });
+      const response = await this.apiClient.get<PersonResponse>({ url: endpoint, params: { includeFields } });
 
       if (response.status !== 200) {
         throw new Error(`Failed to read person ${hrn}: HTTP ${response.status} ${response.statusText}`);
@@ -58,17 +61,59 @@ class ReadPerson {
    * @param personId The person ID to retrieve
    * @returns Promise resolving to the Person data
    */
-  async readPersonById(personId: string): Promise<any> {
+  public readPersonById = async (personId: string, includeFields?: string[]): Promise<HuronPerson> => {
     // For now, we'll assume the HRN format is hrn:hrs:persons:{personId}
     // In a real implementation, you might need to query for the HRN first or have a different endpoint
     const hrn = `hrn:hrs:persons:${personId}`;
-    return this.readPerson(hrn);
+    return this.readPersonByHRN(hrn, includeFields);
+  }
+
+  private async readPersonBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {
+  const persons: any[] = await new ReadPeople(this.config).readAllPeople({
+      filters: [
+        ReadPeople.createFilter({ field, value })
+      ],
+      includeFields
+    });
+    return persons;
+  }
+
+  /**
+   * Read a single person by email address. Assumes email is unique.
+   * @param email 
+   * @returns Promise resolving to an array of Person data matching the email
+   * (Note: could be multiple if somehow not unique)
+   */
+  public async readPersonByEmail(email: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      return this.readPersonBySingleFilter('contactInformation.email', email, includeFields);
+    } catch (error) {
+      console.error(`Failed to read person with email ${email}:`, error);
+      throw new Error(`Failed to read person by email ${email}: ${error}`);
+    }
+  }
+
+  public async readPersonByUserId(userId: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      return this.readPersonBySingleFilter('userId', userId, includeFields);
+    } catch (error) {
+      console.error(`Failed to read person with userId ${userId}:`, error);
+      throw new Error(`Failed to read person by userId ${userId}: ${error}`);
+    }
+  }
+
+  public async readPersonBySourceIdentifier(sourceIdentifier: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      return this.readPersonBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
+    } catch (error) {
+      console.error(`Failed to read person with sourceIdentifier ${sourceIdentifier}:`, error);
+      throw new Error(`Failed to read person by sourceIdentifier ${sourceIdentifier}: ${error}`);
+    }
   }
 }
 
 
 async function main() {
-  const personId = process.env.HURON_PERSON_ID;
   const config = ConfigManager.
     getInstance()
     .fromEnvironment()
@@ -77,8 +122,43 @@ async function main() {
 
   const reader = new ReadPerson(config);
 
+  const { 
+    HURON_ID_TYPE, 
+    HURON_ID, 
+    HURON_HRN, 
+    HURON_SOURCE_ID, 
+    HURON_USER_ID,
+    HURON_EMAIL
+  } = process.env;
+  let personData: HuronPerson | HuronPerson[];
+
+  switch (HURON_ID_TYPE) {
+    case 'id':
+      console.log(`Reading person by ID: ${HURON_ID}`);
+      personData = await reader.readPersonById(HURON_ID!);
+      break;
+    case 'hrn':
+      console.log(`Reading person by HRN: ${HURON_HRN}`);
+      personData = await reader.readPersonByHRN(HURON_HRN!);
+      break;
+    case 'sid':
+      console.log(`Reading person by Source Identifier: ${HURON_SOURCE_ID}`);
+      personData = await reader.readPersonBySourceIdentifier(HURON_SOURCE_ID!);
+      break;
+    case 'uid':
+      console.log(`Reading person by User ID: ${HURON_USER_ID}`);
+      personData = await reader.readPersonByUserId(HURON_USER_ID!);
+      break;
+    case 'email':
+      console.log(`Reading person by Email: ${HURON_EMAIL}`);
+      personData = await reader.readPersonByEmail(HURON_EMAIL!);
+      break;
+    default:
+      console.error('Please set HURON_ID_TYPE to one of: hrn, sid, uid, id, email');
+      return;
+  }
+
   try {
-    const personData = await reader.readPersonById(personId!);
     console.log('Retrieved Person Data:', JSON.stringify(personData, null, 2));
   } catch (error) {
     console.error('Error retrieving person data:', error);
@@ -90,4 +170,4 @@ if (require.main === module) {
   main();
 }
 
-export { ReadPerson, PersonResponse };
+export { PersonResponse, ReadPerson };

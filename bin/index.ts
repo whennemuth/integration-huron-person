@@ -15,4 +15,5 @@ export { BuCdmPersonDataSource as HuronPersonDataSource } from '../src/data-sour
 export { DataMapper } from '../src/DataMapper';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
 export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/DeltaStrategyFactory';
+export { SinglePersonSync } from '../src/SyncPerson';
 export { HuronPersonIntegration } from '../src/SyncPeople';

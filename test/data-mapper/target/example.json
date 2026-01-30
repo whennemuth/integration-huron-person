@@ -1,0 +1,55 @@
+{
+  "id": "DAST-Person-ID-20003",
+  "firstName": "DAST-Person-firstName-20003",
+  "lastName": "DAST-Person-lastName-20003",
+  "employer": {
+    "hrn": "hrn:hrs:orgs:301",
+    "name": "Huron Consulting Group"
+  },
+  "organization": {
+    "hrn": "hrn:hrs:orgs:301",
+    "name": "Huron Consulting Group"
+  },
+  "additionalUnit": {
+    "hrn": "hrn:hrs:orgs:447331409",
+    "name": "3M Company"
+  },
+  "secondaryUnit": {
+    "hrn": "hrn:hrs:orgs:447332038",
+    "name": "Aalborg University"
+  },
+  "sourceIdentifier": "",
+  "contactInformation": {
+    "city": "",
+    "email": "",
+    "phone": "",
+    "country": {
+      "hrn": "hrn:hrs:lists:countries/usa",
+      "name": "United States"
+    },
+    "website": "",
+    "postalCode": "",
+    "addressLine1": "",
+    "addressLine2": "",
+    "stateProvince": {
+      "hrn": "hrn:hrs:lists:states/new-york",
+      "name": "New York"
+    }
+  },
+  "active": true,
+  "isInternal": false,
+  "newUser": true,
+  "showLoginTips": false,
+  "allowLogin": true,
+  "earnedDegrees": "",
+  "employeeId": "",
+  "customProperties": {},
+  "tags": [],
+  "roles": [
+    {
+      "hrn": "hrn:hrs:lists:roles/site-user",
+      "name": "Site User"
+    }
+  ],
+  "openPaymentsId": ""
+}

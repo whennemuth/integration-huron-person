@@ -1,6 +1,6 @@
 import { Input } from 'integration-core';
 import { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
-import { DataMapper } from '../src/DataMapper';
+import { DataMapper } from '../src/data-mapper/DataMapper';
 import { IApiClient } from '../src/ApiClient';
 import { Config } from '../src/config/Config';
 import { AxiosResponseStreamFilter } from '../src/stream/AxiosResponseStreamFilter';

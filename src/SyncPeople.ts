@@ -1,7 +1,7 @@
 import { EndToEnd } from 'integration-core';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper } from './DataMapper';
+import { DataMapper } from './data-mapper/DataMapper';
 import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
@@ -21,7 +21,7 @@ class HuronPersonIntegration {
     const { configPath, cache } = params;
     // Load configuration with chaining API
     const configManager = ConfigManager.getInstance();
-    this.config = configManager.reset().fromFileSystem(configPath).fromEnvironment().getConfig();
+    this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig();
 
     // Create integration components
     const dataMapper = new DataMapper();

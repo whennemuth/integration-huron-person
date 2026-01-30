@@ -1,7 +1,7 @@
 import { CrudOperation, DataTarget, Input } from 'integration-core';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper } from './DataMapper';
+import { DataMapper } from './data-mapper/DataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';

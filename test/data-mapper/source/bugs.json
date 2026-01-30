@@ -1,5 +1,5 @@
 {
-  "personid": "U21967744",
+  "personid": "U12345678",
   "personBasic": {
     "names": [
       {
@@ -138,7 +138,7 @@
   "email": [
     {
       "type": "university",
-      "address": "bugs@looney.com",
+      "address": "bugs@bu.edu",
       "source": "SAP"
     },
     {
@@ -148,7 +148,7 @@
     },
     {
       "type": "BUEM",
-      "address": "TST_bugs@looney.com",
+      "address": "TST_bugs@bu.edu",
       "source": "Campus Solutions",
       "isPreferred": "Y"
     },
@@ -169,7 +169,7 @@
     {
       "type": "WORK",
       "countryCode": "",
-      "number": "8888888888",
+      "number": "9999999999",
       "source": "Campus Solutions",
       "isPreferred": "Y"
     }
@@ -190,9 +190,10 @@
         "type": "home",
         "street": "305 Rabbit Lane, #1",
         "city": "Carrotville",
-        "state": "LT",
+        "state": "NY",
         "postalCode": "12345",
-        "country": "LT"
+        "postalCodeExt": "1234",
+        "country": "US"
       }
     ],
     "health": [
@@ -274,7 +275,7 @@
             "actionEntryDate": "20180216",
             "hirerEmail": {
               "type": "university",
-              "address": "BUGS@LOONEY.COM"
+              "address": "BUGS@BU.EDU"
             }
           },
           "I9": {
@@ -292,9 +293,9 @@
                 "type": "business",
                 "street": "123 Acme Way",
                 "city": "Toontown",
-                "state": "LT",
+                "state": "NY",
                 "postalCode": "67890",
-                "country": "LT",
+                "country": "US",
                 "effectiveDate": "20180701",
                 "location": {
                   "building": {
@@ -370,17 +371,17 @@
           },
           "Supervisor": {
             "managerPosition": "50015700",
-            "managerFullName": "Yosemite Sam",
-            "managerFirstName": "Yosemite",
+            "managerFullName": "Daffy Duck",
+            "managerFirstName": "Daffy",
             "managerMiddleName": "",
-            "managerLastName": "Sam",
-            "managerPersonId": "U89971385",
+            "managerLastName": "Duck",
+            "managerPersonId": "U10203040",
             "managerEmail": {
               "type": "university",
-              "address": "DAFFY@LOONEY.COM",
+              "address": "DDAFFY@BU.EDU",
               "source": "SAP"
             },
-            "managerUsername": "YSAM"
+            "managerUsername": "DDAFFY"
           },
           "Payroll": {
             "area": {

@@ -2,7 +2,7 @@ import { SinglePersonSync } from '../src/SyncPerson';
 import { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
 import { HuronPersonDataTarget } from '../src/data-target/PersonDataTarget';
 import { ConfigManager } from '../src/config/ConfigManager';
-import { DataMapper } from '../src/DataMapper';
+import { DataMapper } from '../src/data-mapper/DataMapper';
 import { Config } from '../src/config/Config';
 import { Status, CrudOperation } from 'integration-core';
 
@@ -10,7 +10,7 @@ import { Status, CrudOperation } from 'integration-core';
 jest.mock('../src/config/ConfigManager');
 jest.mock('../src/data-source/PersonDataSource');
 jest.mock('../src/data-target/PersonDataTarget');
-jest.mock('../src/DataMapper');
+jest.mock('../src/data-mapper/DataMapper');
 
 describe('SinglePersonSync', () => {
   let singlePersonSync: SinglePersonSync;
@@ -134,7 +134,8 @@ describe('SinglePersonSync', () => {
         crud: CrudOperation.CREATE
       })
     } as any;
-    (HuronPersonDataTarget as jest.Mock).mockImplementation(() => mockDataTarget);
+    (HuronPersonDataTarget as unknown as jest.Mock).mockImplementation(() => mockDataTarget);
+    (HuronPersonDataTarget as any).convertFieldSetToRequest = jest.fn();
 
     // Mock DataMapper
     mockDataMapper = {
@@ -143,22 +144,22 @@ describe('SinglePersonSync', () => {
     } as any;
     (DataMapper as jest.Mock).mockImplementation(() => mockDataMapper);
 
-    singlePersonSync = new SinglePersonSync({ buid: 'U12345678', crudOperation: CrudOperation.CREATE});
+    singlePersonSync = new SinglePersonSync({ 
+      buid: 'U12345678', 
+      config: mockConfig
+    });
   });
 
   describe('constructor', () => {
     it('should create instance with correct properties', () => {
-      expect(ConfigManager.getInstance).toHaveBeenCalled();
-
-      expect(mockConfigManager.reset).toHaveBeenCalled();
-      expect(mockConfigManager.fromFileSystem).toHaveBeenCalledWith(undefined);
-      expect(mockConfigManager.fromEnvironment).toHaveBeenCalled();
-      expect(mockConfigManager.getConfig).toHaveBeenCalled();
+      // Config is now passed directly, no ConfigManager calls expected
+      expect(singlePersonSync).toBeDefined();
     });
 
-    it('should create instance with custom config path', () => {
-      const customSync = new SinglePersonSync({ buid: 'U87654321', crudOperation: CrudOperation.CREATE, configPath: './custom-config.json' });
-      expect(mockConfigManager.fromFileSystem).toHaveBeenCalledWith('./custom-config.json');
+    it('should create instance with custom config', () => {
+      const customConfig = { ...mockConfig, integration: { ...mockConfig.integration, clientId: 'custom-client' } };
+      const customSync = new SinglePersonSync({ buid: 'U87654321', config: customConfig });
+      expect(customSync).toBeDefined();
     });
 
     it('should create data source with correct parameters', () => {
@@ -171,7 +172,7 @@ describe('SinglePersonSync', () => {
     });
 
     it('should create data target with config', () => {
-      expect(HuronPersonDataTarget).toHaveBeenCalledWith(mockConfig);
+      expect(HuronPersonDataTarget as unknown as jest.Mock).toHaveBeenCalledWith(mockConfig, undefined);
     });
   });
 
@@ -179,7 +180,7 @@ describe('SinglePersonSync', () => {
     it('should successfully sync a single person', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
       expect(mockDataTarget.pushOne).toHaveBeenCalledWith({
@@ -199,7 +200,7 @@ describe('SinglePersonSync', () => {
       mockDataSource.fetchRaw.mockResolvedValue([]);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
@@ -213,7 +214,7 @@ describe('SinglePersonSync', () => {
       mockDataSource.fetchRaw.mockResolvedValue(null as any);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
 
@@ -227,7 +228,7 @@ describe('SinglePersonSync', () => {
       });
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
@@ -255,7 +256,7 @@ describe('SinglePersonSync', () => {
       mockDataMapper.getMappedData.mockReturnValue(multipleFieldSetsInput);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(mockDataTarget.pushOne).toHaveBeenCalledTimes(2);
       expect(mockDataTarget.pushOne).toHaveBeenNthCalledWith(1, {
@@ -280,7 +281,7 @@ describe('SinglePersonSync', () => {
       });
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await singlePersonSync.sync();
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
       expect(consoleSpy).toHaveBeenCalledWith('Push result for U12345678:', Status.FAILURE, 'Push failed: Invalid data');
 
@@ -292,7 +293,7 @@ describe('SinglePersonSync', () => {
       mockDataSource.fetchRaw.mockRejectedValue(fetchError);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await expect(singlePersonSync.sync()).rejects.toThrow('API fetch failed');
+      await expect(singlePersonSync.sync({ crudOperation: CrudOperation.CREATE })).rejects.toThrow('API fetch failed');
       
       expect(consoleErrorSpy).toHaveBeenCalledWith('Single Person Sync failed for BUID: U12345678:', fetchError);
 
@@ -304,7 +305,7 @@ describe('SinglePersonSync', () => {
       mockDataTarget.pushOne.mockRejectedValue(pushError);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await expect(singlePersonSync.sync()).rejects.toThrow('API push failed');
+      await expect(singlePersonSync.sync({ crudOperation: CrudOperation.CREATE })).rejects.toThrow('API push failed');
       
       expect(consoleErrorSpy).toHaveBeenCalledWith('Single Person Sync failed for BUID: U12345678:', pushError);
 
@@ -318,11 +319,56 @@ describe('SinglePersonSync', () => {
       });
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await expect(singlePersonSync.sync()).rejects.toThrow('Data conversion failed');
+      await expect(singlePersonSync.sync({ crudOperation: CrudOperation.CREATE })).rejects.toThrow('Data conversion failed');
       
       expect(consoleErrorSpy).toHaveBeenCalledWith('Single Person Sync failed for BUID: U12345678:', conversionError);
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it('should use provided rawData and skip fetch when rawData is supplied', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE, rawData: mockRawData });
+
+      expect(mockDataSource.fetchRaw).not.toHaveBeenCalled();
+      expect(mockDataTarget.pushOne).toHaveBeenCalledWith({
+        data: mockInput.fieldSets[0],
+        crud: CrudOperation.CREATE
+      });
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Starting Single Person Sync for BUID: U12345678...');
+      expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('Push result for U12345678:', Status.SUCCESS, 'Person pushed successfully');
+      expect(consoleSpy).toHaveBeenCalledWith('Single Person Sync completed successfully for BUID: U12345678');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle empty rawData array when provided', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE, rawData: [] });
+
+      expect(mockDataSource.fetchRaw).not.toHaveBeenCalled();
+      expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+      
+      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle null rawData when provided', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE, rawData: null as any });
+
+      expect(mockDataSource.fetchRaw).not.toHaveBeenCalled();
+      expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+      
+      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -337,12 +383,11 @@ describe('SinglePersonSync', () => {
           timeout: 10000
         }
       };
-      mockConfigManager.getConfig.mockReturnValue({ ...mockConfig, ...envOverrides });
 
-      const syncWithOverrides = new SinglePersonSync({ buid: 'U12345678', crudOperation: CrudOperation.CREATE});
+      const syncWithOverrides = new SinglePersonSync({ buid: 'U12345678', config: { ...mockConfig, ...envOverrides } });
       
-      // Verify that environment config was applied (implicitly tested through constructor behavior)
-      expect(mockConfigManager.fromEnvironment).toHaveBeenCalled();
+      // Verify that the config with overrides was passed correctly
+      expect(syncWithOverrides).toBeDefined();
     });
   });
 });

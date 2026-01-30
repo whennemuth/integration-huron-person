@@ -1,0 +1,14 @@
+[
+  { "id": "U12345678" },
+  { "employeeId": "U12345678" },
+  { "userId": "U12345678" },
+  { "sourceIdentifier": "U12345678" },
+  { "firstName": "Bugs" },
+  { "middleName": "" },
+  { "lastName": "Bunny" },
+  { "contactInformation": { "addressLine1": "305 Rabbit Lane, #1", "email": "bugs@bu.edu" } },
+  { "roles": [{ "hrn": "hrn:hrs:lists:roles/site-user" }] },
+  { "employer": { "hrn": "lookup:sourceIdentifier:10003827" } },
+  { "organization": { "hrn": "lookup:sourceIdentifier:10003827" } },
+  { "title": "Lead Analyst, Programmer" }
+]

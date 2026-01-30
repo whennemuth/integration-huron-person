@@ -1,5 +1,5 @@
 import { JsonFieldFilter } from '../src/stream/JsonFieldFilter';
-import testPersonData from './json-field-filter-person.json';
+import testPersonData from './data-mapper/source/bugs.json';
 
 describe('JsonFieldFilter', () => {
   let filter: JsonFieldFilter;
@@ -16,7 +16,7 @@ describe('JsonFieldFilter', () => {
 
   it('should filter object fields correctly', (done) => {
     const inputObject = {
-      personid: 'U21967744',
+      personid: 'U12345678',
       personBasic: {
         names: [
           {
@@ -30,7 +30,7 @@ describe('JsonFieldFilter', () => {
     };
 
     const expectedOutput = {
-      personid: 'U21967744',
+      personid: 'U12345678',
       personBasic: {
         names: [
           {
@@ -55,7 +55,7 @@ describe('JsonFieldFilter', () => {
   it('should handle empty fieldsOfInterest array', (done) => {
     const filter = new JsonFieldFilter([]);
     const inputObject = {
-      personid: 'U21967744',
+      personid: 'U12345678',
       personBasic: { name: 'Bugs Bunny' }
     };
 
@@ -199,7 +199,7 @@ describe('JsonFieldFilter', () => {
       filter.on('data', (filteredObj: any) => {
         // Should have personid
         expect(filteredObj).toHaveProperty('personid');
-        expect(filteredObj.personid).toBe('U21967744');
+        expect(filteredObj.personid).toBe('U12345678');
 
         // Should have building code
         expect(filteredObj.employeeInfo.positions[0].positionInfo.Office[0].workAddress.location.building.code).toBe('009411');
@@ -248,7 +248,7 @@ describe('JsonFieldFilter', () => {
       filter.on('data', (filteredObj: any) => {
         // Should only have the valid field
         expect(filteredObj).toHaveProperty('personid');
-        expect(filteredObj.personid).toBe('U21967744');
+        expect(filteredObj.personid).toBe('U12345678');
 
         // Should not have the non-existent path
         expect(filteredObj).not.toHaveProperty('nonexistent');
@@ -348,7 +348,7 @@ describe('JsonFieldFilter', () => {
       filter.on('data', (filteredObj: any) => {
         // Should only have the valid field
         expect(filteredObj).toHaveProperty('personid');
-        expect(filteredObj.personid).toBe('U21967744');
+        expect(filteredObj.personid).toBe('U12345678');
 
         // Should not have the out-of-bounds path
         expect(filteredObj).not.toHaveProperty('personBasic');

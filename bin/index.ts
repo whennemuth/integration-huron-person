@@ -12,7 +12,7 @@ export * from '../src/data-target/crud/Person';
 export { ReadPerson } from '../src/data-target/crud/ReadPerson';
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';
 export { BuCdmPersonDataSource as HuronPersonDataSource } from '../src/data-source/PersonDataSource';
-export { DataMapper } from '../src/DataMapper';
+export { DataMapper } from '../src/data-mapper/DataMapper';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
 export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/DeltaStrategyFactory';
 export { SinglePersonSync } from '../src/SyncPerson';

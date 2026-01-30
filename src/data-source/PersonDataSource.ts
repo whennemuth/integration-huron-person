@@ -3,7 +3,7 @@ import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKe
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { Timer } from '../utils/Timer';
-import { DataMapper } from '../DataMapper';
+import { DataMapper } from '../data-mapper/DataMapper';
 import { ResponseProcessor, AxiosResponseStreamFilter } from '../stream/AxiosResponseStreamFilter';
 import * as fs from 'fs';
 

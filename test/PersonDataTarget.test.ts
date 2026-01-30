@@ -268,7 +268,7 @@ describe('HuronPersonDataTarget', () => {
         hireDate: '2023-01-15'
       });
 
-      const result = (dataTarget as any).convertFieldSetToRequest(fieldSet, 'create');
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.CREATE);
 
       expect(result).toEqual({
         operation: 'create',
@@ -292,7 +292,7 @@ describe('HuronPersonDataTarget', () => {
         department: 'Marketing'
       });
 
-      const result = (dataTarget as any).convertFieldSetToRequest(fieldSet, 'update');
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.UPDATE);
 
       expect(result).toEqual({
         operation: 'update',
@@ -310,7 +310,7 @@ describe('HuronPersonDataTarget', () => {
         id: 'person-1'
       });
 
-      const result = (dataTarget as any).convertFieldSetToRequest(fieldSet, 'delete');
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.DELETE);
 
       expect(result).toEqual({
         operation: 'delete',
@@ -323,7 +323,7 @@ describe('HuronPersonDataTarget', () => {
     it('should handle empty fieldSet', () => {
       const fieldSet = createFieldSet({});
 
-      const result = (dataTarget as any).convertFieldSetToRequest(fieldSet, CrudOperation.CREATE);
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.CREATE);
 
       expect(result).toEqual({
         operation: 'create',

@@ -6,6 +6,8 @@ import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { Cache } from './Cache';
+import { isEmpty } from './utils/Utils';
+import { Character, LooneyTunes } from '../test/LooneyTunes';
 
 /**
  * Single person synchronization between Boston University CRM and Huron systems.
@@ -17,22 +19,17 @@ class SinglePersonSync {
   private dataTarget: DataTarget;
   private dataMapper: DataMapper;
   private buid: string;
-  private crudOperation: CrudOperation;
 
-  constructor(params: { 
+  constructor(private params: { 
     buid: string, 
-    crudOperation: CrudOperation, 
-    configPath?: string, 
-    cache?: Cache<string, string> 
+    config: Config, 
+    cache?: Cache<string, string>,
+    preview?: boolean
   }) {
 
-    const { configPath, cache, crudOperation, buid } = params;
+    const { config, cache, buid } = params;
+    this.config = config;
     this.buid = buid;
-    this.crudOperation = crudOperation;
-    
-    // Load configuration
-    const configManager = ConfigManager.getInstance();
-    this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig();
 
     // Create integration components
     this.dataMapper = new DataMapper();
@@ -50,21 +47,18 @@ class SinglePersonSync {
     this.dataTarget = new HuronPersonDataTarget(this.config, cache);
   }
 
-  /**
-   * Execute the single person synchronization
-   */
-  async sync(): Promise<void> {
-    try {
-      console.log(`Starting Single Person Sync for BUID: ${this.buid}...`);
-      console.log(`Client ID: ${this.config.integration.clientId}`);
-      
-      // Fetch person data from source
-      const rawData = await this.dataSource.fetchRaw();
+  async getMappedPerson(rawData?: any[]): Promise<Input> {
+    try { 
+
+      // Fetch person data from source if not provided
+      if (rawData === undefined) {
+        rawData = await this.dataSource.fetchRaw();
+      }
       
       // Bail out if no data found
       if (!rawData || rawData.length === 0) {
         console.log(`No person data found for BUID: ${this.buid}`);
-        return;
+        return { } as Input;
       }
 
       // Convert data to integration format
@@ -73,6 +67,32 @@ class SinglePersonSync {
       // Bail out if no field sets generated
       if (!input.fieldSets || input.fieldSets.length === 0) {
         console.log(`No valid field sets generated for BUID: ${this.buid}`);
+        return { } as Input;
+      }
+
+      return input;
+    } catch (error) {
+      console.error(`Single Person Sync failed for BUID: ${this.buid}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute the single person synchronization
+   */
+  async sync(params: { crudOperation?: CrudOperation, rawData?: any[] }): Promise<void> {
+    try {
+      console.log(`Starting Single Person Sync for BUID: ${this.buid}...`);
+      console.log(`Client ID: ${this.config.integration.clientId}`);
+
+      let { crudOperation = CrudOperation.CREATE, rawData } = params;
+      
+      // Get the person data mapped to integration format
+      const input = await this.getMappedPerson(rawData);
+
+      // Bail out if no data to push
+      if(isEmpty(input)) {
+        console.log(`No data to push for BUID: ${this.buid}, exiting sync.`);
         return;
       }
 
@@ -80,7 +100,7 @@ class SinglePersonSync {
       for (const fieldSet of input.fieldSets) {
         const result = await this.dataTarget.pushOne({
           data: fieldSet,
-          crud: this.crudOperation
+          crud: crudOperation
         });
         console.log(`Push result for ${this.buid}:`, result.status, result.message);
       }
@@ -98,7 +118,16 @@ class SinglePersonSync {
  */
 async function main() {
   try {
-    let buid: string | undefined;;
+    let buid: string | undefined;
+    let crudOperation: string | undefined;
+    let rawData: any[] | undefined;
+
+    // Load configuration
+    const configManager = ConfigManager.getInstance();
+    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig();
+
+     // Disable source person lookup field filtering for this single sync
+    delete config.dataSource.fieldsOfInterest;
     
     // If no BUID provided via command line, check environment variable
     if (process.argv.length >= 3 && process.argv[2]) {
@@ -106,17 +135,40 @@ async function main() {
     } else {
       buid = process.env.SYNC_BUID;
     }
+
+    // If no crud operation provided via command line, check environment variable
+    if (process.argv.length >= 4 && process.argv[3]) {
+      crudOperation = process.argv[3].toLowerCase();
+    } else {
+      const { SYNC_CRUD = CrudOperation.CREATE } = process.env;
+      crudOperation = SYNC_CRUD.toLowerCase();
+    }
     
-    // Exit only if both command line and environment variable are missing
-    if (!buid) {
-      console.error('Usage: node SinglePersonSync.ts <BUID>');
-      console.error('Alternatively, set the SYNC_BUID environment variable');
+    // Make sure crudOperation is a valid CrudOperation member.
+    if (!Object.values(CrudOperation).includes(crudOperation as CrudOperation)) {
+      console.error(`Invalid CRUD operation: ${crudOperation}. Must be one of: ${Object.values(CrudOperation).join(', ')}`);
       process.exit(1);
     }
+    
+    // Exit only if both command line and environment variable are missing
+    if (!buid ) {
+      if( crudOperation !== CrudOperation.CREATE ) {
+        console.error('Usage: node SinglePersonSync.ts <BUID> <CRUD_OPERATION>');
+        console.error('Alternatively, set the SYNC_BUID and/or the SYNC_CRUD environment variable');
+        process.exit(1);
+      }
+      else {
+        rawData = new LooneyTunes(Character.BugsBunny).getRandomCdmPersonData();
+        buid = rawData[0].personid;
+      }
+    }
 
-    // Sync the person and exit
-    const sync = new SinglePersonSync({ buid, crudOperation: CrudOperation.CREATE });
-    await sync.sync();
+    // Assert buid is now a string (guaranteed by the above logic)
+    buid = buid!;
+
+    // Sync (create) the person and exit
+    const sync = new SinglePersonSync({ config, buid });
+    await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
     process.exit(0);
 
   } catch (error) {

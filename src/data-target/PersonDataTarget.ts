@@ -13,6 +13,7 @@ import { Config } from '../config/Config';
 import { Timer } from '../utils/Timer';
 import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
+import { ConfigManager } from '../config/ConfigManager';
 
 /**
  * Request format for pushing person data to Huron API
@@ -58,7 +59,7 @@ export class HuronPersonDataTarget implements DataTarget {
     
     try {
       // Convert FieldSet to API request format
-      const personRequest = this.convertFieldSetToRequest(data, crud);
+      const personRequest = HuronPersonDataTarget.convertFieldSetToRequest(data, crud);
       
       console.log(`Pushing single person record with ${crud} operation:`, personRequest.data?.id || 'unknown');
       
@@ -199,7 +200,7 @@ export class HuronPersonDataTarget implements DataTarget {
   /**
    * Convert FieldSet to Huron API request format
    */
-  private convertFieldSetToRequest(fieldSet: any, operation: CrudOperation): PersonPushRequest {
+  public static convertFieldSetToRequest(fieldSet: any, operation: CrudOperation): PersonPushRequest {
     // Determine the correct API path and method based on operation
     let path: SchemaPath;
     let method: Method;
@@ -229,3 +230,5 @@ export class HuronPersonDataTarget implements DataTarget {
     return { operation, data };
   }
 }
+
+

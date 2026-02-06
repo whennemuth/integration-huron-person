@@ -6,14 +6,13 @@ import {
   PushAllParms,
   PushOneParms,
   SinglePushResult,
-  Status
+  Status,
+  Timer
 } from 'integration-core';
 import { Cache } from '../Cache';
 import { Config } from '../config/Config';
-import { Timer } from '../utils/Timer';
 import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
-import { ConfigManager } from '../config/ConfigManager';
 
 /**
  * Request format for pushing person data to Huron API

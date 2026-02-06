@@ -1,9 +1,8 @@
 import * as fs from 'fs';
-import { DataSource } from 'integration-core';
+import { DataSource, Timer } from 'integration-core';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
-import { Timer } from '../utils/Timer';
 import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 
 /**

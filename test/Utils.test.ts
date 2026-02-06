@@ -1,4 +1,4 @@
-import { nullsToUndefined } from '../src/utils/Utils';
+import { nullsToUndefined } from '../src/Utils';
 
 describe('nullsToUndefined', () => {
   it('should return undefined for null input', () => {

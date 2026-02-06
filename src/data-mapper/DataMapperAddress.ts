@@ -1,4 +1,4 @@
-import { nullsToUndefined } from '../utils/Utils';
+import { nullsToUndefined } from '../Utils';
 
 export type AddressType = { priority: number; type: string; source?: string; }
 

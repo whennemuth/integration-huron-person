@@ -6,7 +6,7 @@ import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { BasicCache, Cache } from './Cache';
-import { isEmpty } from './utils/Utils';
+import { isEmpty } from './Utils';
 import { Character, LooneyTunes } from '../test/LooneyTunes';
 
 /**

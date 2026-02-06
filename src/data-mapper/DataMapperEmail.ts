@@ -1,4 +1,4 @@
-import { nullsToUndefined } from "../utils/Utils";
+import { nullsToUndefined } from "../Utils";
 
 export type EmailType = { priority: number; type: string; source?: string; }
 

@@ -3,7 +3,7 @@ import { NameMapper } from './DataMapperName';
 import { EmailMapper } from './DataMapperEmail';
 import { AddressMapper } from './DataMapperAddress';
 import { OrgMapper } from './DataMapperOrg';
-import { anyEmpty, isEmpty, nullsToUndefined } from '../utils/Utils';
+import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
 import { TitleMapper } from './DataMapperTitle';
 
 /**

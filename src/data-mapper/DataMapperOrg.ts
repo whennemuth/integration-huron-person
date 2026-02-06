@@ -1,4 +1,4 @@
-import { isEmpty, isNotEmpty, nullsToUndefined } from "../utils/Utils";
+import { isEmpty, isNotEmpty, nullsToUndefined } from "../Utils";
 
 export type OrgType = { priority: number; type: string; source?: string; }
 

@@ -60,6 +60,11 @@ export class HuronPersonDataTarget implements DataTarget {
     try {
       // Convert FieldSet to API request format
       const personRequest = HuronPersonDataTarget.convertFieldSetToRequest(data, crud);
+
+// Temporary hardcodes for testing - to be removed
+personRequest.data.employer.hrn = "hrn:hrs:orgs:419"; // Temporary hardcode for testing
+personRequest.data.organization.hrn = "hrn:hrs:orgs:419"; // Temporary hardcode for testing
+console.log(JSON.stringify(personRequest.data, null, 2));     
       
       console.log(`Pushing single person record with ${crud} operation:`, personRequest.data?.id || 'unknown');
       

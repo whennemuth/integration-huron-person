@@ -39,7 +39,6 @@ class SinglePersonSync {
     }
     this.dataSource = new BuCdmPersonDataSource({ 
       config: this.config, 
-      dataMapper: this.dataMapper,
       responseFilter,
       buid: this.buid 
     });

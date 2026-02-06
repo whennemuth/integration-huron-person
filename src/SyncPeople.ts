@@ -33,7 +33,7 @@ class HuronPersonIntegration {
     if (fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
-    const dataSource = new BuCdmPersonDataSource({ config, dataMapper, responseFilter });
+    const dataSource = new BuCdmPersonDataSource({ config, responseFilter });
     const dataTarget = new HuronPersonDataTarget(config, cache);
     const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
 

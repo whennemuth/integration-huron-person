@@ -1,11 +1,10 @@
+import * as fs from 'fs';
 import { DataSource } from 'integration-core';
-import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
+import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { Timer } from '../utils/Timer';
-import { DataMapper } from '../data-mapper/DataMapper';
-import { ResponseProcessor, AxiosResponseStreamFilter } from '../stream/AxiosResponseStreamFilter';
-import * as fs from 'fs';
+import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 
 /**
  * DataSource implementation for fetching person data from Boston University CRM API
@@ -16,14 +15,12 @@ class BuCdmPersonDataSource implements DataSource {
 
   private apiClient: ApiClientForApiKey;
   private config: Config;
-  private dataMapper: DataMapper;
   private responseFilter: ResponseProcessor | undefined;
-  private params: { config: Config, dataMapper: DataMapper, responseFilter?: ResponseProcessor, buid?: string };
+  private params: { config: Config, responseFilter?: ResponseProcessor, buid?: string };
 
-  constructor(params: { config: Config, dataMapper: DataMapper, responseFilter?: ResponseProcessor, buid?: string }) {
+  constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
     this.params = params;
     this.config = params.config;
-    this.dataMapper = params.dataMapper;
     this.responseFilter = params.responseFilter;
     const endpointConfig: EndpointConfigForApiKey = {
       ...this.config.dataSource.endpointConfig,
@@ -73,7 +70,6 @@ async function main() {
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));
 
     // Create data source instance
-    const dataMapper = new DataMapper();
     let responseFilter: ResponseProcessor | undefined;
 
     // Destructure for easier access
@@ -82,7 +78,7 @@ async function main() {
     if (fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
-    const dataSource = new BuCdmPersonDataSource({ config, dataMapper, responseFilter, buid: 'U21967744' });
+    const dataSource = new BuCdmPersonDataSource({ config, responseFilter, buid: 'U21967744' });
 
     // Fetch raw person data
     const rawData = await dataSource.fetchRaw();
@@ -106,3 +102,4 @@ if (require.main === module) {
 }
 
 export { BuCdmPersonDataSource };
+

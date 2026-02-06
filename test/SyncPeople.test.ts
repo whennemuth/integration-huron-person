@@ -91,7 +91,7 @@ describe('Package Exports', () => {
         password: 'pass'
       })).not.toThrow();
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
-      expect(() => new HuronPersonDataSource({ config: mockConfig, dataMapper: new DataMapper(), responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
+      expect(() => new HuronPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
       expect(() => new HuronPersonDataTarget(mockConfig)).not.toThrow();
       expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
     });

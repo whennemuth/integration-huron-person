@@ -5,7 +5,7 @@ import { DataMapper } from './data-mapper/DataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { Cache } from './Cache';
+import { BasicCache, Cache } from './Cache';
 import { isEmpty } from './utils/Utils';
 import { Character, LooneyTunes } from '../test/LooneyTunes';
 
@@ -88,7 +88,7 @@ class SinglePersonSync {
       let { crudOperation = CrudOperation.CREATE, rawData } = params;
       
       // Get the person data mapped to integration format
-      const input = await this.getMappedPerson(rawData);
+      const input = await this.getMappedPerson(rawData);      
 
       // Bail out if no data to push
       if(isEmpty(input)) {
@@ -166,8 +166,11 @@ async function main() {
     // Assert buid is now a string (guaranteed by the above logic)
     buid = buid!;
 
+    // Create the token cache
+    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+
     // Sync (create) the person and exit
-    const sync = new SinglePersonSync({ config, buid });
+    const sync = new SinglePersonSync({ config, buid, cache });
     await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
     process.exit(0);
 

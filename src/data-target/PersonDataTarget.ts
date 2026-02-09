@@ -13,6 +13,7 @@ import { Cache } from '../Cache';
 import { Config } from '../config/Config';
 import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
+import { error as logError } from '../Utils';
 
 /**
  * Request format for pushing person data to Huron API
@@ -62,7 +63,7 @@ export class HuronPersonDataTarget implements DataTarget {
 
 // Temporary hardcodes for testing - to be removed
 personRequest.data.employer.hrn = "hrn:hrs:orgs:419"; // Temporary hardcode for testing
-personRequest.data.organization.hrn = "hrn:hrs:orgs:419"; // Temporary hardcode for testing
+personRequest.data.organization.hrn = "hrn:hrs:orgs:54321"; // Temporary hardcode for testing
 console.log(JSON.stringify(personRequest.data, null, 2));     
       
       console.log(`Pushing single person record with ${crud} operation:`, personRequest.data?.id || 'unknown');
@@ -73,6 +74,7 @@ console.log(JSON.stringify(personRequest.data, null, 2));
       if (crud === CrudOperation.CREATE) {
         // CREATE: Use POST to /api/v2/persons
         response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
+console.log(JSON.stringify(response.data, null, 2));
       } else if (crud === CrudOperation.UPDATE) {
         // UPDATE: Use PUT to /api/v2/persons/{hrn} if hrn is available
         if (personRequest.data?.hrn) {
@@ -121,7 +123,14 @@ console.log(JSON.stringify(personRequest.data, null, 2));
         crud
       };
     } catch (error) {
-      console.error(`Failed to push person record:`, error);
+      console.error(`Failed to push person record:`);
+      const { response } = error as any || {};
+      if( response ) {
+        logError(response, 'API response');
+      }
+      else {
+        logError(error, 'Error details');
+      }
       return {
         status: Status.FAILURE,
         message: `API request failed: ${error}`,

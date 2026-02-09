@@ -65,3 +65,49 @@ export const nullsToUndefined = (obj: any): any => {
   }
   return obj;
 }
+
+export const debugLog = (o:any, msg?:string) => {
+  if(process.env.DEBUG == 'true') {
+    log(o, msg);
+  }
+}
+
+export const serializeObject = (o:any, seen = new Set()):any => {
+  if (o && typeof o === 'object') {
+    if (seen.has(o)) return '[Circular]';
+    seen.add(o);
+
+    if (Array.isArray(o)) return o.map(item => serializeObject(item, seen));
+    return Object.fromEntries(Object.entries(o).map(([key, value]) => [key, serializeObject(value, seen)]));
+  }
+  return o;
+}
+
+const toConsole = (o:any, out:Function, msg?:string) => {
+  const output = (suffix:string) => {
+    if(msg) msg = msg.endsWith(': ') ? msg : `${msg}: `;
+    out(msg ? `${msg}${suffix}` : suffix);
+  }
+  if(o instanceof Error) {
+    console.error(msg);
+    console.error(o);
+    return;
+  }
+  if(o instanceof Object) {
+    output(JSON.stringify(serializeObject(o), null, 2));
+    return;
+  }
+  output(`${o}`);
+}
+
+export const log = (o:any, msg?:string) => {
+  toConsole(o, (s:string) => console.log(s), msg);
+}
+
+export const warn = (o:any, msg?:string) => {
+  toConsole(o, (s:string) => console.warn(s), msg);
+}
+
+export const error = (o:any, msg?:string) => {
+  toConsole(o, (s:string) => console.error(s), msg);
+}

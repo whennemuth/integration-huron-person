@@ -14,10 +14,25 @@ import { TitleMapper } from './DataMapperTitle';
  *   2) Cherry-picking out only "fields of interest" that the target endpoint is interested in.
  */
 export class DataMapper implements CoreDataMapper {
-  private _validationFailureMessage:string;
+  private _criticalValidationFailureMessage:string;
+  private _infoValidationFailureMessage:string;
+  private _orgHrn: (sourceOrgId: string) => string | undefined;
 
-  public get validationFailureMessage(): string {
-    return this._validationFailureMessage;
+  constructor(private orgHrn?: (sourceOrgId: string) => string | undefined) { 
+    if(orgHrn) {
+      this._orgHrn = orgHrn;
+    } else {
+      // Default organization HRN expression to a lookup function if not provided
+      this._orgHrn = (sourceOrgId: string) => `lookup:sourceIdentifier:${sourceOrgId}`;
+    }
+  }
+
+  public get criticalValidationErrorMessage(): string {
+    return this._criticalValidationFailureMessage;
+  }
+
+  public get infoValidationErrorMessage(): string {
+    return this._infoValidationFailureMessage;
   }
 
   /**
@@ -62,13 +77,18 @@ export class DataMapper implements CoreDataMapper {
 
       // Basic data check
       if(isEmpty(personid)) {
-        this._validationFailureMessage = `Person record is missing required personId field: ${JSON.stringify(person)}`;
+        this._criticalValidationFailureMessage = `Person record is missing required personId field: ${JSON.stringify(person)}`;
       }
-      if(anyEmpty(firstName, lastName) && !this._validationFailureMessage) {
-        this._validationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
+      if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
+        this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
       }
-      if(orgIds.size === 0 && !this._validationFailureMessage) {
-        this._validationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
+      if(orgIds.size === 0 && !this._criticalValidationFailureMessage) {
+        this._criticalValidationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
+      }
+      
+      const orgHrn = this._orgHrn(Array.from(orgIds)[0]);
+      if(isEmpty(orgHrn) && !this._criticalValidationFailureMessage) {
+        this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${Array.from(orgIds)[0]}: ${JSON.stringify(person)}`;
       }
       
       const fieldValues = [
@@ -82,6 +102,7 @@ export class DataMapper implements CoreDataMapper {
         { contactInformation: { email, addressLine1 } },
         { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
         { employer: { hrn: orgHrn } },
+        { organization: { hrn: orgHrn } },
       ] as Field[];
 
       if(title) {
@@ -91,7 +112,11 @@ export class DataMapper implements CoreDataMapper {
       if( orgIds.size > 1 ) {
         // Must be a dual-appointee employee, or student with multiple colleges
         const secondOrgId = Array.from(orgIds)[1];
-        fieldValues.push({ secondaryUnit: { hrn: `lookup:sourceIdentifier:${secondOrgId}` } });
+        const secondaryHrn = this._orgHrn(secondOrgId);
+        if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
+          this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${secondOrgId}: ${JSON.stringify(person)}`;
+        }
+        fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
       }
 
       return { fieldValues };

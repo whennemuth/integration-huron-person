@@ -24,15 +24,16 @@ class SinglePersonSync {
     buid: string, 
     config: Config, 
     cache?: Cache<string, string>,
+    orgHrn?: (sourceOrgId: string) => string | undefined,
     preview?: boolean
   }) {
 
-    const { config, cache, buid } = params;
+    const { config, cache, buid, orgHrn } = params;
     this.config = config;
     this.buid = buid;
 
     // Create integration components
-    this.dataMapper = new DataMapper();
+    this.dataMapper = new DataMapper(orgHrn);
     let responseFilter: ResponseProcessor | undefined;
     if (this.config.dataSource.fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.fieldsOfInterest });
@@ -61,7 +62,12 @@ class SinglePersonSync {
       }
 
       // Convert data to integration format
-      const input: Input = this.dataMapper.getMappedData(rawData);
+
+      // Bail out if there are critical validation errors
+      if (this.dataMapper.criticalValidationErrorMessage) {
+        console.error(`Critical validation error for BUID: ${this.buid}: ${this.dataMapper.criticalValidationErrorMessage}`);
+        return { } as Input;
+      }
       
       // Bail out if no field sets generated
       if (!input.fieldSets || input.fieldSets.length === 0) {
@@ -165,11 +171,17 @@ async function main() {
     // Assert buid is now a string (guaranteed by the above logic)
     buid = buid!;
 
+  // Create a custom hrn expression that goes to a map for the actual hrn given a source org id key
+  const orgs = await import('./data-mapper/OrgMap.json');
+  const orgHrn = (sourceOrgId: string) => orgs.map.find((entry: any) => {
+    return entry.id === sourceOrgId;
+  })?.hrn;
+
     // Create the token cache
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
 
     // Sync (create) the person and exit
-    const sync = new SinglePersonSync({ config, buid, cache });
+    const sync = new SinglePersonSync({ config, buid, cache, orgHrn });
     await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
     process.exit(0);
 

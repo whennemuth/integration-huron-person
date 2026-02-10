@@ -31,14 +31,14 @@ describe('DataMapper', () => {
       const mapper = new DataMapper();
       const invalidPerson = { personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] } };
       mapper.map([invalidPerson]);
-      expect(mapper.validationFailureMessage).toContain('missing required personId');
+      expect(mapper.criticalValidationErrorMessage).toContain('missing required personId');
     });
 
     it('should set validationFailureMessage for missing names', () => {
       const mapper = new DataMapper();
       const invalidPerson = { personid: '123' };
       mapper.map([invalidPerson]);
-      expect(mapper.validationFailureMessage).toContain('missing required name fields');
+      expect(mapper.criticalValidationErrorMessage).toContain('missing required name fields');
     });
 
     it('should set validationFailureMessage for missing organizations', () => {
@@ -48,7 +48,7 @@ describe('DataMapper', () => {
         personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] }
       };
       mapper.map([invalidPerson]);
-      expect(mapper.validationFailureMessage).toContain('missing required organization field');
+      expect(mapper.criticalValidationErrorMessage).toContain('missing required organization field');
     });
 
     it('should handle multiple persons', () => {

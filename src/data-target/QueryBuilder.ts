@@ -29,7 +29,7 @@ export type LogicalOperator = 'and' | 'or';
 /**
  * Comparison operators for filters
  */
-export type ComparisonOperator = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null';
+export type ComparisonOperator = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null' | 'in';
 
 /**
  * Individual filter specification

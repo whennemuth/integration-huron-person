@@ -166,7 +166,7 @@ class ReadPeople {
     value: string,
     priority?: number,
     logicalOperator?: 'and' | 'or',
-    comparisonOperator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null'
+    comparisonOperator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'null' | 'in'
   }): FilterSpec {
     return QueryBuilder.createFilter(filter);
   }

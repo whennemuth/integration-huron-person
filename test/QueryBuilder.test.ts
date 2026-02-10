@@ -45,6 +45,9 @@ describe('QueryBuilder', () => {
       expect(QueryBuilder.createFilter({ field: 'category', value: 'null', priority: 0, logicalOperator: 'and', comparisonOperator: 'null' })).toMatchObject({
         comparisonOperator: 'null'
       });
+      expect(QueryBuilder.createFilter({ field: 'status', value: 'active,pending,draft', priority: 0, logicalOperator: 'and', comparisonOperator: 'in' })).toMatchObject({
+        comparisonOperator: 'in'
+      });
     });
 
     it('should create filters with different logical operators', () => {
@@ -204,6 +207,26 @@ describe('QueryBuilder', () => {
         sort: 'lastName',
         'filter[0!status!and]': 'eq:active',
         include: 'name,email'
+      });
+    });
+
+    it('should handle filters with in operator and comma-delimited values', () => {
+      const options: BuildQueryOptions = {
+        filters: [
+          QueryBuilder.createFilter({ 
+            field: 'status', 
+            value: 'active,pending,draft', 
+            priority: 0, 
+            logicalOperator: 'and', 
+            comparisonOperator: 'in' 
+          })
+        ]
+      };
+
+      const params = queryBuilder.buildQueryParams(options);
+
+      expect(params).toEqual({
+        'filter[0!status!and]': 'in:active,pending,draft'
       });
     });
 

@@ -129,8 +129,10 @@ export class ApiClientForJWT implements IApiClient {
       }
     }
 
-    this.tokenExpiry = this.jwtToken ? decodeTokenExpiry(this.jwtToken) : 0;
-    const expiryMinutes = Math.round((this.tokenExpiry - now) / 60000);
+    const expiryMinutes = () => {
+      this.tokenExpiry = this.jwtToken ? decodeTokenExpiry(this.jwtToken) : 0;
+      return Math.round((this.tokenExpiry - now) / 60000);
+    };
 
     // If no token or expired, authenticate for new token
     if (!this.jwtToken || now >= (this.tokenExpiry - bufferTime)) {
@@ -140,16 +142,16 @@ export class ApiClientForJWT implements IApiClient {
       
       // Cache the new token if caching is enabled
       if (this.jwtToken && this.cache) {
-        console.log(`Caching new JWT token with ${expiryMinutes} minutes until expiry`);
+        console.log(`Caching new JWT token with ${expiryMinutes()} minutes until expiry`);
         const cacheKey = authMethod === 'basic' ? JWT_BASIC_TOKEN_CACHE_KEY : JWT_EXTERNAL_TOKEN_CACHE_KEY;
         this.cache.set(cacheKey, this.jwtToken);
       }
       else {
-        console.log(`Caching disabled.Acquired new JWT token with ${expiryMinutes} minutes until expiry`);
+        console.log(`Caching disabled.Acquired new JWT token with ${expiryMinutes()} minutes until expiry`);
       }
     }
     else {
-      console.log(`Existing JWT token is still valid with ${expiryMinutes} minutes until expiry`);
+      console.log(`Existing JWT token is still valid with ${expiryMinutes()} minutes until expiry`);
     }
   }
 

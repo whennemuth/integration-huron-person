@@ -80,9 +80,8 @@ export class DataMapper implements CoreDataMapper {
         { middleName },
         { lastName },
         { contactInformation: { email, addressLine1 } },
-        { roles: [ { hrn: 'hrn:hrs:lists:roles/site-user' } ] },
-        { employer: { hrn: `lookup:sourceIdentifier:${Array.from(orgIds)[0]}` } },
-        { organization: { hrn: `lookup:sourceIdentifier:${Array.from(orgIds)[0]}` } },
+        { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
+        { employer: { hrn: orgHrn } },
       ] as Field[];
 
       if(title) {

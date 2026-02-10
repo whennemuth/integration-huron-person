@@ -69,7 +69,8 @@ describe('Package Exports', () => {
             username: 'user',
             password: 'pass'
           },
-          personsPath: '/persons'
+          personsPath: '/api/persons',
+          organizationsPath: '/api/organizations'
         },
         integration: {
           clientId: 'test',

@@ -18,7 +18,8 @@ describe('ConfigValidator', () => {
         username: 'dt-user',
         password: 'dt-pass'
       },
-      personsPath: '/api/v1/persons/batch'
+      personsPath: '/api/v1/persons/batch',
+      organizationsPath: '/api/v1/organizations'
     },
     integration: {
       clientId: 'test-client-id',
@@ -135,6 +136,14 @@ describe('ConfigValidator', () => {
         
         const validator = new ConfigValidator(config);
         expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.personsPath');
+      });
+
+      it('should throw error when organizationsPath is missing', () => {
+        const config = getValidConfig();
+        delete (config.dataTarget as any).organizationsPath;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.organizationsPath');
       });
 
       it('should throw error for invalid dataTarget baseUrl', () => {

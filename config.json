@@ -22,7 +22,8 @@
       "loginSvcPath": "/loginsvc/api/v1/token/",
       "timeout": 30000
     },
-    "personsPath": "/api/v2/persons"
+    "personsPath": "/api/v2/persons",
+    "organizationsPath": "/api/v2/organizations"
   },
   "integration": {
     "clientId": "huron-person-integration",

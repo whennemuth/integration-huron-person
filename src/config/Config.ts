@@ -22,6 +22,8 @@ export interface Config {
     endpointConfig: EndpointConfigForJWT;
     /** Endpoint for pushing person data updates */
     personsPath: string;
+    /** Endpoint for fetching organization data */
+    organizationsPath: string;
   };
   
   /** Integration settings */

@@ -4,6 +4,7 @@
 export interface PaginationParams {
   offset?: number;
   pageSize?: number;
+  total?: number;
   continuationToken?: string;
 }
 

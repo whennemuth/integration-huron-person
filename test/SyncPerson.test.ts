@@ -35,7 +35,8 @@ describe('SinglePersonSync', () => {
         username: 'dt-user',
         password: 'dt-pass'
       },
-      personsPath: '/api/v1/persons/batch'
+      personsPath: '/api/v1/persons/batch',
+      organizationsPath: '/api/v1/organizations'
     },
     integration: {
       clientId: 'test-client',

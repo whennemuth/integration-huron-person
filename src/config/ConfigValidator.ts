@@ -39,7 +39,8 @@ export class ConfigValidator {
     const dataTargetBaseFields = [
       'dataTarget.endpointConfig.baseUrl',
       'dataTarget.endpointConfig.authMethod',
-      'dataTarget.personsPath'
+      'dataTarget.personsPath',
+      'dataTarget.organizationsPath'
     ];
 
     // General required fields

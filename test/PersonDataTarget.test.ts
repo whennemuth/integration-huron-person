@@ -141,7 +141,8 @@ describe('HuronPersonDataTarget', () => {
         username: 'dt-user',
         password: 'dt-pass'
       },
-      personsPath: '/api/v1/persons/batch'
+      personsPath: '/api/v1/persons/batch',
+      organizationsPath: '/api/v1/organizations'
     },
     integration: {
       clientId: 'test-client',
@@ -189,7 +190,8 @@ describe('HuronPersonDataTarget', () => {
             password: 'test-pass',
             timeout: 15000  // Endpoint-specific timeout
           },
-          personsPath: '/api/v1/persons'
+          personsPath: '/api/v1/persons',
+          organizationsPath: '/api/v1/organizations'
         },
         integration: {
           clientId: 'test-client-id',
@@ -231,7 +233,8 @@ describe('HuronPersonDataTarget', () => {
             password: 'test-pass'
             // No timeout specified in endpointConfig
           },
-          personsPath: '/api/v1/persons'
+          personsPath: '/api/v1/persons',
+          organizationsPath: '/api/v1/organizations'
         },
         integration: {
           clientId: 'test-client-id',

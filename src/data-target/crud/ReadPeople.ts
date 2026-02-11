@@ -156,6 +156,29 @@ class ReadPeople {
     }
   }
 
+  public async readPeopleByFilterField(filterField: string, inArray: string[], includeFields?: string[]): Promise<HuronPerson[]> {
+    if(!this.queryBuilder['filterFields'].has(filterField)) {
+      throw new Error(`Invalid filter field: ${filterField}. Allowed fields: ${Array.from(this.queryBuilder['filterFields']).join(', ')}`);
+    }
+    
+    // Convert array to comma-delimited string for the "in" operator
+    const inValue = inArray.join(',');
+    
+    // Create filter using the "in" operator
+    const filter = ReadPeople.createFilter({
+      field: filterField,
+      value: inValue,
+      comparisonOperator: 'in'
+    });
+    
+    // Call readAllPeople with the filter
+    return await this.readAllPeople({
+      filters: [filter],
+      includeFields
+    });
+
+  }
+
   /**
    * Helper method to create a simple filter specification
    * @param filter The filter parameters
@@ -189,64 +212,75 @@ async function main() {
 
   const reader = new ReadPeople(config);
 
-  const { HURON_NAME_FILTER, HURON_FNAME, HURON_LNAME } = process.env;
+  const { HURON_PEOPLE_FILTER, 
+    HURON_PERSON_SOURCE_IDS, 
+    HURON_PERSON_NAME_FILTER, HURON_PERSON_FNAME, HURON_PERSON_LNAME } = process.env;
   
   try {
     let personData: HuronPerson | HuronPerson[];
-    switch (HURON_NAME_FILTER) {
-      case 'full':
-        if( ! HURON_FNAME || ! HURON_LNAME ) {
-          console.error('Please set both HURON_FNAME and HURON_LNAME for full name filter');
-          return;
-        }
-        personData = await reader.readPeopleByFullName(
-          HURON_FNAME!, 
-          HURON_LNAME!, 
-          ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
-        );
-        console.log(`Reading people by full name: ${HURON_FNAME} ${HURON_LNAME}`);
-        break;
-      case 'first': case 'last':
-        if(HURON_NAME_FILTER === 'first' && ! HURON_FNAME) {
-          console.error('Please set HURON_FNAME for first name filter');
-          return;
-        }
-        if(HURON_NAME_FILTER === 'last' && ! HURON_LNAME) {
-          console.error('Please set HURON_LNAME for last name filter');
-          return;
-        }
-        const options: ReadPeopleOptions = {
-          filters: [
-            ReadPeople.createFilter({ 
-              field: 'active', 
-              value: 'true', 
-              priority: 0, 
-              logicalOperator: 'and', 
-              comparisonOperator: 'eq' 
-            }),
-            ReadPeople.createFilter({ 
-              field: HURON_NAME_FILTER === 'first' ? 'firstName' : 'lastName', 
-              value: HURON_NAME_FILTER === 'first' ? HURON_FNAME! : HURON_LNAME!, 
-              priority: 1, 
-              logicalOperator: 'and', 
-              comparisonOperator: 'eq' 
-            })
-          ],
-          sort: ReadPeople.createSort({ 
-            field: HURON_NAME_FILTER === 'first' ? 'lastName' : 'firstName', 
-            direction: 'desc' 
-          }),
-          pagination: { pageSize: 50 },
-          includeFields: ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
-        };
-        personData = await reader.readAllPeople(options);
-        console.log(`Reading people by: ${HURON_NAME_FILTER === 'first' ? HURON_FNAME : HURON_LNAME}`);
-
-        break;
-      default:
-        console.error('Please set HURON_NAME_FILTER to one of: full, first, last');
-        return;
+    if(HURON_PEOPLE_FILTER && HURON_PEOPLE_FILTER !== 'buid') {
+      const sourceIds = HURON_PERSON_SOURCE_IDS ? HURON_PERSON_SOURCE_IDS.split(',') : [];
+      console.log(`Reading people by filter field: ${HURON_PEOPLE_FILTER} with source IDs: ${sourceIds.join(', ')}`);
+      personData = await reader.readPeopleByFilterField(HURON_PEOPLE_FILTER, sourceIds, 
+        ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']);
     }
+    else {
+      switch (HURON_PERSON_NAME_FILTER) {
+        case 'full':
+          if( ! HURON_PERSON_FNAME || ! HURON_PERSON_LNAME ) {
+            console.error('Please set both HURON_PERSON_FNAME and HURON_PERSON_LNAME for full name filter');
+            return;
+          }
+          personData = await reader.readPeopleByFullName(
+            HURON_PERSON_FNAME!, 
+            HURON_PERSON_LNAME!, 
+            ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
+          );
+          console.log(`Reading people by full name: ${HURON_PERSON_FNAME} ${HURON_PERSON_LNAME}`);
+          break;
+        case 'first': case 'last':
+          if(HURON_PERSON_NAME_FILTER === 'first' && ! HURON_PERSON_FNAME) {
+            console.error('Please set HURON_PERSON_FNAME for first name filter');
+            return;
+          }
+          if(HURON_PERSON_NAME_FILTER === 'last' && ! HURON_PERSON_LNAME) {
+            console.error('Please set HURON_PERSON_LNAME for last name filter');
+            return;
+          }
+          const options: ReadPeopleOptions = {
+            filters: [
+              ReadPeople.createFilter({ 
+                field: 'active', 
+                value: 'true', 
+                priority: 0, 
+                logicalOperator: 'and', 
+                comparisonOperator: 'eq' 
+              }),
+              ReadPeople.createFilter({ 
+                field: HURON_PERSON_NAME_FILTER === 'first' ? 'firstName' : 'lastName', 
+                value: HURON_PERSON_NAME_FILTER === 'first' ? HURON_PERSON_FNAME! : HURON_PERSON_LNAME!, 
+                priority: 1, 
+                logicalOperator: 'and', 
+                comparisonOperator: 'eq' 
+              })
+            ],
+            sort: ReadPeople.createSort({ 
+              field: HURON_PERSON_NAME_FILTER === 'first' ? 'lastName' : 'firstName', 
+              direction: 'desc' 
+            }),
+            pagination: { pageSize: 50 },
+            includeFields: ['id', 'userId', 'sourceIdentifier', 'firstName', 'lastName', 'organization']
+          };
+          personData = await reader.readAllPeople(options);
+          console.log(`Reading people by: ${HURON_PERSON_NAME_FILTER === 'first' ? HURON_PERSON_FNAME : HURON_PERSON_LNAME}`);
+
+          break;
+        default:
+          console.error('Please set HURON_PERSON_NAME_FILTER to one of: full, first, last');
+          return;
+      }
+    }
+
     console.log(`Retrieved ${Array.isArray(personData) ? personData.length : 1} person records.`);
     console.log(JSON.stringify(personData, null, 2));
   } catch (error) {

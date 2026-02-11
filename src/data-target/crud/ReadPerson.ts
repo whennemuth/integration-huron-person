@@ -128,38 +128,38 @@ async function main() {
   const reader = new ReadPerson(config);
 
   const { 
-    HURON_ID_TYPE, 
-    HURON_ID, 
-    HURON_HRN, 
-    HURON_SOURCE_ID, 
-    HURON_USER_ID,
-    HURON_EMAIL
+    HURON_PERSON_ID_TYPE, 
+    HURON_PERSON_ID, 
+    HURON_PERSON_HRN, 
+    HURON_PERSON_SOURCE_ID, 
+    HURON_PERSON_USER_ID,
+    HURON_PERSON_EMAIL
   } = process.env;
   let personData: HuronPerson | HuronPerson[];
 
-  switch (HURON_ID_TYPE) {
+  switch (HURON_PERSON_ID_TYPE) {
     case 'id':
-      console.log(`Reading person by ID: ${HURON_ID}`);
-      personData = await reader.readPersonById(HURON_ID!);
+      console.log(`Reading person by ID: ${HURON_PERSON_ID}`);
+      personData = await reader.readPersonById(HURON_PERSON_ID!);
       break;
     case 'hrn':
-      console.log(`Reading person by HRN: ${HURON_HRN}`);
-      personData = await reader.readPersonByHRN(HURON_HRN!);
+      console.log(`Reading person by HRN: ${HURON_PERSON_HRN}`);
+      personData = await reader.readPersonByHRN(HURON_PERSON_HRN!);
       break;
     case 'sid':
-      console.log(`Reading person by Source Identifier: ${HURON_SOURCE_ID}`);
-      personData = await reader.readPersonBySourceIdentifier(HURON_SOURCE_ID!);
+      console.log(`Reading person by Source Identifier: ${HURON_PERSON_SOURCE_ID}`);
+      personData = await reader.readPersonBySourceIdentifier(HURON_PERSON_SOURCE_ID!);
       break;
     case 'uid':
-      console.log(`Reading person by User ID: ${HURON_USER_ID}`);
-      personData = await reader.readPersonByUserId(HURON_USER_ID!);
+      console.log(`Reading person by User ID: ${HURON_PERSON_USER_ID}`);
+      personData = await reader.readPersonByUserId(HURON_PERSON_USER_ID!);
       break;
     case 'email':
-      console.log(`Reading person by Email: ${HURON_EMAIL}`);
-      personData = await reader.readPersonByEmail(HURON_EMAIL!);
+      console.log(`Reading person by Email: ${HURON_PERSON_EMAIL}`);
+      personData = await reader.readPersonByEmail(HURON_PERSON_EMAIL!);
       break;
     default:
-      console.error('Please set HURON_ID_TYPE to one of: hrn, sid, uid, id, email');
+      console.error('Please set HURON_PERSON_ID_TYPE to one of: hrn, sid, uid, id, email');
       return;
   }
 

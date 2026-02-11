@@ -166,7 +166,6 @@ describe('SinglePersonSync', () => {
     it('should create data source with correct parameters', () => {
       expect(BuCdmPersonDataSource).toHaveBeenCalledWith({
         config: mockConfig,
-        dataMapper: expect.anything(),
         responseFilter: undefined,
         buid: 'U12345678'
       });
@@ -189,8 +188,10 @@ describe('SinglePersonSync', () => {
         crud: CrudOperation.CREATE
       });
       
-      expect(consoleSpy).toHaveBeenCalledWith('Starting Single Person Sync for BUID: U12345678...');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
       expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('SOURCE CHECK: Looking up raw person data for BUID: U12345678 from source...');
+      expect(consoleSpy).toHaveBeenCalledWith('Found U12345678 in source');
       expect(consoleSpy).toHaveBeenCalledWith('Push result for U12345678:', Status.SUCCESS, 'Person pushed successfully');
       expect(consoleSpy).toHaveBeenCalledWith('Single Person Sync completed successfully for BUID: U12345678');
 
@@ -206,7 +207,10 @@ describe('SinglePersonSync', () => {
       expect(mockDataSource.fetchRaw).toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
       
-      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
+      expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('SOURCE CHECK: Looking up raw person data for BUID: U12345678 from source...');
+      expect(consoleSpy).toHaveBeenCalledWith('Did not find U12345678 in source');
 
       consoleSpy.mockRestore();
     });
@@ -217,7 +221,10 @@ describe('SinglePersonSync', () => {
 
       await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
-      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
+      expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('SOURCE CHECK: Looking up raw person data for BUID: U12345678 from source...');
+      expect(consoleSpy).toHaveBeenCalledWith('Did not find U12345678 in source');
 
       consoleSpy.mockRestore();
     });
@@ -338,8 +345,9 @@ describe('SinglePersonSync', () => {
         crud: CrudOperation.CREATE
       });
       
-      expect(consoleSpy).toHaveBeenCalledWith('Starting Single Person Sync for BUID: U12345678...');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
       expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('Found U12345678 in source');
       expect(consoleSpy).toHaveBeenCalledWith('Push result for U12345678:', Status.SUCCESS, 'Person pushed successfully');
       expect(consoleSpy).toHaveBeenCalledWith('Single Person Sync completed successfully for BUID: U12345678');
 
@@ -354,7 +362,9 @@ describe('SinglePersonSync', () => {
       expect(mockDataSource.fetchRaw).not.toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
       
-      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
+      expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('Did not find U12345678 in source');
 
       consoleSpy.mockRestore();
     });
@@ -367,7 +377,9 @@ describe('SinglePersonSync', () => {
       expect(mockDataSource.fetchRaw).not.toHaveBeenCalled();
       expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
       
-      expect(consoleSpy).toHaveBeenCalledWith('No person data found for BUID: U12345678');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing U12345678'));
+      expect(consoleSpy).toHaveBeenCalledWith('Client ID: test-client');
+      expect(consoleSpy).toHaveBeenCalledWith('Did not find U12345678 in source');
 
       consoleSpy.mockRestore();
     });

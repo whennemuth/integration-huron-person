@@ -1,9 +1,9 @@
-import { Input, DataMapper as CoreDataMapper, Field } from 'integration-core';
-import { NameMapper } from './DataMapperName';
-import { EmailMapper } from './DataMapperEmail';
-import { AddressMapper } from './DataMapperAddress';
-import { OrgMapper } from './DataMapperOrg';
+import { DataMapper as CoreDataMapper, Field, Input } from 'integration-core';
 import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
+import { AddressMapper } from './DataMapperAddress';
+import { EmailMapper } from './DataMapperEmail';
+import { NameMapper } from './DataMapperName';
+import { OrgMapper } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
 
 /**
@@ -46,9 +46,10 @@ export class DataMapper implements CoreDataMapper {
   /**
    * Convert raw person data to Input format
    * @param rawData Array of person data objects from Boston University CDM API
+   * @param hrn Optional person HRN to use applying to the returned data to indicate a put/patch operation
    */
-  getMappedData(rawData: any[]): Input {
-
+  getMappedData(rawData: any[], personHrn?: string): Input {
+    
     const fieldDefinitions = [
       { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
       { name: 'sourceIdentifier', type: 'string' as const, required: false },
@@ -61,8 +62,13 @@ export class DataMapper implements CoreDataMapper {
       { name: 'organization', type: 'object' as const, required: true },
       { name: 'secondaryUnit', type: 'object' as const, required: false },
       { name: 'contactInformation', type: 'object' as const, required: true },
+      { name: 'roles', type: 'array' as const, required: false },
       { name: '__arrayFieldOperations', type: 'object' as const, required: true } // Special field for conveying array operation instructions (e.g. for roles)
     ];
+
+    if(personHrn) {
+      fieldDefinitions.push({ name: 'hrn', type: 'string' as const, required: true });
+    }
 
     const fieldSets = rawData.map(person => {
 
@@ -106,6 +112,10 @@ export class DataMapper implements CoreDataMapper {
         // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
         { __arrayFieldOperations: { append: [ 'roles' ] } }
       ] as Field[];
+
+      if(personHrn) {
+        fieldValues.push({ hrn: personHrn });
+      }
 
       if(title) {
         fieldValues.push({ title });

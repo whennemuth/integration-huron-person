@@ -61,7 +61,7 @@ export class DataMapper implements CoreDataMapper {
       { name: 'organization', type: 'object' as const, required: true },
       { name: 'secondaryUnit', type: 'object' as const, required: false },
       { name: 'contactInformation', type: 'object' as const, required: true },
-      { name: 'roles', type: 'array' as const, required: false }
+      { name: '__arrayFieldOperations', type: 'object' as const, required: true } // Special field for conveying array operation instructions (e.g. for roles)
     ];
 
     const fieldSets = rawData.map(person => {
@@ -103,6 +103,8 @@ export class DataMapper implements CoreDataMapper {
         { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
         { employer: { hrn: orgHrn } },
         { organization: { hrn: orgHrn } },
+        // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
+        { __arrayFieldOperations: { append: [ 'roles' ] } }
       ] as Field[];
 
       if(title) {

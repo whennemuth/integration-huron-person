@@ -41,6 +41,9 @@ class ReadPerson {
    */
   public readPersonByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronPerson> => {
     try {
+      if(/^\d+$/.test(hrn)) {
+        hrn = `hrn:hrs:persons:${hrn}`;
+      }
       const endpoint = SchemaPath.PERSONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
       const response = await this.apiClient.get<PersonResponse>({ url: endpoint, params: { includeFields } });
 
@@ -61,11 +64,13 @@ class ReadPerson {
    * @param personId The person ID to retrieve
    * @returns Promise resolving to the Person data
    */
-  public readPersonById = async (personId: string, includeFields?: string[]): Promise<HuronPerson> => {
-    // For now, we'll assume the HRN format is hrn:hrs:persons:{personId}
-    // In a real implementation, you might need to query for the HRN first or have a different endpoint
-    const hrn = `hrn:hrs:persons:${personId}`;
-    return this.readPersonByHRN(hrn, includeFields);
+  public readPersonById = async (personId: string, includeFields?: string[]): Promise<HuronPerson[]> => {
+    try {
+      return this.readPersonBySingleFilter('id', personId, includeFields);
+    } catch (error) {
+      console.error(`Failed to read person with id ${personId}:`, error);
+      throw new Error(`Failed to read person by id ${personId}: ${error}`);
+    }
   }
 
   private async readPersonBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {

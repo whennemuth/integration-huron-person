@@ -5,6 +5,7 @@ import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
 import { OrgMapper } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
+import { UserIdMapper } from './DataMapperUserId';
 
 /**
  * DataMapper class for:
@@ -76,6 +77,7 @@ export class DataMapper implements CoreDataMapper {
 
       const { personid } = person;
       const { firstName, middleName, lastName } = NameMapper(person, false).getName() ?? {};
+      const userId = UserIdMapper(person, false).getUserId();
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();
       const addressLine1 = AddressMapper(person, false).getAddressLine1();
@@ -100,7 +102,7 @@ export class DataMapper implements CoreDataMapper {
       const fieldValues = [
         { id: personid },
         { employeeId: personid },
-        { userId: personid },
+        { userId },
         { sourceIdentifier: personid },
         { firstName },
         { middleName },

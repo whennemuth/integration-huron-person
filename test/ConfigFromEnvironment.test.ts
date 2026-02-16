@@ -4,11 +4,20 @@ import { Config } from '../src/config/Config';
 describe('ConfigFromEnvironment', () => {
   const validConfig: Config = {
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -36,9 +45,12 @@ describe('ConfigFromEnvironment', () => {
 
   beforeEach(() => {
     // Clear any existing environment variables
-    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL];
-    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY];
-    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_PASSWORD];
@@ -57,24 +69,48 @@ describe('ConfigFromEnvironment', () => {
       expect(result).toEqual({});
     });
 
-    it('should override DataSource API key configuration', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL] = 'https://prod-datasource.example.com';
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'prod-api-key-123';
+    it('should override DataSource person API key configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL] = 'https://prod-datasource.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY] = 'prod-api-key-123';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.endpointConfig?.baseUrl).toBe('https://prod-datasource.example.com');
-      expect(result.dataSource?.endpointConfig?.apiKey).toBe('prod-api-key-123');
+      expect(result.dataSource?.person?.endpointConfig?.baseUrl).toBe('https://prod-datasource.example.com');
+      expect(result.dataSource?.person?.endpointConfig?.apiKey).toBe('prod-api-key-123');
+      expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
     });
 
-    it('should override DataSource fetchPersonsPath', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH] = '/api/v2/prod/persons';
+    it('should override DataSource person fetchPersonsPath', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH] = '/api/v2/prod/persons';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.fetchPersonsPath).toBe('/api/v2/prod/persons');
+      expect(result.dataSource?.person?.fetchPersonsPath).toBe('/api/v2/prod/persons');
+      expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
+    });
+
+    it('should override DataSource people API key configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL] = 'https://prod-datasource.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY] = 'prod-api-key-123';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.dataSource?.people?.endpointConfig?.baseUrl).toBe('https://prod-datasource.example.com');
+      expect(result.dataSource?.people?.endpointConfig?.apiKey).toBe('prod-api-key-123');
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+    });
+
+    it('should override DataSource people fetchPersonsPath', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH] = '/api/v2/prod/people';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.dataSource?.people?.fetchPersonsPath).toBe('/api/v2/prod/people');
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
 
     it('should override DataTarget JWT configuration', () => {
@@ -111,28 +147,29 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should handle partial overrides correctly', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'new-api-key';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY] = 'new-api-key';
       process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME] = 'new-username';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.endpointConfig?.apiKey).toBe('new-api-key');
+      expect(result.dataSource?.person?.endpointConfig?.apiKey).toBe('new-api-key');
+      expect(result.dataSource?.people).toBeUndefined(); // Only person should be overridden
       expect((result.dataTarget?.endpointConfig as any)?.username).toBe('new-username');
       // ConfigFromEnvironment includes base config when building overrides
-      expect(result.dataSource?.fetchPersonsPath).toBe('/api/v1/persons');
       expect(result.dataTarget?.personsPath).toBe('/api/v1/persons/batch');
     });
 
-    it('should handle multiple environment variables for same section', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL] = 'https://new-base.example.com';
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'new-key-456';
+    it('should handle multiple person environment variables for same section', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL] = 'https://new-base.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY] = 'new-key-456';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.endpointConfig?.baseUrl).toBe('https://new-base.example.com');
-      expect(result.dataSource?.endpointConfig?.apiKey).toBe('new-key-456');
+      expect(result.dataSource?.person?.endpointConfig?.baseUrl).toBe('https://new-base.example.com');
+      expect(result.dataSource?.person?.endpointConfig?.apiKey).toBe('new-key-456');
+      expect(result.dataSource?.people).toBeUndefined(); // Only person should be overridden
     });
 
     it('should preserve existing endpointConfig when adding overrides', () => {
@@ -147,13 +184,14 @@ describe('ConfigFromEnvironment', () => {
 
     it('should work without base config', () => {
       process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID] = 'standalone-client-id';
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY] = 'standalone-api-key';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY] = 'standalone-api-key';
 
       const configFromEnv = new ConfigFromEnvironment();
       const result = configFromEnv.getConfig();
       
       expect(result.integration?.clientId).toBe('standalone-client-id');
-      expect(result.dataSource?.endpointConfig?.apiKey).toBe('standalone-api-key');
+      expect(result.dataSource?.person?.endpointConfig?.apiKey).toBe('standalone-api-key');
+      expect(result.dataSource?.people).toBeUndefined(); // Only person should be set
     });
 
     it('should handle external token configuration', () => {

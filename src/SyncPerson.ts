@@ -46,8 +46,8 @@ class SinglePersonSync {
     // Create integration components
     this.dataMapper = new DataMapper(orgHrn);
     let responseFilter: ResponseProcessor | undefined;
-    if (this.config.dataSource.fieldsOfInterest) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.fieldsOfInterest });
+    if (this.config.dataSource.person?.fieldsOfInterest) {
+      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.person.fieldsOfInterest });
     }
     this.dataSource = new BuCdmPersonDataSource({ 
       config: this.config, 
@@ -201,7 +201,9 @@ async function main() {
       let { buid, crudOperation, preview } = params;
 
       // Disable source person lookup field filtering for this single sync
-      delete config.dataSource.fieldsOfInterest;
+      if (config.dataSource.person) {
+        delete config.dataSource.person.fieldsOfInterest;
+      }
       
       if ( ! buid ) {
         if( crudOperation === CrudOperation.CREATE || crudOperation === undefined ) {
@@ -240,7 +242,9 @@ async function main() {
       }
 
       // Disable source person lookup field filtering for this single sync
-      delete config.dataSource.fieldsOfInterest;
+      if (config.dataSource.person) {
+        delete config.dataSource.person.fieldsOfInterest;
+      }
 
       // Create the token cache
       const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
@@ -258,7 +262,7 @@ async function main() {
 
   // Load configuration
   const configManager = ConfigManager.getInstance();
-  const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig();
+  const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
 
   // Create a custom hrn expression that goes to a map for the actual hrn given a source org id key
   const orgs = await import('./data-mapper/OrgMap.json');

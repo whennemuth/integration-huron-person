@@ -116,7 +116,7 @@ async function main() {
     getInstance()
     .fromEnvironment()
     .fromFileSystem()
-    .getConfig();
+    .getConfig('nobody');
 
   const reader = new ReadOrganization(config);
 

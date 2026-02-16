@@ -11,11 +11,20 @@ jest.mock('integration-core', () => ({
 describe('DeltaStrategyFactory', () => {
   const mockConfig: Config = {
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -170,9 +179,12 @@ describe('DeltaStrategyFactory', () => {
         ...mockConfig,
         dataSource: {
           ...mockConfig.dataSource,
-          endpointConfig: {
-            ...mockConfig.dataSource.endpointConfig,
-            baseUrl: '' // Invalid empty URL
+          person: {
+            ...mockConfig.dataSource.person!,
+            endpointConfig: {
+              ...mockConfig.dataSource.person!.endpointConfig,
+              baseUrl: '' // Invalid empty URL
+            }
           }
         }
       };

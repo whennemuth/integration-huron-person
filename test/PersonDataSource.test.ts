@@ -46,11 +46,20 @@ describe('BuCdmPersonDataSource', () => {
   
   const mockConfig: Config = {
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource-api.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource-api.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource-api.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -192,8 +201,8 @@ describe('BuCdmPersonDataSource', () => {
 
   describe('constructor', () => {
     it('should create instance with correct name and description', () => {
-      expect(dataSource.name).toBe('Boston University CRM Data Source');
-      expect(dataSource.description).toBe('Fetches person data from Boston University CRM API endpoint');
+      expect(dataSource.name).toBe('Boston University CRM Person Data Source');
+      expect(dataSource.description).toBe('Fetches single person data from Boston University CRM API endpoint');
     });
   });
 
@@ -201,12 +210,21 @@ describe('BuCdmPersonDataSource', () => {
     it('should prioritize endpointConfig timeout over integration timeout', () => {
       const configWithBothTimeouts: Config = {
         dataSource: {
-          endpointConfig: {
-            baseUrl: 'https://datasource-api.example.com',
-            apiKey: 'test-api-key',
-            timeout: 12000  // Endpoint-specific timeout
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key',
+              timeout: 12000  // Endpoint-specific timeout
+            },
+            fetchPersonsPath: '/api/v1/persons'
           },
-          fetchPersonsPath: '/api/v1/persons'
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
+          }
         },
         dataTarget: {
           endpointConfig: {
@@ -244,12 +262,21 @@ describe('BuCdmPersonDataSource', () => {
     it('should fallback to integration timeout when endpointConfig timeout is undefined', () => {
       const configWithOnlyIntegrationTimeout: Config = {
         dataSource: {
-          endpointConfig: {
-            baseUrl: 'https://datasource-api.example.com',
-            apiKey: 'test-api-key'
-            // No timeout specified in endpointConfig
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+              // No timeout specified in endpointConfig
+            },
+            fetchPersonsPath: '/api/v1/persons'
           },
-          fetchPersonsPath: '/api/v1/persons'
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
+          }
         },
         dataTarget: {
           endpointConfig: {

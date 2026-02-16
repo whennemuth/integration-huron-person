@@ -1,5 +1,5 @@
 import { FileConfig, DatabaseConfig, S3Config } from 'integration-core';
-import { Config } from './Config';
+import { Config, ExecutionMode } from './Config';
 
 /**
  * Configuration validator for validating configuration structure and content
@@ -14,9 +14,9 @@ export class ConfigValidator {
   /**
    * Validate the configuration and return true if valid, false if invalid
    */
-  isValid(): boolean {
+  isValid(executionMode: ExecutionMode): boolean {
     try {
-      this.validateConfig();
+      this.validateConfig(executionMode);
       return true;
     } catch (error) {
       return false;
@@ -27,13 +27,17 @@ export class ConfigValidator {
    * Validate configuration structure and required fields
    * Throws an error with descriptive message if validation fails
    */
-  validateConfig(): void {
-    // Required fields for API Key authentication (DataSource)
-    const dataSourceRequiredFields = [
-      'dataSource.endpointConfig.baseUrl',
-      'dataSource.endpointConfig.apiKey',
-      'dataSource.fetchPersonsPath'
-    ];
+  validateConfig(executionMode: ExecutionMode): void {
+    // Required fields for API Key authentication (DataSource) - mode-specific
+    const dataSourceRequiredFields = executionMode === 'person' ? [
+      'dataSource.person.endpointConfig.baseUrl',
+      'dataSource.person.endpointConfig.apiKey',
+      'dataSource.person.fetchPersonsPath'
+    ] : executionMode === 'people' ? [
+      'dataSource.people.endpointConfig.baseUrl',
+      'dataSource.people.endpointConfig.apiKey',
+      'dataSource.people.fetchPersonsPath'
+    ] : []; // 'nobody' mode requires no dataSource fields
 
     // Required fields for JWT authentication (DataTarget) - now discriminated union
     const dataTargetBaseFields = [
@@ -90,7 +94,12 @@ export class ConfigValidator {
 
     // Validate URLs
     try {
-      new URL(this.config.dataSource.endpointConfig.baseUrl);
+      const dataSourceUrl = executionMode === 'person' 
+        ? this.config.dataSource.person?.endpointConfig.baseUrl
+        : this.config.dataSource.people?.endpointConfig.baseUrl;
+      if (dataSourceUrl) {
+        new URL(dataSourceUrl);
+      }
       new URL(this.config.dataTarget.endpointConfig.baseUrl);
     } catch {
       throw new Error('Invalid baseUrl in dataSource or dataTarget endpointConfig');

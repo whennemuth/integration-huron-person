@@ -3,17 +3,32 @@ import { EndpointConfigForJWT } from '../data-target/ApiClientForJWT';
 import { EndpointConfigForApiKey } from '../data-source/ApiClientForApiKey';
 
 /**
+ * Execution mode for the integration
+ */
+export type ExecutionMode = 'person' | 'people' | 'nobody';
+
+/**
+ * Configuration for data source endpoints
+ */
+type DataSourceConfig = {
+  /** API client configuration */
+  endpointConfig: EndpointConfigForApiKey;
+  /** Endpoint for fetching person data */
+  fetchPersonsPath: string;
+  /** Optional fields to keep during response filtering */
+  fieldsOfInterest?: string[];
+};
+
+/**
  * Configuration interface for Huron Person Integration
  */
 export interface Config {
   /** DataSource configuration (where we fetch data from) - uses API key authentication */
   dataSource: {
-    /** API client configuration */
-    endpointConfig: EndpointConfigForApiKey;
-    /** Endpoint for fetching person data */
-    fetchPersonsPath: string;
-    /** Optional fields to keep during response filtering */
-    fieldsOfInterest?: string[];
+    /** Configuration for single person operations */
+    person?: DataSourceConfig;
+    /** Configuration for bulk people operations */
+    people?: DataSourceConfig;
   };
   
   /** DataTarget configuration (where we push data to) - uses JWT authentication */

@@ -4,11 +4,20 @@ import { Config } from '../src/config/Config';
 describe('ConfigValidator', () => {
   const getValidConfig = (): Config => ({
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -37,7 +46,7 @@ describe('ConfigValidator', () => {
   describe('isValid', () => {
     it('should return true for valid configuration', () => {
       const validator = new ConfigValidator(getValidConfig());
-      expect(validator.isValid()).toBe(true);
+      expect(validator.isValid('person')).toBe(true);
     });
 
     it('should return false for invalid configuration', () => {
@@ -45,14 +54,14 @@ describe('ConfigValidator', () => {
       delete (invalidConfig as any).dataSource;
       
       const validator = new ConfigValidator(invalidConfig);
-      expect(validator.isValid()).toBe(false);
+      expect(validator.isValid('person')).toBe(false);
     });
   });
 
   describe('validateConfig', () => {
     it('should validate complete configuration successfully', () => {
       const validator = new ConfigValidator(getValidConfig());
-      expect(() => validator.validateConfig()).not.toThrow();
+      expect(() => validator.validateConfig('person')).not.toThrow();
     });
 
     describe('dataSource validation', () => {
@@ -61,39 +70,71 @@ describe('ConfigValidator', () => {
         delete (config as any).dataSource;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataSource.endpointConfig.baseUrl');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.endpointConfig.baseUrl');
       });
 
-      it('should throw error when dataSource baseUrl is missing', () => {
+      it('should throw error when dataSource person baseUrl is missing', () => {
         const config = getValidConfig();
-        delete (config.dataSource.endpointConfig as any).baseUrl;
+        delete (config.dataSource as any).person.endpointConfig.baseUrl;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataSource.endpointConfig.baseUrl');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.endpointConfig.baseUrl');
       });
 
-      it('should throw error when dataSource apiKey is missing', () => {
+      it('should throw error when dataSource person apiKey is missing', () => {
         const config = getValidConfig();
-        delete (config.dataSource.endpointConfig as any).apiKey;
+        delete (config.dataSource as any).person.endpointConfig.apiKey;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataSource.endpointConfig.apiKey');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.endpointConfig.apiKey');
       });
 
-      it('should throw error when fetchPersonsPath is missing', () => {
+      it('should throw error when dataSource people baseUrl is missing', () => {
         const config = getValidConfig();
-        delete (config.dataSource as any).fetchPersonsPath;
+        delete (config.dataSource as any).people.endpointConfig.baseUrl;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataSource.fetchPersonsPath');
+        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.endpointConfig.baseUrl');
       });
 
-      it('should throw error for invalid dataSource baseUrl', () => {
+      it('should throw error when dataSource people apiKey is missing', () => {
         const config = getValidConfig();
-        config.dataSource.endpointConfig.baseUrl = 'invalid-url';
+        delete (config.dataSource as any).people.endpointConfig.apiKey;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
+        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.endpointConfig.apiKey');
+      });
+
+      it('should throw error when person fetchPersonsPath is missing', () => {
+        const config = getValidConfig();
+        delete (config.dataSource.person as any).fetchPersonsPath;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.fetchPersonsPath');
+      });
+
+      it('should throw error when people fetchPersonsPath is missing', () => {
+        const config = getValidConfig();
+        delete (config.dataSource.people as any).fetchPersonsPath;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.fetchPersonsPath');
+      });
+
+      it('should throw error for invalid dataSource person baseUrl', () => {
+        const config = getValidConfig();
+        config.dataSource.person!.endpointConfig.baseUrl = 'invalid-url';
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('person')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
+      });
+
+      it('should throw error for invalid dataSource people baseUrl', () => {
+        const config = getValidConfig();
+        config.dataSource.people!.endpointConfig.baseUrl = 'invalid-url';
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('people')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
       });
     });
 
@@ -103,7 +144,7 @@ describe('ConfigValidator', () => {
         delete (config as any).dataTarget;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.baseUrl');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.baseUrl');
       });
 
       it('should throw error when dataTarget baseUrl is missing', () => {
@@ -111,7 +152,7 @@ describe('ConfigValidator', () => {
         delete (config.dataTarget.endpointConfig as any).baseUrl;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.baseUrl');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.baseUrl');
       });
 
       it('should throw error when authMethod is missing', () => {
@@ -119,7 +160,7 @@ describe('ConfigValidator', () => {
         delete (config.dataTarget.endpointConfig as any).authMethod;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.authMethod');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.authMethod');
       });
 
       it('should throw error for invalid authMethod', () => {
@@ -127,7 +168,7 @@ describe('ConfigValidator', () => {
         (config.dataTarget.endpointConfig as any).authMethod = 'invalid';
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Invalid authMethod: invalid. Must be \'basic\' or \'externalToken\'');
+        expect(() => validator.validateConfig('person')).toThrow('Invalid authMethod: invalid. Must be \'basic\' or \'externalToken\'');
       });
 
       it('should throw error when personsPath is missing', () => {
@@ -135,7 +176,7 @@ describe('ConfigValidator', () => {
         delete (config.dataTarget as any).personsPath;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.personsPath');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.personsPath');
       });
 
       it('should throw error when organizationsPath is missing', () => {
@@ -143,7 +184,7 @@ describe('ConfigValidator', () => {
         delete (config.dataTarget as any).organizationsPath;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.organizationsPath');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.organizationsPath');
       });
 
       it('should throw error for invalid dataTarget baseUrl', () => {
@@ -151,7 +192,7 @@ describe('ConfigValidator', () => {
         config.dataTarget.endpointConfig.baseUrl = 'invalid-url';
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
+        expect(() => validator.validateConfig('person')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
       });
 
       describe('basic auth validation', () => {
@@ -166,7 +207,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should throw error when loginSvcPath is missing for basic auth', () => {
@@ -179,7 +220,7 @@ describe('ConfigValidator', () => {
           } as any;
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.loginSvcPath');
+          expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.loginSvcPath');
         });
 
         it('should throw error when username is missing for basic auth', () => {
@@ -192,7 +233,7 @@ describe('ConfigValidator', () => {
           } as any;
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.username');
+          expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.username');
         });
 
         it('should throw error when password is missing for basic auth', () => {
@@ -205,7 +246,7 @@ describe('ConfigValidator', () => {
           } as any;
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.password');
+          expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.password');
         });
       });
 
@@ -220,7 +261,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should throw error when externalToken is missing for externalToken auth', () => {
@@ -232,7 +273,7 @@ describe('ConfigValidator', () => {
           } as any;
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.externalToken');
+          expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.externalToken');
         });
 
         it('should throw error when userId is missing for externalToken auth', () => {
@@ -244,7 +285,7 @@ describe('ConfigValidator', () => {
           } as any;
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Missing required configuration field: dataTarget.endpointConfig.userId');
+          expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataTarget.endpointConfig.userId');
         });
       });
     });
@@ -255,7 +296,7 @@ describe('ConfigValidator', () => {
         delete (config as any).integration;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: integration.clientId');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: integration.clientId');
       });
 
       it('should throw error when clientId is missing', () => {
@@ -263,7 +304,7 @@ describe('ConfigValidator', () => {
         delete (config.integration as any).clientId;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: integration.clientId');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: integration.clientId');
       });
     });
 
@@ -273,7 +314,7 @@ describe('ConfigValidator', () => {
         delete (config as any).storage;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: storage.type');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: storage.type');
       });
 
       it('should throw error when storage type is missing', () => {
@@ -281,7 +322,7 @@ describe('ConfigValidator', () => {
         delete (config.storage as any).type;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: storage.type');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: storage.type');
       });
 
       it('should throw error when storage config is missing', () => {
@@ -289,7 +330,7 @@ describe('ConfigValidator', () => {
         delete (config.storage as any).config;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Missing required configuration field: storage.config');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: storage.config');
       });
 
       describe('file storage validation', () => {
@@ -303,7 +344,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should throw error when file storage path is missing', () => {
@@ -314,7 +355,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('File storage requires path configuration');
+          expect(() => validator.validateConfig('person')).toThrow('File storage requires path configuration');
         });
       });
 
@@ -330,7 +371,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should validate postgresql database storage configuration successfully', () => {
@@ -346,7 +387,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should throw error when database type is missing', () => {
@@ -359,7 +400,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Database storage requires type configuration');
+          expect(() => validator.validateConfig('person')).toThrow('Database storage requires type configuration');
         });
 
         it('should throw error when sqlite filename and database are both missing', () => {
@@ -372,7 +413,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('SQLite requires filename or database configuration');
+          expect(() => validator.validateConfig('person')).toThrow('SQLite requires filename or database configuration');
         });
 
         it('should throw error when non-sqlite database host is missing', () => {
@@ -386,7 +427,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('Non-SQLite databases require host configuration');
+          expect(() => validator.validateConfig('person')).toThrow('Non-SQLite databases require host configuration');
         });
       });
 
@@ -402,7 +443,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).not.toThrow();
+          expect(() => validator.validateConfig('person')).not.toThrow();
         });
 
         it('should throw error when s3 bucketName is missing', () => {
@@ -415,7 +456,7 @@ describe('ConfigValidator', () => {
           };
           
           const validator = new ConfigValidator(config);
-          expect(() => validator.validateConfig()).toThrow('S3 storage requires bucketName configuration');
+          expect(() => validator.validateConfig('person')).toThrow('S3 storage requires bucketName configuration');
         });
       });
 
@@ -427,7 +468,7 @@ describe('ConfigValidator', () => {
         };
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig()).toThrow('Unsupported storage type: unsupported');
+        expect(() => validator.validateConfig('person')).toThrow('Unsupported storage type: unsupported');
       });
     });
   });

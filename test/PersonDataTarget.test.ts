@@ -127,11 +127,20 @@ describe('HuronPersonDataTarget', () => {
   
   const mockConfig: Config = {
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource-api.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource-api.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource-api.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -175,11 +184,20 @@ describe('HuronPersonDataTarget', () => {
     it('should prioritize endpointConfig timeout over integration timeout', () => {
       const configWithBothTimeouts: Config = {
         dataSource: {
-          endpointConfig: {
-            baseUrl: 'https://datasource-api.example.com',
-            apiKey: 'test-api-key'
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
           },
-          fetchPersonsPath: '/api/v1/persons'
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
+          }
         },
         dataTarget: {
           endpointConfig: {
@@ -218,11 +236,20 @@ describe('HuronPersonDataTarget', () => {
     it('should fallback to integration timeout when endpointConfig timeout is undefined', () => {
       const configWithOnlyIntegrationTimeout: Config = {
         dataSource: {
-          endpointConfig: {
-            baseUrl: 'https://datasource-api.example.com',
-            apiKey: 'test-api-key'
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
           },
-          fetchPersonsPath: '/api/v1/persons'
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://datasource-api.example.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/api/v1/persons'
+          }
         },
         dataTarget: {
           endpointConfig: {

@@ -3,7 +3,7 @@ import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { DataMapper } from './data-mapper/DataMapper';
 import { DeltaStrategyFactory } from './DeltaStrategyFactory';
-import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
+import { BuCdmPeopleDataSource } from './data-source/PeopleDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { Cache } from './Cache';
@@ -21,21 +21,21 @@ class HuronPersonIntegration {
     const { configPath, cache } = params;
     // Load configuration with chaining API
     const configManager = ConfigManager.getInstance();
-    this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig();
+    this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig('people');
 
     // Create integration components
     const dataMapper = new DataMapper();
     let responseFilter: ResponseProcessor | undefined;
 
     // Destructure for easier access
-    const { config, config: { dataSource: { fieldsOfInterest } } } = this;
+    const fieldsOfInterest = this.config.dataSource.people?.fieldsOfInterest;
 
     if (fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
-    const dataSource = new BuCdmPersonDataSource({ config, responseFilter });
-    const dataTarget = new HuronPersonDataTarget(config, cache);
-    const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
+    const dataSource = new BuCdmPeopleDataSource({ config: this.config, responseFilter });
+    const dataTarget = new HuronPersonDataTarget(this.config, cache);
+    const deltaStrategy = DeltaStrategyFactory.createStrategy(this.config);
 
     // Initialize EndToEnd integration
     this.endToEnd = new EndToEnd({

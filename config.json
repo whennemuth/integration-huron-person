@@ -1,17 +1,33 @@
 {
   "dataSource": {
-    "endpointConfig": {
-      "baseUrl": "https://prod-budev-fm.snaplogic.io",
-      "apiKey": "your-api-key-here",
-      "timeout": 300000
+    "person": {
+      "endpointConfig": {
+        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "apiKey": "your-api-key-here",
+        "timeout": 300000
+      },
+      "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+      "fieldsOfInterest": [
+        "personid",
+        "personBasic.names[*].firstName",
+        "personBasic.names[*].lastName",
+        "personBasic.names[*].middleName"
+      ]
     },
-    "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
-    "fieldsOfInterest": [
-      "personid",
-      "personBasic.names[*].firstName",
-      "personBasic.names[*].lastName",
-      "personBasic.names[*].middleName"
-    ]
+    "people": {
+      "endpointConfig": {
+        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "apiKey": "your-api-key-here",
+        "timeout": 600000
+      },
+      "fetchPersonsPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fieldsOfInterest": [
+        "personid",
+        "personBasic.names[*].firstName",
+        "personBasic.names[*].lastName",
+        "personBasic.names[*].middleName"
+      ]
+    }
   },
   "dataTarget": {
     "endpointConfig": {

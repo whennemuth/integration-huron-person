@@ -54,10 +54,25 @@ src/
 ├── IApiClient.ts             # Common interface for both authentication clients
 ├── Config.ts                 # TypeScript interfaces with nested endpointConfig structure
 ├── ConfigManager.ts          # Singleton configuration manager with validation and env overrides  
+├── ConfigValidator.ts        # Configuration validation with execution mode support
 ├── DeltaStrategyFactory.ts   # Factory for creating storage-appropriate delta strategies
-├── PersonDataSource.ts       # BuCdmPersonDataSource - fetches data using API key auth
+├── data-source/
+│   ├── DataSource.ts         # BuCdmDataSource - abstract base class for CDM data sources
+│   ├── PersonDataSource.ts   # BuCdmPersonDataSource - fetches single person data using API key auth
+│   └── PeopleDataSource.ts   # BuCdmPeopleDataSource - fetches bulk people data using API key auth
+├── data-target/
+│   ├── crud/
+│   │   ├── ReadOrganizations.ts # Read organization data from Huron API
+│   │   ├── ReadPeople.ts       # Read people data from Huron API
+│   │   ├── ReadPerson.ts       # Read single person data from Huron API
+│   │   └── ReadOrganization.ts # Read single organization data from Huron API
+│   ├── ApiClientForJWT.ts      # JWT authentication client for DataTarget
+│   ├── AuthToken.ts            # Authentication token management
+│   └── QueryBuilder.ts         # Query building utilities
 ├── PersonDataTarget.ts       # HuronPersonDataTarget - pushes data using JWT auth
-└── index.ts                  # Main exports and HuronPersonIntegration orchestrator
+├── SyncPeople.ts             # Bulk people synchronization orchestrator
+├── SyncPerson.ts             # Single person synchronization orchestrator
+└── index.ts                  # Main exports and integration orchestrators
 ```
 
 ### Test Structure (79 Tests)
@@ -91,25 +106,51 @@ Complete configuration with all available options:
 ```json
 {
   "dataSource": {
-    "endpointConfig": {
-      "baseUrl": "https://api-dev.bu.edu/huron",
-      "apiKey": "your_api_key_here",
-      "timeout": 30000
+    "person": {
+      "endpointConfig": {
+        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "apiKey": "your_person_api_key_here",
+        "timeout": 300000
+      },
+      "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+      "fieldsOfInterest": [
+        "personid",
+        "personBasic.names[*].firstName",
+        "personBasic.names[*].lastName",
+        "personBasic.names[*].middleName"
+      ]
     },
-    "fetchPersonsPath": "/cdm/persons"
+    "people": {
+      "endpointConfig": {
+        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "apiKey": "your_people_api_key_here",
+        "timeout": 600000
+      },
+      "fetchPersonsPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fieldsOfInterest": [
+        "personid",
+        "personBasic.names[*].firstName",
+        "personBasic.names[*].lastName",
+        "personBasic.names[*].middleName"
+      ]
+    }
   },
   "dataTarget": {
     "endpointConfig": {
-      "baseUrl": "https://huron-target.bu.edu",
-      "authTokenUrl": "https://huron-target.bu.edu/auth",
-      "username": "huron_push_account", 
-      "password": "target_password_here",
-      "timeout": 60000
+      "baseUrl": "https://bu.hrs-staging.com",
+      "authMethod": "externalToken",
+      "externalToken": "your-external-token-here",
+      "userId": "bu-sso_wrh@bu.edu",
+      "loginSvcPath": "/loginsvc/api/v1/token/",
+      "timeout": 30000
     },
-    "personsPath": "/api/persons/batch"
+    "personsPath": "/api/v2/persons",
+    "organizationsPath": "/api/v2/organizations"
   },
   "integration": {
-    "clientId": "bu-huron-person-integration"
+    "clientId": "huron-person-integration",
+    "batchSize": 100,
+    "timeout": 30000
   },
   "storage": {
     "type": "file",
@@ -125,28 +166,60 @@ Complete configuration with all available options:
 The ConfigManager supports environment variable overrides for secure credential management:
 
 ```bash
-# Data Source Overrides (API Key Authentication)
-export DATASOURCE_ENDPOINTCONFIG_BASE_URL="https://prod-budev-fm.snaplogic.io"
-export DATASOURCE_ENDPOINTCONFIG_API_KEY="prod_api_key_here"
-export DATASOURCE_ENDPOINT_PERSON_PATH="/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
+# Data Source Overrides (API Key Authentication) - Person Mode
+export DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL="https://prod-budev-fm.snaplogic.io"
+export DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY="prod_person_api_key_here"
+export DATASOURCE_ENDPOINTCONFIG_PERSON_PATH="/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
+
+# Data Source Overrides (API Key Authentication) - People Mode
+export DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL="https://prod-budev-fm.snaplogic.io"
+export DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY="prod_people_api_key_here"
+export DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH="/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation"
 
 # Data Target Overrides (JWT Authentication)
 export DATATARGET_ENDPOINTCONFIG_BASE_URL="https://bu.hrs-staging.com"
 export DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH="/loginsvc/api/v1/token/"
-export DATATARGET_ENDPOINTCONFIG_USER_ID="prod_user_id"
+export DATATARGET_ENDPOINTCONFIG_USER_ID="bu-sso_wrh@bu.edu"
 export DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN="prod_external_token"
 
 # Integration Overrides
 export CLIENT_ID="prod-bu-huron-integration"
+export BATCH_SIZE="100"
+export TIMEOUT="30000"
 ```
 
 ### Configuration Validation
 
-The system automatically validates all required fields:
-- Data source/target URLs and credentials
+The system automatically validates all required fields based on the execution mode:
+- **Person mode**: Validates `dataSource.person` configuration for single-person operations
+- **People mode**: Validates `dataSource.people` configuration for bulk-people operations  
+- **Nobody mode**: No data source validation required for data-target-only operations
+- Data target configuration is always validated regardless of mode
 - Storage configuration based on type
 - Endpoint paths and timeout values
 - Batch size and processing parameters
+
+### Execution Modes
+
+The integration supports three execution modes to handle different operational scenarios:
+
+#### Person Mode (`'person'`)
+Used for single-person synchronization operations:
+- Validates `dataSource.person` configuration
+- Uses `BuCdmPersonDataSource` for data fetching
+- Suitable for individual person updates and lookups
+
+#### People Mode (`'people'`)
+Used for bulk-people synchronization operations:
+- Validates `dataSource.people` configuration  
+- Uses `BuCdmPeopleDataSource` for data fetching
+- Suitable for population-wide data synchronization
+
+#### Nobody Mode (`'nobody'`)
+Used for data-target-only operations:
+- No data source validation required
+- Suitable for reading data from Huron API without source synchronization
+- Used by `ReadPerson`, `ReadPeople`, `ReadOrganization`, and `ReadOrganizations` classes
 
 ## Installation & Setup
 
@@ -209,13 +282,35 @@ import { HuronPersonIntegration, ConfigManager } from 'integration-huron-person'
 
 // Load and validate configuration using chaining API
 const configManager = ConfigManager.getInstance();
-const config = configManager.reset().fromFileSystem('./config.json').fromEnvironment().getConfig();
+const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('people');
 
-// Create and run integration
+// Create and run bulk people integration
 const integration = new HuronPersonIntegration(config);
 const result = await integration.run();
 
 console.log(`Integration completed with status: ${result.status}`);
+```
+
+### Execution Mode Usage
+
+```typescript
+import { SyncPerson, SyncPeople, ConfigManager } from 'integration-huron-person';
+
+const configManager = ConfigManager.getInstance();
+
+// Single person synchronization
+const personConfig = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
+const personSync = new SyncPerson({ config: personConfig, buid: 'U123456' });
+await personSync.run();
+
+// Bulk people synchronization  
+const peopleConfig = configManager.reset().fromEnvironment().fromFileSystem().getConfig('people');
+const peopleSync = new SyncPeople({ config: peopleConfig });
+await peopleSync.run();
+
+// Data-target-only operations (no data source validation)
+const targetOnlyConfig = configManager.reset().fromEnvironment().fromFileSystem().getConfig('nobody');
+// Use ReadPerson, ReadPeople, ReadOrganization, ReadOrganizations classes
 ```
 
 ### Advanced Usage with Custom Components
@@ -224,7 +319,8 @@ console.log(`Integration completed with status: ${result.status}`);
 import {
   HuronApiClientForJWT,
   HuronApiClientForApiKey,
-  BuCdmPersonDataSource, 
+  BuCdmPersonDataSource,
+  BuCdmPeopleDataSource,
   HuronPersonDataTarget,
   HuronDeltaStrategyFactory
 } from 'integration-huron-person';
@@ -232,7 +328,7 @@ import {
 import { EndToEnd } from 'integration-core';
 
 // Create components manually with appropriate authentication
-const dataSource = new BuCdmPersonDataSource(config);
+const dataSource = new BuCdmPeopleDataSource({ config }); // or BuCdmPersonDataSource
 const dataTarget = new HuronPersonDataTarget(config);
 
 // Create delta strategy based on configuration
@@ -419,21 +515,36 @@ npm test -- --coverage
 
 ### Data Source Customization
 
-Extend `BuCdmPersonDataSource` for different data sources:
+Extend `BuCdmDataSource` for different data sources:
 
 ```typescript
-class CustomPersonDataSource extends BuCdmPersonDataSource {
-  async fetchRaw(): Promise<any[]> {
-    // Custom data fetching logic
-    return await this.customApiCall();
+class CustomPersonDataSource extends BuCdmDataSource {
+  public readonly name = 'Custom Person Data Source';
+  public readonly description = 'Fetches person data from custom API endpoint';
+
+  protected getEndpointConfig(): EndpointConfigForApiKey {
+    // Return person-specific endpoint config
+    return this.config.dataSource.person!.endpointConfig;
   }
 
-  convertRawToInput(rawData: any[]): Input {
-    // Custom data transformation
-    return {
-      fieldDefinitions: this.getCustomFieldDefinitions(),
-      fieldSets: rawData.map(item => this.transformCustomItem(item))
-    };
+  protected getFetchPath(): string {
+    // Return person-specific fetch path
+    return this.config.dataSource.person!.fetchPersonsPath;
+  }
+}
+
+class CustomPeopleDataSource extends BuCdmDataSource {
+  public readonly name = 'Custom People Data Source';
+  public readonly description = 'Fetches bulk people data from custom API endpoint';
+
+  protected getEndpointConfig(): EndpointConfigForApiKey {
+    // Return people-specific endpoint config
+    return this.config.dataSource.people!.endpointConfig;
+  }
+
+  protected getFetchPath(): string {
+    // Return people-specific fetch path
+    return this.config.dataSource.people!.fetchPersonsPath;
   }
 }
 ```

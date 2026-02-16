@@ -30,15 +30,31 @@ const config = configManager
   .getConfig();               // Returns validated config
 ```
 
-### Custom Configuration File
+### Configuration with Execution Modes
+
+The configuration system supports execution modes to validate different data source configurations:
 
 ```typescript
-// Using custom config file path
-const config = configManager
+// Person mode - validates dataSource.person configuration
+const personConfig = configManager
   .reset()
-  .fromFileSystem('./custom-config.json')
+  .fromFileSystem('./config.json')
   .fromEnvironment()
-  .getConfig();
+  .getConfig('person');
+
+// People mode - validates dataSource.people configuration  
+const peopleConfig = configManager
+  .reset()
+  .fromFileSystem('./config.json')
+  .fromEnvironment()
+  .getConfig('people');
+
+// Nobody mode - no data source validation required
+const targetOnlyConfig = configManager
+  .reset()
+  .fromFileSystem('./config.json')
+  .fromEnvironment()
+  .getConfig('nobody');
 ```
 
 ### Environment-Only Configuration
@@ -74,6 +90,28 @@ Result: `{ apiKey: "file-key", timeout: 5000, retries: 3 }`
 - `timeout` comes from file (only source)
 - `retries` comes from environment (fills missing value)
 
+## Execution Modes
+
+The configuration system supports three execution modes that determine which data source configuration is validated:
+
+### Person Mode (`'person'`)
+- **Purpose**: Single-person operations and synchronization
+- **Validates**: `dataSource.person` configuration section
+- **Use Case**: Individual person lookups, updates, and targeted synchronization
+- **Data Source**: `BuCdmPersonDataSource`
+
+### People Mode (`'people'`)
+- **Purpose**: Bulk-people operations and synchronization  
+- **Validates**: `dataSource.people` configuration section
+- **Use Case**: Population-wide data synchronization and bulk operations
+- **Data Source**: `BuCdmPeopleDataSource`
+
+### Nobody Mode (`'nobody'`)
+- **Purpose**: Data-target-only operations
+- **Validates**: No data source configuration required
+- **Use Case**: Reading data from Huron API without source synchronization
+- **Classes**: `ReadPerson`, `ReadPeople`, `ReadOrganization`, `ReadOrganizations`
+
 ## Configuration Flow
 
 ```mermaid
@@ -100,8 +138,8 @@ sequenceDiagram
     ConfigManager->>ConfigManager: deepMerge(envConfig, existingConfig)
     ConfigManager-->>Client: this (chainable)
     
-    Client->>ConfigManager: getConfig()
-    ConfigManager->>Validator: validateConfig()
+    Client->>ConfigManager: getConfig(executionMode)
+    ConfigManager->>Validator: validateConfig(executionMode)
     Validator-->>ConfigManager: validation result
     ConfigManager-->>Client: validated Config object
 ```
@@ -127,10 +165,14 @@ Automatically maps environment variables to configuration structure:
 
 | Environment Variable | Configuration Path |
 |---------------------|-------------------|
-| **Data Source (BU CDM API)** | |
-| `DATASOURCE_ENDPOINTCONFIG_BASE_URL` | `dataSource.endpointConfig.baseUrl` |
-| `DATASOURCE_ENDPOINTCONFIG_API_KEY` | `dataSource.endpointConfig.apiKey` |
-| `DATASOURCE_ENDPOINT_PERSON_PATH` | `dataSource.fetchPersonsPath` |
+| **Data Source (BU CDM API) - Person Mode** | |
+| `DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL` | `dataSource.person.endpointConfig.baseUrl` |
+| `DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY` | `dataSource.person.endpointConfig.apiKey` |
+| `DATASOURCE_ENDPOINTCONFIG_PERSON_PATH` | `dataSource.person.fetchPersonsPath` |
+| **Data Source (BU CDM API) - People Mode** | |
+| `DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL` | `dataSource.people.endpointConfig.baseUrl` |
+| `DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY` | `dataSource.people.endpointConfig.apiKey` |
+| `DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH` | `dataSource.people.fetchPersonsPath` |
 | **Data Target (Huron API)** | |
 | `DATATARGET_ENDPOINTCONFIG_BASE_URL` | `dataTarget.endpointConfig.baseUrl` |
 | `DATATARGET_ENDPOINTCONFIG_USERNAME` | `dataTarget.endpointConfig.username` |
@@ -273,13 +315,13 @@ import { ConfigManager } from './config/ConfigManager';
 class HuronPersonIntegration {
   private config: Config;
 
-  constructor(configPath?: string) {
+  constructor(configPath?: string, executionMode: ExecutionMode = 'people') {
     const configManager = ConfigManager.getInstance();
     this.config = configManager
       .reset()
       .fromFileSystem(configPath || './config.json')
       .fromEnvironment()
-      .getConfig();
+      .getConfig(executionMode);
   }
 }
 ```
@@ -288,8 +330,8 @@ class HuronPersonIntegration {
 
 ```typescript
 // Test with mock environment variables
-process.env.HURON_API_BASE_URL = 'https://test-api.example.com';
-process.env.BU_CDM_API_KEY = 'test-key';
+process.env.DATATARGET_ENDPOINTCONFIG_BASE_URL = 'https://test-api.example.com';
+process.env.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY = 'test-key';
 
 const config = ConfigManager.getInstance()
   .reset()
@@ -304,11 +346,13 @@ const config = ConfigManager.getInstance()
 import { ConfigManager } from './config/ConfigManager';
 
 const configPath = process.argv[2] || './config.json';
+const executionMode = (process.argv[3] as ExecutionMode) || 'people';
+
 const config = ConfigManager.getInstance()
   .reset()
   .fromFileSystem(configPath)
   .fromEnvironment()
-  .getConfig();
+  .getConfig(executionMode);
 
 console.log('Loaded configuration:', JSON.stringify(config, null, 2));
 ```
@@ -328,12 +372,13 @@ console.log('Loaded configuration:', JSON.stringify(config, null, 2));
 
 ### Validation Errors
 1. Compare your config against the expected schema
-2. Check for missing required fields
+2. Check for missing required fields based on execution mode
 3. Verify data types match expected values
 4. Ensure URLs are properly formatted
+5. Confirm the correct execution mode is being used for your operation
 
 ## Configuration Schema
 
 For the complete configuration schema and validation rules, see:
-- `Config.ts` - TypeScript interface definitions
-- `ConfigValidator.ts` - Validation logic and error messages
+- `Config.ts` - TypeScript interface definitions and ExecutionMode type
+- `ConfigValidator.ts` - Validation logic with execution mode support and error messages

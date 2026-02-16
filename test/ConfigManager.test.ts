@@ -13,11 +13,20 @@ describe('ConfigManager', () => {
   
   const validConfig: Config = {
     dataSource: {
-      endpointConfig: {
-        baseUrl: 'https://datasource.example.com',
-        apiKey: 'test-api-key'
+      person: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
       },
-      fetchPersonsPath: '/api/v1/persons'
+      people: {
+        endpointConfig: {
+          baseUrl: 'https://datasource.example.com',
+          apiKey: 'test-api-key'
+        },
+        fetchPersonsPath: '/api/v1/persons'
+      }
     },
     dataTarget: {
       endpointConfig: {
@@ -61,7 +70,7 @@ describe('ConfigManager', () => {
         const result = configManager.fromFileSystem(mockConfigPath);
 
         expect(result).toBe(configManager); // Returns same instance for chaining
-        expect(configManager.getConfig()).toEqual(validConfig);
+        expect(configManager.getConfig('person')).toEqual(validConfig);
       });
 
       it('should throw error for invalid file system config', () => {
@@ -107,7 +116,7 @@ describe('ConfigManager', () => {
         const result = configManager
           .fromFileSystem(mockConfigPath)
           .fromEnvironment()
-          .getConfig();
+          .getConfig('person');
 
         // File config should win (earlier in chain)
         expect(result.integration.clientId).toBe('file-client-id');
@@ -138,7 +147,7 @@ describe('ConfigManager', () => {
         const result = configManager
           .fromFileSystem(mockConfigPath)
           .fromEnvironment()
-          .getConfig();
+          .getConfig('person');
 
         // Should have data from both sources with proper precedence
         expect(result.dataSource).toEqual(validConfig.dataSource);
@@ -165,7 +174,7 @@ describe('ConfigManager', () => {
         const result = configManager.reset();
         
         expect(result).toBe(configManager); // Returns same instance for chaining
-        expect(() => configManager.getConfig()).toThrow('No configuration loaded');
+        expect(() => configManager.getConfig('person')).toThrow('No configuration loaded');
       });
     });
   });
@@ -176,13 +185,13 @@ describe('ConfigManager', () => {
       mockedFs.readFileSync.mockReturnValue(JSON.stringify(validConfig));
       
       configManager.fromFileSystem(mockConfigPath);
-      const result = configManager.getConfig();
+      const result = configManager.getConfig('person');
       
       expect(result).toEqual(validConfig);
     });
 
     it('should throw error if no config loaded', () => {
-      expect(() => configManager.getConfig()).toThrow(
+      expect(() => configManager.getConfig('person')).toThrow(
         'No configuration loaded. Use fromFileSystem() or fromEnvironment() first.'
       );
     });
@@ -194,8 +203,8 @@ describe('ConfigManager', () => {
       configManager.fromFileSystem(mockConfigPath);
       
       // Multiple calls should not re-validate
-      const result1 = configManager.getConfig();
-      const result2 = configManager.getConfig();
+      const result1 = configManager.getConfig('person');
+      const result2 = configManager.getConfig('person');
       
       expect(result1).toEqual(validConfig);
       expect(result2).toEqual(validConfig);

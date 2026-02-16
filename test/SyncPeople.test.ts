@@ -55,11 +55,20 @@ describe('Package Exports', () => {
     it('should allow instantiation of all exported classes', () => {
       const mockConfig = {
         dataSource: {
-          endpointConfig: {
-            baseUrl: 'https://test-ds.com',
-            apiKey: 'test-api-key'
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/persons'
           },
-          fetchPersonsPath: '/persons'
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'test-api-key'
+            },
+            fetchPersonsPath: '/persons'
+          }
         },
         dataTarget: {
           endpointConfig: {

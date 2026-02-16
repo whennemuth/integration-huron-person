@@ -1,4 +1,4 @@
-import { Config } from './Config';
+import { Config, ExecutionMode } from './Config';
 import { ConfigValidator } from './ConfigValidator';
 import { ConfigFromEnvironment } from './ConfigFromEnvironment';
 import { ConfigFromFileSystem } from './ConfigFromFileSystem';
@@ -102,14 +102,14 @@ export class ConfigManager {
   /**
    * Get current configuration with validation
    */
-  getConfig(): Config {
+  getConfig(executionMode: ExecutionMode): Config {
     if (Object.keys(this.config).length === 0) {
       throw new Error('No configuration loaded. Use fromFileSystem() or fromEnvironment() first.');
     }
 
     if (!this.isValidated) {
       const validator = new ConfigValidator(this.config as Config);
-      validator.validateConfig();
+      validator.validateConfig(executionMode);
       this.isValidated = true;
     }
 

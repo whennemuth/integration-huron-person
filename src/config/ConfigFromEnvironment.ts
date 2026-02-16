@@ -8,9 +8,12 @@ export class ConfigFromEnvironment {
    * Environment variable names used by ConfigFromEnvironment
    */
   static readonly ENV_VARS = {
-    DATASOURCE_ENDPOINTCONFIG_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_BASE_URL',
-    DATASOURCE_ENDPOINTCONFIG_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_API_KEY',
-    DATASOURCE_ENDPOINT_PERSON_PATH: 'DATASOURCE_ENDPOINT_PERSON_PATH',
+    DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL',
+    DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY',
+    DATASOURCE_ENDPOINTCONFIG_PERSON_PATH: 'DATASOURCE_ENDPOINTCONFIG_PERSON_PATH',
+    DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL',
+    DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY',
+    DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH',
     DATATARGET_ENDPOINTCONFIG_BASE_URL: 'DATATARGET_ENDPOINTCONFIG_BASE_URL',
     DATATARGET_ENDPOINTCONFIG_USERNAME: 'DATATARGET_ENDPOINTCONFIG_USERNAME',
     DATATARGET_ENDPOINTCONFIG_PASSWORD: 'DATATARGET_ENDPOINTCONFIG_PASSWORD',
@@ -39,31 +42,66 @@ export class ConfigFromEnvironment {
     // Override with environment variables if present
     
     // DataSource (API Key authentication) overrides
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL]) {
-      envOverrides.dataSource = {
-        ...envOverrides.dataSource || this.baseConfig?.dataSource,
+    // Person-specific overrides
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).person = {
+        ...(envOverrides.dataSource as any).person,
         endpointConfig: {
-          ...this.baseConfig?.dataSource?.endpointConfig,
-          baseUrl: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_BASE_URL]
+          ...(envOverrides.dataSource as any).person?.endpointConfig,
+          baseUrl: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL]
         }
-      } as any;
+      };
     }
 
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY]) {
-      envOverrides.dataSource = {
-        ...envOverrides.dataSource || this.baseConfig?.dataSource,
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).person = {
+        ...(envOverrides.dataSource as any).person,
         endpointConfig: {
-          ...envOverrides.dataSource?.endpointConfig || this.baseConfig?.dataSource?.endpointConfig,
-          apiKey: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_API_KEY]
+          ...(envOverrides.dataSource as any).person?.endpointConfig,
+          apiKey: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY]
         }
-      } as any;
+      };
     }
 
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH]) {
-      envOverrides.dataSource = {
-        ...envOverrides.dataSource || this.baseConfig?.dataSource,
-        fetchPersonsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINT_PERSON_PATH]
-      } as any;
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).person = {
+        ...(envOverrides.dataSource as any).person,
+        fetchPersonsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH]
+      };
+    }
+
+    // People-specific overrides
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        endpointConfig: {
+          ...(envOverrides.dataSource as any).people?.endpointConfig,
+          baseUrl: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL]
+        }
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        endpointConfig: {
+          ...(envOverrides.dataSource as any).people?.endpointConfig,
+          apiKey: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY]
+        }
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        fetchPersonsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
+      };
     }
 
     // DataTarget (JWT authentication) overrides

@@ -91,8 +91,8 @@ class ReadOrganizations {
     }
   }
 
-    /**
-   * Read all organizations matching the criteria, handling pagination automatically
+  /**
+   * Read all organizations matching the criteria, handling pagination automatically.
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Organization records
    */
@@ -112,6 +112,7 @@ class ReadOrganizations {
 
       const response = await this.readOrganizations(paginationOptions);
       allOrganizations.push(...response.data);
+      console.log(`Fetched page ${offset} with ${response.data.length} organizations (Total so far: ${allOrganizations.length})`);
 
       // If we got fewer items than requested, we've reached the last page
       if (response.data.length < pageSize) {
@@ -119,7 +120,7 @@ class ReadOrganizations {
       }
 
       // Move to next page
-      offset += pageSize;
+      offset += 1;
     } while (true);
 
     return allOrganizations;
@@ -127,10 +128,16 @@ class ReadOrganizations {
 
   /**
    * Read all organizations matching the criteria, handling pagination automatically
+   * 
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Organization records
    */
   public async readAllOrganizations(options: Omit<ReadOrganizationsOptions, 'pagination'> = {}): Promise<HuronOrganization[]> {
+    
+    // PENDING: Huron API does not currently support tokenized pagination, but it is coming.
+    // Use the non-tokenized pagination method for now.
+    return await this.readAllOrganizationsNonTokenized(options);
+    
     const allOrganizations: HuronOrganization[] = [];
     let continuationToken: string | undefined;
 
@@ -206,65 +213,53 @@ async function main() {
     .getConfig('nobody');
 
   const reader = new ReadOrganizations(config);
+  const task = process.env.HURON_ORGS_TASK;
 
   try {
-    // // Example: Read all organizations
-    // console.log('Reading all organizations...');
-    // const allOrganizations = await reader.readAllOrganizationsTokenized();
-    // console.log(`Found ${allOrganizations.length} organizations`);
-
-    console.log('Reading organizations who match the "in" filter on id field...');
-    const orgsInFilter = await reader.readOrganizationsByFilterField('id', [
-      '10005944',
-      '10000477',
-      '10004680',
-      '10001021',
-      '10003951',
-      '10003353',
-      '10006927',
-      '10002222',
-      '10002118',
-      '10001195',
-      '10007085',
-      '00000000',
-      '10001077',
-      '10008083',
-      '10000273',
-      '10003253',
-      '10003826',
-      '10004679',
-      '10000950',
-      '10001487'
-    ]);
-    console.log(orgsInFilter, null, 2);
-    console.log(`Found ${orgsInFilter.length} organizations matching the "in" filter on id field`);
-    
-    // // Example: Read organizations with pagination
-    // console.log('\\nReading organizations with pagination...');
-    // const response = await reader.readOrganizations({
-    //   pagination: { pageSize: 10, offset: 1 }
-    // });
-    // console.log(`Page: ${response.pagination.offset}, Size: ${response.pagination.pageSize}, Total: ${response.pagination.total}`);
-    // console.log(`Organizations on this page: ${response.data.length}`);
-
-    // // Example: Read organizations with filtering
-    // console.log('\\nReading active organizations...');
-    // const activeOrgs = await reader.readAllOrganizations({
-    //   filters: [
-    //     ReadOrganizations.createFilter({ field: 'active', value: 'true' })
-    //   ]
-    // });
-    // console.log(`Found ${activeOrgs.length} active organizations`);
-
-    // // Example: Read organizations with sorting
-    // console.log('\nReading organizations sorted by name...');
-    // const sortedOrgs = await reader.readOrganizations({
-    //   sort: { field: 'name', direction: 'asc' },
-    //   pagination: { pageSize: 5 }
-    // });
-    // console.log('First 5 organizations by name:');
-    // sortedOrgs.data.forEach(org => console.log(`- ${org.name} (${org.id})`));
-
+    switch (task) {
+      case 'pages':
+        // Pagination defaulted - no custom pagination setting, and ALL records
+        console.log('Reading all organizations...');
+        const allOrganizations = await reader.readAllOrganizations();
+        console.log(`Found ${allOrganizations.length} organizations`);
+        break;
+      case 'page':
+        // Pagination customized - read into the second page (items 11 through 20)
+        console.log('Reading organizations with pagination...');
+        const response = await reader.readOrganizations({
+          pagination: { pageSize: 10, offset: 1 }
+        });
+        console.log(`Size: ${response.pagination.pageSize}, Total: ${response.pagination.total}`);
+        console.log(`Organizations on this page: ${response.data.length}`);
+        console.log('Organizations:', JSON.stringify(response.data.map(org => ( `${org.id}: ${org.name}` )), null, 2));
+        break;
+      case 'in':
+        console.log('Reading organizations who match the "in" filter on id field...');
+        const orgsInFilter = await reader.readOrganizationsByFilterField('id', [ '10005944', '10000477', '10004680' ]);
+        console.log(orgsInFilter, null, 2);
+        console.log(`Found ${orgsInFilter.length} organizations matching the "in" filter on id field`);
+        break;
+      case 'filter':
+        console.log('Reading organizations with filtering...');
+        const activeOrgs = await reader.readAllOrganizations({
+          filters: [
+            ReadOrganizations.createFilter({ field: 'active', value: 'true' })
+          ]
+        });
+        console.log(`Found ${activeOrgs.length} active organizations`);
+        break;
+      case 'sort':
+        console.log('Reading organizations with sorting...');
+        const sortedOrgs = await reader.readOrganizations({
+          sort: { field: 'name', direction: 'asc' },
+          pagination: { pageSize: 5 }
+        });
+        console.log('First 5 organizations by name:');
+        sortedOrgs.data.forEach(org => console.log(`- ${org.name} (${org.id})`));
+        break;
+      default:
+        console.log(`Invalid task specified: ${task || 'undefined'}. Please set HURON_ORGS_TASK to one of the following: all, in, paginate, filter, sort`);
+    }
   } catch (error) {
     console.error('Error reading organizations:', error);
   }

@@ -75,11 +75,51 @@ class ReadPeople {
   }
 
   /**
+   * Read all organizations matching the criteria, handling pagination automatically.
+   * @param options Configuration options for the query
+   * @returns Promise resolving to array of all matching Organization records
+   */
+  public async readAllPeopleNonTokenized(options: ReadPeopleOptions): Promise<HuronPerson[]> {
+    const allPeople: HuronPerson[] = [];
+    const { pagination: { pageSize = 500 } = {}} = options;
+    let offset = 0;
+
+    do {
+      const paginationOptions: ReadPeopleOptions = {
+        ...options,
+        pagination: {
+          pageSize,
+          offset
+        }
+      };
+
+      const response = await this.readPeople(paginationOptions);
+      allPeople.push(...response.data);
+      console.log(`Fetched page ${offset} with ${response.data.length} people (Total so far: ${allPeople.length})`);
+
+      // If we got fewer items than requested, we've reached the last page
+      if (response.data.length < pageSize) {
+        break;
+      }
+
+      // Move to next page
+      offset += 1;
+    } while (true);
+
+    return allPeople;
+  }
+
+  /**
    * Read all people matching the criteria, handling pagination automatically
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Person records
    */
   public async readAllPeople(options: Omit<ReadPeopleOptions, 'pagination'> = {}): Promise<HuronPerson[]> {
+    
+    // PENDING: Huron API does not currently support tokenized pagination, but it is coming.
+    // Use the non-tokenized pagination method for now.
+    return await this.readAllPeopleNonTokenized(options);
+
     const allPeople: HuronPerson[] = [];
     let continuationToken: string | undefined;
 

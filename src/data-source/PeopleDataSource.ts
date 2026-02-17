@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { DataSource } from 'integration-core';
+import { DataSource, Timer } from 'integration-core';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
@@ -63,8 +63,12 @@ async function main() {
     }
     const dataSource = new BuCdmPeopleDataSource({ config, responseFilter });
 
-    // Fetch data    
+    // Fetch data
+    const timer = new Timer();
+    timer.start();   
     const rawData = await dataSource.fetchRaw();
+    timer.stop();
+    timer.logElapsed(`Fetched people data in`);
 
     // Output the fetched data to console
     console.log('Fetched People Data:', JSON.stringify(rawData, null, 2));

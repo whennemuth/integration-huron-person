@@ -51,6 +51,9 @@ describe('ConfigFromEnvironment', () => {
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_USERNAME];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_PASSWORD];
@@ -111,6 +114,30 @@ describe('ConfigFromEnvironment', () => {
       
       expect(result.dataSource?.people?.fetchPath).toBe('/api/v2/prod/people');
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+    });
+
+    it('should override DataSource current terms API key configuration', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL] = 'https://prod-terms.example.com';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY] = 'prod-terms-key-456';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.dataSource?.terms?.endpointConfig?.baseUrl).toBe('https://prod-terms.example.com');
+      expect(result.dataSource?.terms?.endpointConfig?.apiKey).toBe('prod-terms-key-456');
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+      expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
+    });
+
+    it('should override DataSource current terms fetchPath', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH] = '/api/v2/prod/terms/current';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      expect(result.dataSource?.terms?.fetchPath).toBe('/api/v2/prod/terms/current');
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+      expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
     });
 
     it('should override DataTarget JWT configuration', () => {

@@ -136,6 +136,151 @@ describe('ConfigValidator', () => {
         const validator = new ConfigValidator(config);
         expect(() => validator.validateConfig('people')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
       });
+
+      it('should throw error when dataSource terms baseUrl is missing', () => {
+        const config = getValidConfig();
+        config.dataSource.terms = {
+          endpointConfig: {
+            apiKey: 'test-api-key'
+          } as any,
+          fetchPath: '/api/terms/current'
+        };
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).toThrow('Missing required configuration field: dataSource.terms.endpointConfig.baseUrl');
+      });
+
+      it('should throw error when dataSource terms apiKey is missing', () => {
+        const config = getValidConfig();
+        config.dataSource.terms = {
+          endpointConfig: {
+            baseUrl: 'https://datasource.example.com'
+          } as any,
+          fetchPath: '/api/terms/current'
+        };
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).toThrow('Missing required configuration field: dataSource.terms.endpointConfig.apiKey');
+      });
+
+      it('should throw error when terms fetchPath is missing', () => {
+        const config = getValidConfig();
+        config.dataSource.terms = {
+          endpointConfig: {
+            baseUrl: 'https://datasource.example.com',
+            apiKey: 'test-api-key'
+          }
+        } as any;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).toThrow('Missing required configuration field: dataSource.terms.fetchPath');
+      });
+
+      it('should throw error for invalid dataSource terms baseUrl', () => {
+        const config = getValidConfig();
+        config.dataSource.terms = {
+          endpointConfig: {
+            baseUrl: 'invalid-url',
+            apiKey: 'test-api-key'
+          },
+          fetchPath: '/api/terms/current'
+        };
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');
+      });
+    });
+
+    describe('execution mode validation', () => {
+      it('should validate person mode without requiring people or terms fields', () => {
+        const config = getValidConfig();
+        // Remove people and terms fields - should still be valid for person mode
+        delete (config.dataSource as any).people;
+        delete (config.dataSource as any).terms;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('person')).not.toThrow();
+      });
+
+      it('should validate people mode without requiring person or terms fields', () => {
+        const config = getValidConfig();
+        // Remove person and terms fields - should still be valid for people mode
+        delete (config.dataSource as any).person;
+        delete (config.dataSource as any).terms;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('people')).not.toThrow();
+      });
+
+      it('should validate terms mode without requiring person or people fields', () => {
+        const config = getValidConfig();
+        // Remove person and people, add terms
+        delete (config.dataSource as any).person;
+        delete (config.dataSource as any).people;
+        config.dataSource.terms = {
+          endpointConfig: {
+            baseUrl: 'https://datasource.example.com',
+            apiKey: 'test-api-key'
+          },
+          fetchPath: '/api/terms/current'
+        };
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).not.toThrow();
+      });
+
+      it('should validate none mode without requiring any dataSource fields', () => {
+        const config = getValidConfig();
+        // Remove all dataSource fields - should be valid for none mode
+        delete (config.dataSource as any).person;
+        delete (config.dataSource as any).people;
+        delete (config.dataSource as any).terms;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('none')).not.toThrow();
+      });
+
+      it('should fail person mode when person fields are missing', () => {
+        const config = getValidConfig();
+        delete (config.dataSource as any).person;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.endpointConfig.baseUrl');
+      });
+
+      it('should fail people mode when people fields are missing', () => {
+        const config = getValidConfig();
+        delete (config.dataSource as any).people;
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.endpointConfig.baseUrl');
+      });
+
+      it('should fail terms mode when terms fields are missing', () => {
+        const config = getValidConfig();
+        // Don't add terms field
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('terms')).toThrow('Missing required configuration field: dataSource.terms.endpointConfig.baseUrl');
+      });
+
+      it('should use isValid method returning true for valid none mode', () => {
+        const config = getValidConfig();
+        delete (config.dataSource as any).person;
+        delete (config.dataSource as any).people;
+        delete (config.dataSource as any).terms;
+        
+        const validator = new ConfigValidator(config);
+        expect(validator.isValid('none')).toBe(true);
+      });
+
+      it('should use isValid method returning false for invalid terms mode', () => {
+        const config = getValidConfig();
+        // Missing terms configuration
+        
+        const validator = new ConfigValidator(config);
+        expect(validator.isValid('terms')).toBe(false);
+      });
     });
 
     describe('dataTarget validation', () => {

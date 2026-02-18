@@ -14,6 +14,9 @@ export class ConfigFromEnvironment {
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL',
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY',
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH',
+    DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL',
+    DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY',
+    DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH',
     DATATARGET_ENDPOINTCONFIG_BASE_URL: 'DATATARGET_ENDPOINTCONFIG_BASE_URL',
     DATATARGET_ENDPOINTCONFIG_USERNAME: 'DATATARGET_ENDPOINTCONFIG_USERNAME',
     DATATARGET_ENDPOINTCONFIG_PASSWORD: 'DATATARGET_ENDPOINTCONFIG_PASSWORD',
@@ -101,6 +104,37 @@ export class ConfigFromEnvironment {
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
         fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
+      };
+    }
+
+    // Current Terms-specific overrides
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).terms = {
+        ...(envOverrides.dataSource as any).terms,
+        endpointConfig: {
+          ...(envOverrides.dataSource as any).terms?.endpointConfig,
+          baseUrl: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL]
+        }
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).terms = {
+        ...(envOverrides.dataSource as any).terms,
+        endpointConfig: {
+          ...(envOverrides.dataSource as any).terms?.endpointConfig,
+          apiKey: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY]
+        }
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).terms = {
+        ...(envOverrides.dataSource as any).terms,
+        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH]
       };
     }
 

@@ -5,7 +5,7 @@ import { EndpointConfigForApiKey } from '../data-source/ApiClientForApiKey';
 /**
  * Execution mode for the integration
  */
-export type ExecutionMode = 'person' | 'people' | 'none';
+export type ExecutionMode = 'person' | 'people' | 'terms' | 'none';
 
 /**
  * Configuration for data source endpoints
@@ -29,6 +29,8 @@ export interface Config {
     person?: DataSourceConfig;
     /** Configuration for bulk people operations */
     people?: DataSourceConfig;
+    /** Configuration for aquiring list of terms */
+    terms?: DataSourceConfig;
   };
   
   /** DataTarget configuration (where we push data to) - uses JWT authentication */

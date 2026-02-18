@@ -37,6 +37,10 @@ export class ConfigValidator {
       'dataSource.people.endpointConfig.baseUrl',
       'dataSource.people.endpointConfig.apiKey',
       'dataSource.people.fetchPath'
+    ] : executionMode === 'terms' ? [
+      'dataSource.terms.endpointConfig.baseUrl',
+      'dataSource.terms.endpointConfig.apiKey',
+      'dataSource.terms.fetchPath'
     ] : []; // 'none' mode requires no dataSource fields
 
     // Required fields for JWT authentication (DataTarget) - now discriminated union
@@ -96,7 +100,11 @@ export class ConfigValidator {
     try {
       const dataSourceUrl = executionMode === 'person' 
         ? this.config.dataSource.person?.endpointConfig.baseUrl
-        : this.config.dataSource.people?.endpointConfig.baseUrl;
+        : executionMode === 'people'
+        ? this.config.dataSource.people?.endpointConfig.baseUrl
+        : executionMode === 'terms'
+        ? this.config.dataSource.terms?.endpointConfig.baseUrl
+        : undefined;
       if (dataSourceUrl) {
         new URL(dataSourceUrl);
       }

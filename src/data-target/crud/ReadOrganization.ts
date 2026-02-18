@@ -62,7 +62,7 @@ class ReadOrganization {
    */
   public readOrganizationById = async (organizationId: string, includeFields?: string[]): Promise<HuronOrganization[]> => {
     try {
-      return this.readOrganizationBySingleFilter('id', organizationId, includeFields);
+      return await this.readOrganizationBySingleFilter('id', organizationId, includeFields);
     } catch (error) {
       console.error(`Failed to read organization with id ${organizationId}:`, error);
       throw new Error(`Failed to read organization by id ${organizationId}: ${error}`);
@@ -86,7 +86,7 @@ class ReadOrganization {
    */
   public async readOrganizationByName(name: string, includeFields?: string[]): Promise<HuronOrganization[]> {
     try {
-      return this.readOrganizationBySingleFilter('name', name, includeFields);
+      return await this.readOrganizationBySingleFilter('name', name, includeFields);
     } catch (error) {
       console.error(`Failed to read organization with name ${name}:`, error);
       throw new Error(`Failed to read organization by name ${name}: ${error}`);
@@ -100,7 +100,7 @@ class ReadOrganization {
    */
   public async readOrganizationBySourceIdentifier(sourceIdentifier: string, includeFields?: string[]): Promise<HuronOrganization[]> {
     try {
-      return this.readOrganizationBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
+      return await this.readOrganizationBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
     } catch (error) {
       console.error(`Failed to read organization with sourceIdentifier ${sourceIdentifier}:`, error);
       throw new Error(`Failed to read organization by sourceIdentifier ${sourceIdentifier}: ${error}`);

@@ -66,7 +66,7 @@ class ReadPerson {
    */
   public readPersonById = async (personId: string, includeFields?: string[]): Promise<HuronPerson[]> => {
     try {
-      return this.readPersonBySingleFilter('id', personId, includeFields);
+      return await this.readPersonBySingleFilter('id', personId, includeFields);
     } catch (error) {
       console.error(`Failed to read person with id ${personId}:`, error);
       throw new Error(`Failed to read person by id ${personId}: ${error}`);
@@ -91,7 +91,7 @@ class ReadPerson {
    */
   public async readPersonByEmail(email: string, includeFields?: string[]): Promise<HuronPerson[]> {
     try {
-      return this.readPersonBySingleFilter('contactInformation.email', email, includeFields);
+      return await this.readPersonBySingleFilter('contactInformation.email', email, includeFields);
     } catch (error) {
       console.error(`Failed to read person with email ${email}:`, error);
       throw new Error(`Failed to read person by email ${email}: ${error}`);
@@ -100,7 +100,7 @@ class ReadPerson {
 
   public async readPersonByUserId(userId: string, includeFields?: string[]): Promise<HuronPerson[]> {
     try {
-      return this.readPersonBySingleFilter('userId', userId, includeFields);
+      return await this.readPersonBySingleFilter('userId', userId, includeFields);
     } catch (error) {
       console.error(`Failed to read person with userId ${userId}:`, error);
       throw new Error(`Failed to read person by userId ${userId}: ${error}`);
@@ -109,7 +109,7 @@ class ReadPerson {
 
   public async readPersonBySourceIdentifier(sourceIdentifier: string, includeFields?: string[]): Promise<HuronPerson[]> {
     try {
-      return this.readPersonBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
+      return await this.readPersonBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
     } catch (error) {
       console.error(`Failed to read person with sourceIdentifier ${sourceIdentifier}:`, error);
       throw new Error(`Failed to read person by sourceIdentifier ${sourceIdentifier}: ${error}`);

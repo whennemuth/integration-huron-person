@@ -159,7 +159,7 @@ describe('ReadOrganizations', () => {
 
       // Mock second page response
       const secondPageData = {
-        pagination: { offset: 2, pageSize: 2, total: 5, continuationToken: 'token2' },
+        pagination: { offset: 1, pageSize: 2, total: 5, continuationToken: 'token2' },
         data: [
           { id: 'org3', name: 'Organization 3' },
           { id: 'org4', name: 'Organization 4' }
@@ -168,7 +168,7 @@ describe('ReadOrganizations', () => {
 
       // Mock final page response
       const finalPageData = {
-        pagination: { offset: 4, pageSize: 2, total: 5 },
+        pagination: { offset: 2, pageSize: 2, total: 5 },
         data: [
           { id: 'org5', name: 'Organization 5' }
         ]
@@ -197,7 +197,7 @@ describe('ReadOrganizations', () => {
           config: {}
         } as any);
 
-      const result = await readOrganizations.readAllOrganizations();
+      const result = await (readOrganizations as any).readAllOrganizationsNonTokenized({ pagination: { pageSize: 2 } });
 
       expect(result).toHaveLength(5);
       expect(result[0]).toEqual({ id: 'org1', name: 'Organization 1' });
@@ -226,6 +226,123 @@ describe('ReadOrganizations', () => {
 
       expect(result).toHaveLength(2);
       expect(mockApiClient.get).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('readOrganizationsByFilterField', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      // Mock successful single page response
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          pagination: { offset: 0, pageSize: 25, total: 3 },
+          data: [
+            { id: 'org1', name: 'Organization 1' },
+            { id: 'org2', name: 'Organization 2' },
+            { id: 'org3', name: 'Organization 3' }
+          ]
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
+    });
+
+    it('should filter organizations by valid field with multiple values', async () => {
+      const result = await readOrganizations.readOrganizationsByFilterField('id', ['org1', 'org2', 'org3']);
+
+      expect(result).toHaveLength(3);
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'id',
+              value: 'org1,org2,org3',
+              comparisonOperator: 'in'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should throw error for invalid filter field', async () => {
+      await expect(
+        readOrganizations.readOrganizationsByFilterField('invalidField', ['value1', 'value2'])
+      ).rejects.toThrow(/Invalid filter field: invalidField/);
+      
+      expect(mockApiClient.get).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty array', async () => {
+      const result = await readOrganizations.readOrganizationsByFilterField('name', []);
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'name',
+              value: '',
+              comparisonOperator: 'in'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should handle single-item array', async () => {
+      const result = await readOrganizations.readOrganizationsByFilterField('id', ['org1']);
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'id',
+              value: 'org1',
+              comparisonOperator: 'in'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should merge with existing filters from options', async () => {
+      const existingFilter = ReadOrganizations.createFilter({
+        field: 'active',
+        value: 'true'
+      });
+
+      const result = await readOrganizations.readOrganizationsByFilterField(
+        'id',
+        ['org1', 'org2'],
+        { filters: [existingFilter] }
+      );
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'id',
+              value: 'org1,org2',
+              comparisonOperator: 'in'
+            }),
+            existingFilter
+          ])
+        })
+      );
+      // Verify the 'in' filter comes first
+      const call = mockQueryBuilder.buildQueryParams.mock.calls[0]?.[0];
+      expect(call?.filters?.[0]?.field).toBe('id');
+      expect(call?.filters?.[1]).toBe(existingFilter);
+    });
+
+    it('should work with valid organization filter fields', async () => {
+      // Test a few valid fields to ensure they work (using fields from the mock)
+      await readOrganizations.readOrganizationsByFilterField('name', ['Test Org']);
+      await readOrganizations.readOrganizationsByFilterField('id', ['12345']);
+      await readOrganizations.readOrganizationsByFilterField('active', ['true']);
+      
+      expect(mockApiClient.get).toHaveBeenCalledTimes(3);
     });
   });
 

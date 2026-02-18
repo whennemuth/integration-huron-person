@@ -96,10 +96,10 @@ class ReadOrganizations {
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Organization records
    */
-  public async readAllOrganizationsNonTokenized(options: Omit<ReadOrganizationsOptions, 'pagination'> = {}): Promise<HuronOrganization[]> {
+  public async readAllOrganizationsNonTokenized(options: ReadOrganizationsOptions = {}): Promise<HuronOrganization[]> {
     const allOrganizations: HuronOrganization[] = [];
+    const { pagination: { pageSize = 100 } = {}} = options;
     let offset = 0;
-    const pageSize = 100; // Use larger page size for efficiency
 
     do {
       const paginationOptions: ReadOrganizationsOptions = {

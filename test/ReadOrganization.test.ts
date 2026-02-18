@@ -17,7 +17,7 @@ describe('ReadOrganization', () => {
       .getInstance()
       .fromEnvironment()
       .fromFileSystem()
-      .getConfig('nobody');
+      .getConfig('none');
 
     readOrganization = new ReadOrganization(config);
 

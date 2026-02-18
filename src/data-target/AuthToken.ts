@@ -61,7 +61,7 @@ async function main() {
     .getInstance()
     .fromEnvironment()
     .fromFileSystem()
-    .getConfig('nobody');
+    .getConfig('none');
 
   const tokenAuthConfig = config.dataTarget.endpointConfig as EndpointConfigForJWT & TokenAuthConfig;
 

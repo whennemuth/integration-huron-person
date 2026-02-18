@@ -49,12 +49,12 @@ const peopleConfig = configManager
   .fromEnvironment()
   .getConfig('people');
 
-// Nobody mode - no data source validation required
+// None mode - no data source validation required
 const targetOnlyConfig = configManager
   .reset()
   .fromFileSystem('./config.json')
   .fromEnvironment()
-  .getConfig('nobody');
+  .getConfig('none');
 ```
 
 ### Environment-Only Configuration
@@ -106,7 +106,7 @@ The configuration system supports three execution modes that determine which dat
 - **Use Case**: Population-wide data synchronization and bulk operations
 - **Data Source**: `BuCdmPeopleDataSource`
 
-### Nobody Mode (`'nobody'`)
+### None Mode (`'none'`)
 - **Purpose**: Data-target-only operations
 - **Validates**: No data source configuration required
 - **Use Case**: Reading data from Huron API without source synchronization

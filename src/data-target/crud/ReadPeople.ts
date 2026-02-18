@@ -248,7 +248,7 @@ async function main() {
     .getInstance()
     .fromEnvironment()
     .fromFileSystem()
-    .getConfig('nobody');
+    .getConfig('none');
 
   const reader = new ReadPeople(config);
 

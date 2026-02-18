@@ -70,7 +70,7 @@ if (require.main === module) {
         .getInstance()
         .fromEnvironment()
         .fromFileSystem()
-        .getConfig('nobody');
+        .getConfig('none');
 
       let listPeople: ListPeople;
       let people: HuronPerson[];

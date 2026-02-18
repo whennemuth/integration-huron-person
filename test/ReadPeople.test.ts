@@ -16,7 +16,7 @@ describe('ReadPeople', () => {
       .getInstance()
       .fromEnvironment()
       .fromFileSystem()
-      .getConfig('nobody');
+      .getConfig('none');
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;

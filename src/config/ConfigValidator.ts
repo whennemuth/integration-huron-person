@@ -37,7 +37,7 @@ export class ConfigValidator {
       'dataSource.people.endpointConfig.baseUrl',
       'dataSource.people.endpointConfig.apiKey',
       'dataSource.people.fetchPath'
-    ] : []; // 'nobody' mode requires no dataSource fields
+    ] : []; // 'none' mode requires no dataSource fields
 
     // Required fields for JWT authentication (DataTarget) - now discriminated union
     const dataTargetBaseFields = [

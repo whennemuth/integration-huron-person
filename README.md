@@ -193,7 +193,7 @@ export TIMEOUT="30000"
 The system automatically validates all required fields based on the execution mode:
 - **Person mode**: Validates `dataSource.person` configuration for single-person operations
 - **People mode**: Validates `dataSource.people` configuration for bulk-people operations  
-- **Nobody mode**: No data source validation required for data-target-only operations
+- **None mode**: No data source validation required for data-target-only operations
 - Data target configuration is always validated regardless of mode
 - Storage configuration based on type
 - Endpoint paths and timeout values
@@ -215,7 +215,7 @@ Used for bulk-people synchronization operations:
 - Uses `BuCdmPeopleDataSource` for data fetching
 - Suitable for population-wide data synchronization
 
-#### Nobody Mode (`'nobody'`)
+#### None Mode (`'none'`)
 Used for data-target-only operations:
 - No data source validation required
 - Suitable for reading data from Huron API without source synchronization
@@ -309,7 +309,7 @@ const peopleSync = new SyncPeople({ config: peopleConfig });
 await peopleSync.run();
 
 // Data-target-only operations (no data source validation)
-const targetOnlyConfig = configManager.reset().fromEnvironment().fromFileSystem().getConfig('nobody');
+const targetOnlyConfig = configManager.reset().fromEnvironment().fromFileSystem().getConfig('none');
 // Use ReadPerson, ReadPeople, ReadOrganization, ReadOrganizations classes
 ```
 

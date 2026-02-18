@@ -5,7 +5,7 @@ import { EndpointConfigForApiKey } from '../data-source/ApiClientForApiKey';
 /**
  * Execution mode for the integration
  */
-export type ExecutionMode = 'person' | 'people' | 'nobody';
+export type ExecutionMode = 'person' | 'people' | 'none';
 
 /**
  * Configuration for data source endpoints

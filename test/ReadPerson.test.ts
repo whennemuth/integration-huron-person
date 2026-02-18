@@ -19,7 +19,7 @@ describe('ReadPerson', () => {
       .getInstance()
       .fromEnvironment()
       .fromFileSystem()
-      .getConfig('nobody');
+      .getConfig('none');
 
     readPerson = new ReadPerson(config);
 

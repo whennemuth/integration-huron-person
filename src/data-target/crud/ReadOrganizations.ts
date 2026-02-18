@@ -210,7 +210,7 @@ async function main() {
     getInstance()
     .fromEnvironment()
     .fromFileSystem()
-    .getConfig('nobody');
+    .getConfig('none');
 
   const reader = new ReadOrganizations(config);
   const task = process.env.HURON_ORGS_TASK;

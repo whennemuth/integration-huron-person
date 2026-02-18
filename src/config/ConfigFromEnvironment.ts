@@ -69,7 +69,7 @@ export class ConfigFromEnvironment {
       envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
       (envOverrides.dataSource as any).person = {
         ...(envOverrides.dataSource as any).person,
-        fetchPersonsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH]
+        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH]
       };
     }
 
@@ -100,7 +100,7 @@ export class ConfigFromEnvironment {
       envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
-        fetchPersonsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
+        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
       };
     }
 

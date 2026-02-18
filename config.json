@@ -6,7 +6,7 @@
         "apiKey": "your-api-key-here",
         "timeout": 300000
       },
-      "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+      "fetchPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",
@@ -18,9 +18,9 @@
       "endpointConfig": {
         "baseUrl": "https://prod-budev-fm.snaplogic.io",
         "apiKey": "your-api-key-here",
-        "timeout": 600000
+        "timeout": 3600000
       },
-      "fetchPersonsPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",

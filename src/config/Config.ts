@@ -14,7 +14,7 @@ type DataSourceConfig = {
   /** API client configuration */
   endpointConfig: EndpointConfigForApiKey;
   /** Endpoint for fetching person data */
-  fetchPersonsPath: string;
+  fetchPath: string;
   /** Optional fields to keep during response filtering */
   fieldsOfInterest?: string[];
 };

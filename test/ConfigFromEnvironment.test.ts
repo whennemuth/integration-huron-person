@@ -9,14 +9,14 @@ describe('ConfigFromEnvironment', () => {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       }
     },
     dataTarget: {
@@ -81,13 +81,13 @@ describe('ConfigFromEnvironment', () => {
       expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
     });
 
-    it('should override DataSource person fetchPersonsPath', () => {
+    it('should override DataSource person fetchPath', () => {
       process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH] = '/api/v2/prod/persons';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.person?.fetchPersonsPath).toBe('/api/v2/prod/persons');
+      expect(result.dataSource?.person?.fetchPath).toBe('/api/v2/prod/persons');
       expect(result.dataSource?.people).toBeUndefined(); // People should not be overridden
     });
 
@@ -103,13 +103,13 @@ describe('ConfigFromEnvironment', () => {
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
 
-    it('should override DataSource people fetchPersonsPath', () => {
+    it('should override DataSource people fetchPath', () => {
       process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH] = '/api/v2/prod/people';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.people?.fetchPersonsPath).toBe('/api/v2/prod/people');
+      expect(result.dataSource?.people?.fetchPath).toBe('/api/v2/prod/people');
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
 

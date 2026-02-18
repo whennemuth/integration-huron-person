@@ -33,7 +33,7 @@ class BuCdmPeopleDataSource extends BuCdmDataSource implements DataSource {
     if (!people) {
       throw new Error('People data source configuration is required for people execution mode');
     }
-    return people.fetchPersonsPath;
+    return people.fetchPath;
   }
 }
 

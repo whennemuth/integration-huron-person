@@ -60,14 +60,14 @@ describe('Package Exports', () => {
               baseUrl: 'https://test-ds.com',
               apiKey: 'test-api-key'
             },
-            fetchPersonsPath: '/persons'
+            fetchPath: '/persons'
           },
           people: {
             endpointConfig: {
               baseUrl: 'https://test-ds.com',
               apiKey: 'test-api-key'
             },
-            fetchPersonsPath: '/persons'
+            fetchPath: '/persons'
           }
         },
         dataTarget: {

@@ -9,14 +9,14 @@ describe('ConfigValidator', () => {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       }
     },
     dataTarget: {
@@ -105,20 +105,20 @@ describe('ConfigValidator', () => {
         expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.endpointConfig.apiKey');
       });
 
-      it('should throw error when person fetchPersonsPath is missing', () => {
+      it('should throw error when person fetchPath is missing', () => {
         const config = getValidConfig();
-        delete (config.dataSource.person as any).fetchPersonsPath;
+        delete (config.dataSource.person as any).fetchPath;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.fetchPersonsPath');
+        expect(() => validator.validateConfig('person')).toThrow('Missing required configuration field: dataSource.person.fetchPath');
       });
 
-      it('should throw error when people fetchPersonsPath is missing', () => {
+      it('should throw error when people fetchPath is missing', () => {
         const config = getValidConfig();
-        delete (config.dataSource.people as any).fetchPersonsPath;
+        delete (config.dataSource.people as any).fetchPath;
         
         const validator = new ConfigValidator(config);
-        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.fetchPersonsPath');
+        expect(() => validator.validateConfig('people')).toThrow('Missing required configuration field: dataSource.people.fetchPath');
       });
 
       it('should throw error for invalid dataSource person baseUrl', () => {

@@ -112,7 +112,7 @@ Complete configuration with all available options:
         "apiKey": "your_person_api_key_here",
         "timeout": 300000
       },
-      "fetchPersonsPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+      "fetchPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",
@@ -126,7 +126,7 @@ Complete configuration with all available options:
         "apiKey": "your_people_api_key_here",
         "timeout": 600000
       },
-      "fetchPersonsPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",
@@ -529,7 +529,7 @@ class CustomPersonDataSource extends BuCdmDataSource {
 
   protected getFetchPath(): string {
     // Return person-specific fetch path
-    return this.config.dataSource.person!.fetchPersonsPath;
+    return this.config.dataSource.person!.fetchPath;
   }
 }
 
@@ -544,7 +544,7 @@ class CustomPeopleDataSource extends BuCdmDataSource {
 
   protected getFetchPath(): string {
     // Return people-specific fetch path
-    return this.config.dataSource.people!.fetchPersonsPath;
+    return this.config.dataSource.people!.fetchPath;
   }
 }
 ```

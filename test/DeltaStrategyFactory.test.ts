@@ -16,14 +16,14 @@ describe('DeltaStrategyFactory', () => {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       }
     },
     dataTarget: {

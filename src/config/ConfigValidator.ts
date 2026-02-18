@@ -32,11 +32,11 @@ export class ConfigValidator {
     const dataSourceRequiredFields = executionMode === 'person' ? [
       'dataSource.person.endpointConfig.baseUrl',
       'dataSource.person.endpointConfig.apiKey',
-      'dataSource.person.fetchPersonsPath'
+      'dataSource.person.fetchPath'
     ] : executionMode === 'people' ? [
       'dataSource.people.endpointConfig.baseUrl',
       'dataSource.people.endpointConfig.apiKey',
-      'dataSource.people.fetchPersonsPath'
+      'dataSource.people.fetchPath'
     ] : []; // 'nobody' mode requires no dataSource fields
 
     // Required fields for JWT authentication (DataTarget) - now discriminated union

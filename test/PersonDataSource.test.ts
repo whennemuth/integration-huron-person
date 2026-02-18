@@ -51,14 +51,14 @@ describe('BuCdmPersonDataSource', () => {
           baseUrl: 'https://datasource-api.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource-api.example.com',
           apiKey: 'test-api-key'
         },
-        fetchPersonsPath: '/api/v1/persons'
+        fetchPath: '/api/v1/persons'
       }
     },
     dataTarget: {
@@ -216,14 +216,14 @@ describe('BuCdmPersonDataSource', () => {
               apiKey: 'test-api-key',
               timeout: 12000  // Endpoint-specific timeout
             },
-            fetchPersonsPath: '/api/v1/persons'
+            fetchPath: '/api/v1/persons'
           },
           people: {
             endpointConfig: {
               baseUrl: 'https://datasource-api.example.com',
               apiKey: 'test-api-key'
             },
-            fetchPersonsPath: '/api/v1/persons'
+            fetchPath: '/api/v1/persons'
           }
         },
         dataTarget: {
@@ -268,14 +268,14 @@ describe('BuCdmPersonDataSource', () => {
               apiKey: 'test-api-key'
               // No timeout specified in endpointConfig
             },
-            fetchPersonsPath: '/api/v1/persons'
+            fetchPath: '/api/v1/persons'
           },
           people: {
             endpointConfig: {
               baseUrl: 'https://datasource-api.example.com',
               apiKey: 'test-api-key'
             },
-            fetchPersonsPath: '/api/v1/persons'
+            fetchPath: '/api/v1/persons'
           }
         },
         dataTarget: {

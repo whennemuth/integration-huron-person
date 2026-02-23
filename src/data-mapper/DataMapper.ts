@@ -1,4 +1,5 @@
 import { DataMapper as CoreDataMapper, Field, Input } from 'integration-core';
+import { Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
 import { AddressMapper } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
@@ -6,6 +7,14 @@ import { NameMapper } from './DataMapperName';
 import { OrgMapper } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
 import { UserIdMapper } from './DataMapperUserId';
+
+/**
+ * Parameters for DataMapper constructor
+ */
+interface DataMapperParams {
+  currentTerms: Term[];
+  orgHrn?: (sourceOrgId: string) => string | undefined;
+}
 
 /**
  * DataMapper class for:
@@ -18,10 +27,13 @@ export class DataMapper implements CoreDataMapper {
   private _criticalValidationFailureMessage:string;
   private _infoValidationFailureMessage:string;
   private _orgHrn: (sourceOrgId: string) => string | undefined;
+  private _currentTerms: Term[];
 
-  constructor(private orgHrn?: (sourceOrgId: string) => string | undefined) { 
-    if(orgHrn) {
-      this._orgHrn = orgHrn;
+  constructor(params: DataMapperParams) { 
+    this._currentTerms = params.currentTerms;
+    
+    if(params.orgHrn) {
+      this._orgHrn = params.orgHrn;
     } else {
       // Default organization HRN expression to a lookup function if not provided
       this._orgHrn = (sourceOrgId: string) => `lookup:sourceIdentifier:${sourceOrgId}`;
@@ -34,6 +46,10 @@ export class DataMapper implements CoreDataMapper {
 
   public get infoValidationErrorMessage(): string {
     return this._infoValidationFailureMessage;
+  }
+
+  public get currentTerms(): Term[] {
+    return this._currentTerms;
   }
 
   /**

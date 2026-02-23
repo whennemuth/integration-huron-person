@@ -4,6 +4,7 @@ import { DataMapper } from '../src/data-mapper/DataMapper';
 import { IApiClient } from '../src/ApiClient';
 import { Config } from '../src/config/Config';
 import { AxiosResponseStreamFilter } from '../src/stream/AxiosResponseStreamFilter';
+import { Term } from '../src/data-source/CurrentTermsDataSource';
 
 // Mock ApiClient
 class MockApiClient implements IApiClient {
@@ -190,10 +191,22 @@ describe('BuCdmPersonDataSource', () => {
     }
   ];
 
+  // Mock current terms for DataMapper
+  const mockCurrentTerms: Term[] = [
+    {
+      term: '2261',
+      termDescription: 'Spring 2026',
+      academicCareer: 'GRAD',
+      termBeginDate: '20260120',
+      termEndDate: '20260508',
+      currentInd: 'Y'
+    }
+  ];
+
   beforeEach(() => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
-    dataMapper = new DataMapper();
+    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms });
     dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;

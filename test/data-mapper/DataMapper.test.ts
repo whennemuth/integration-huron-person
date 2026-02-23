@@ -1,12 +1,33 @@
 import { DataMapper } from '../../src/data-mapper/DataMapper';
+import { Term } from '../../src/data-source/CurrentTermsDataSource';
 
 describe('DataMapper', () => {
+  // Mock current terms data for tests
+  const mockCurrentTerms: Term[] = [
+    {
+      term: '2261',
+      termDescription: 'Spring 2026',
+      academicCareer: 'GRAD',
+      termBeginDate: '20260120',
+      termEndDate: '20260508',
+      currentInd: 'Y'
+    },
+    {
+      term: '2261',
+      termDescription: 'Spring 2026',
+      academicCareer: 'UGRD',
+      termBeginDate: '20260120',
+      termEndDate: '20260508',
+      currentInd: 'Y'
+    }
+  ];
+
   describe('map', () => {
     it('should map bugs.json source to bugs.json target', () => {
       const source = require('./source/bugs.json');
       const expectedTarget = require('./target/bugs.json');
 
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const result = mapper.map([source]);
 
       // The result should have fieldSets with one item, and fieldValues should match expectedTarget
@@ -21,28 +42,28 @@ describe('DataMapper', () => {
 
     // Add more comprehensive tests here, without repeating mapper-specific tests
     it('should handle empty array', () => {
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const result = mapper.map([]);
       expect(result.fieldSets).toEqual([]);
       expect(result.fieldDefinitions).toBeDefined();
     });
 
     it('should set validationFailureMessage for missing personId', () => {
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const invalidPerson = { personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] } };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required personId');
     });
 
     it('should set validationFailureMessage for missing names', () => {
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const invalidPerson = { personid: '123' };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required name fields');
     });
 
     it('should set validationFailureMessage for missing organizations', () => {
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const invalidPerson = {
         personid: '123',
         personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] }
@@ -52,7 +73,7 @@ describe('DataMapper', () => {
     });
 
     it('should handle multiple persons', () => {
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const person1 = {
         personid: '1',
         personBasic: { names: [{ firstName: 'First', lastName: 'User' }] },
@@ -102,7 +123,7 @@ describe('DataMapper', () => {
         affiliateInfo: { address: [] },
         constituentInfo: { address: [] }
       };
-      const mapper = new DataMapper();
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
       const result = mapper.map([dualOrgPerson]);
       expect(result.fieldSets).toHaveLength(1);
       const fields = result.fieldSets[0].fieldValues;
@@ -110,6 +131,12 @@ describe('DataMapper', () => {
       expect(secondaryUnitField).toBeDefined();
       expect(secondaryUnitField!.secondaryUnit).toBeDefined();
       expect((secondaryUnitField!.secondaryUnit as any).hrn).toBe('lookup:sourceIdentifier:20003827');
+    });
+
+    it('should expose currentTerms via getter', () => {
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms });
+      expect(mapper.currentTerms).toEqual(mockCurrentTerms);
+      expect(mapper.currentTerms).toHaveLength(2);
     });
   });
 });

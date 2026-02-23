@@ -3,6 +3,8 @@ import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { DataMapper } from './data-mapper/DataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
+import { BuCdmCurrentTermsDataSource } from './data-source/CurrentTermsDataSource';
+import { Term } from './data-source/CurrentTermsDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { BasicCache, Cache } from './Cache';
@@ -16,6 +18,7 @@ type PersonSyncParams = {
   cache?: Cache<string, string>;
   orgHrn?: (sourceOrgId: string) => string | undefined;
   preview?: boolean;
+  currentTerms?: Term[]; // Optional for backward compatibility, will be fetched if not provided
 };
 
 type SinglePersonSyncParams = PersonSyncParams & {
@@ -34,17 +37,20 @@ class SinglePersonSync {
   private config: Config;
   private dataSource: DataSource;
   private dataTarget: DataTarget;
-  private dataMapper: DataMapper;
+  private dataMapper: DataMapper | undefined;
   private buid: string;
   private targetPerson: HuronPerson | undefined;
+  private currentTerms: Term[] | undefined;
+  private orgHrn: ((sourceOrgId: string) => string | undefined) | undefined;
 
-  constructor(private params: SinglePersonSyncParams) {
-    const { config, cache, buid, orgHrn } = params;
+  private constructor(private params: SinglePersonSyncParams) {
+    const { config, cache, buid, orgHrn, currentTerms } = params;
     this.config = config;
     this.buid = buid;
+    this.orgHrn = orgHrn;
+    this.currentTerms = currentTerms;
 
-    // Create integration components
-    this.dataMapper = new DataMapper(orgHrn);
+    // DataMapper will be initialized in ensureInitialized()
     let responseFilter: ResponseProcessor | undefined;
     if (this.config.dataSource.person?.fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.person.fieldsOfInterest });
@@ -58,8 +64,37 @@ class SinglePersonSync {
     this.dataTarget = new HuronPersonDataTarget(this.config, cache);
   }
 
+  /**
+   * Static factory method to create SinglePersonSync with currentTerms fetched
+   */
+  public static async create(params: SinglePersonSyncParams): Promise<SinglePersonSync> {
+    const instance = new SinglePersonSync(params);
+    await instance.ensureInitialized();
+    return instance;
+  }
+
+  /**
+   * Ensure DataMapper is initialized with currentTerms
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.dataMapper) {
+      if (!this.currentTerms) {
+        console.log('Fetching current terms for person sync...');
+        const termsDataSource = new BuCdmCurrentTermsDataSource({ config: this.config });
+        this.currentTerms = await termsDataSource.fetchRaw();
+        console.log(`Fetched ${this.currentTerms.length} current term(s)`);
+      }
+      this.dataMapper = new DataMapper({ 
+        currentTerms: this.currentTerms,
+        orgHrn: this.orgHrn
+      });
+    }
+  }
+
   private getMappedPerson = async (rawData?: any[]): Promise<Input> => {
     try { 
+      // Ensure DataMapper is initialized
+      await this.ensureInitialized();
 
       // Fetch person data from source if not provided
       if (rawData === undefined) {
@@ -77,11 +112,11 @@ class SinglePersonSync {
       }
 
       // Convert data to integration format
-      const input: Input = this.dataMapper.getMappedData(rawData, this.targetPerson?.hrn);
+      const input: Input = this.dataMapper!.getMappedData(rawData, this.targetPerson?.hrn);
 
       // Bail out if there are critical validation errors
-      if (this.dataMapper.criticalValidationErrorMessage) {
-        console.error(`Critical validation error for BUID: ${this.buid}: ${this.dataMapper.criticalValidationErrorMessage}`);
+      if (this.dataMapper!.criticalValidationErrorMessage) {
+        console.error(`Critical validation error for BUID: ${this.buid}: ${this.dataMapper!.criticalValidationErrorMessage}`);
         return { } as Input;
       }
       
@@ -167,15 +202,26 @@ class SinglePersonSync {
    * @returns 
    */
   public static syncAll = async (params: SinglePersonSyncAllParams) => {
-    const { buids, preview } = params;
+    const { buids, preview, config, currentTerms } = params;
+    
+    // Fetch current terms once if not already provided
+    let sharedCurrentTerms = currentTerms;
+    if (!sharedCurrentTerms) {
+      console.log('Fetching current terms for batch sync...');
+      const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
+      sharedCurrentTerms = await termsDataSource.fetchRaw();
+      console.log(`Fetched ${sharedCurrentTerms.length} current term(s) to be shared across all syncs`);
+    }
+    
     for (let i=0; i<buids.length; i++) {
       try {
-        const singleSync = new SinglePersonSync({ 
+        const singleSync = await SinglePersonSync.create({ 
           config: params.config, 
           cache: params.cache, 
           orgHrn: params.orgHrn, 
           preview,
-          buid: buids[i]
+          buid: buids[i],
+          currentTerms: sharedCurrentTerms
         });
         await singleSync.sync({ });
       } 
@@ -225,7 +271,7 @@ async function main() {
       const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
 
       // Sync (create/update) the person and exit
-      const sync = new SinglePersonSync({ config, buid, cache, orgHrn, preview });
+      const sync = await SinglePersonSync.create({ config, buid, cache, orgHrn, preview });
       await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
     } 
     catch (error) {

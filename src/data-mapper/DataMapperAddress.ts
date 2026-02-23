@@ -19,9 +19,7 @@ const AddressTypes = [
  * @param person 
  * @returns 
  */
-export const AddressMapper = (person: any, convertNullstoIndefined:boolean = true): { getAddressLine1: () => any } => {
-
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

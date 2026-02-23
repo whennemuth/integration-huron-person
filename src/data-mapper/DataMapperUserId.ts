@@ -7,9 +7,9 @@ const UserIdTypes = [
   { priority: 2, source: 'Campus Solutions' }
 ] as UserIdType[];
 
-export const UserIdMapper = (person: any, convertNullstoIndefined:boolean = true): { getUserId: () => any } => {
+export const UserIdMapper = (person: any, convertNullstoUndefined:boolean = true): { getUserId: () => any } => {
 
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

@@ -15,9 +15,9 @@ const OrgTypes = [
  * @param person 
  * @returns 
  */
-export const OrgMapper = (person: any, convertNullstoIndefined:boolean = true): { getOrgs: () => Set<string> } => {
+export const OrgMapper = (person: any, convertNullstoUndefined:boolean = true): { getOrgs: () => Set<string> } => {
 
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

@@ -291,7 +291,7 @@ describe('UserIdMapper', () => {
       expect(result).toEqual("undefined"); // SAP has highest priority but no name
     });
 
-    it('should not convert nulls to undefined when convertNullstoIndefined is false', () => {
+    it('should not convert nulls to undefined when convertNullstoUndefined is false', () => {
       const person = {
         personid: 'U12345678',
         personDetails: {
@@ -310,7 +310,7 @@ describe('UserIdMapper', () => {
       expect(result).toEqual("null");
     });
 
-    it('should convert nulls to undefined when convertNullstoIndefined is true (default)', () => {
+    it('should convert nulls to undefined when convertNullstoUndefined is true (default)', () => {
       const person = {
         personid: 'U12345678',
         personDetails: {

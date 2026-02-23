@@ -18,9 +18,9 @@ const EmailTypes = [
  * @param person 
  * @returns 
  */
-export const EmailMapper = (person: any, convertNullstoIndefined:boolean = true): { getEmail: () => any } => {
+export const EmailMapper = (person: any, convertNullstoUndefined:boolean = true): { getEmail: () => any } => {
 
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

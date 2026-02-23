@@ -1,8 +1,8 @@
 import { isNotEmpty, nullsToUndefined } from "../Utils";
 
-export const TitleMapper = (person: any, convertNullstoIndefined:boolean = true): { getTitle: () => any } => {
+export const TitleMapper = (person: any, convertNullstoUndefined:boolean = true): { getTitle: () => any } => {
 
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

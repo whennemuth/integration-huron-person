@@ -16,9 +16,9 @@ const NameTypes = [
  * @param person 
  * @returns The selected name object mapped over to the target Huron structure.
  */
-export const NameMapper = (person: any, convertNullstoIndefined:boolean = true): { getName: () => any } => {
+export const NameMapper = (person: any, convertNullstoUndefined:boolean = true): { getName: () => any } => {
 
-  if(convertNullstoIndefined) {
+  if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
 

@@ -1,19 +1,26 @@
 import { DataMapper as CoreDataMapper, Field, Input } from 'integration-core';
-import { Term } from '../data-source/CurrentTermsDataSource';
+import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
 import { AddressMapper } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
-import { OrgMapper } from './DataMapperOrg';
+import { loadOrgMap, OrgMapper } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
 import { UserIdMapper } from './DataMapperUserId';
+import { StateLookup, StateRow } from './DataMapperState';
+import { CountryLookup, CountryRow } from './DataMapperCountry';
+import { Config } from '../config/Config';
+import { ConfigManager } from '../config/ConfigManager';
 
 /**
  * Parameters for DataMapper constructor
  */
 interface DataMapperParams {
   currentTerms: Term[];
+  stateMap: Map<string, StateRow>;
+  countryMap: Map<string, CountryRow>;
   orgHrn?: (sourceOrgId: string) => string | undefined;
+  orgMap?: Map<string, string>;
 }
 
 /**
@@ -26,11 +33,11 @@ interface DataMapperParams {
 export class DataMapper implements CoreDataMapper {
   private _criticalValidationFailureMessage:string;
   private _infoValidationFailureMessage:string;
-  private _orgHrn: (sourceOrgId: string) => string | undefined;
-  private _currentTerms: Term[];
+  private _params: DataMapperParams;
+  private _orgHrn: (sourceOrgId: string) => string | undefined
 
   constructor(params: DataMapperParams) { 
-    this._currentTerms = params.currentTerms;
+    this._params = params;
     
     if(params.orgHrn) {
       this._orgHrn = params.orgHrn;
@@ -49,7 +56,23 @@ export class DataMapper implements CoreDataMapper {
   }
 
   public get currentTerms(): Term[] {
-    return this._currentTerms;
+    return this._params.currentTerms;
+  }
+
+  public get stateMap(): Map<string, StateRow> | undefined {
+    return this._params.stateMap;
+  }
+
+  public get countryMap(): Map<string, CountryRow> | undefined {
+    return this._params.countryMap;
+  }
+
+  public get orgHrn(): (sourceOrgId: string) => string | undefined {
+    return this._orgHrn;
+  }
+
+  public get orgMap(): Map<string, string> | undefined {
+    return this._params.orgMap;
   }
 
   /**
@@ -157,5 +180,39 @@ export class DataMapper implements CoreDataMapper {
       fieldSets
     };
   }
-
 }
+
+
+/**
+ * Fetch all static mapping needed for the DataMapper, including current terms, state 
+ * and country lookups, and org HRN mapping, and return a DataMapper instance with this 
+ * data to be shared across syncs.
+ * @param config 
+ * @returns 
+ */
+export const getDataMapper = async (config: Config): Promise<DataMapper> => {
+  const orgMap: Map<string, string> = await loadOrgMap(config);
+  const orgHrn = (sourceOrgId: string) => orgMap.get(sourceOrgId);
+  const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
+  const currentTerms = await termsDataSource.fetchRaw();
+  const stateMap = await StateLookup.loadStates(config);
+  const countryMap = await CountryLookup.loadCountries(config);
+  console.log(`Fetched ${currentTerms.length} current term(s)`);
+  return new DataMapper({ currentTerms, stateMap, countryMap, orgHrn, orgMap });
+}
+
+
+
+if(require.main === module) {
+  (async () => {
+    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const dataMapper = await getDataMapper(config);
+    const { currentTerms=[], stateMap, countryMap, orgMap=(new Map<string, string>()) } = dataMapper;
+    console.log(`DataMapper: ${JSON.stringify({
+      stateMapSize: stateMap?.size,
+      countryMapSize: countryMap?.size,
+      orgMapSize: orgMap.size,
+      currentTerms
+    }, null, 2)}`);
+  })()
+};

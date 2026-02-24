@@ -1,0 +1,241 @@
+Alpha-2,ID,Name
+US,usa,United States
+CA,canada,Canada
+AF,afghanistan,Afghanistan
+AL,albania,Albania
+DZ,algeria,Algeria
+AD,andorra,Andorra
+AO,angola,Angola
+AI,anguilla,Anguilla
+AQ,antarctica,Antarctica
+AG,antigua-and-barbuda,Antigua and Barbuda
+AR,argentina,Argentina
+AM,armenia,Armenia
+AW,aruba,Aruba
+AU,australia,Australia
+AT,austria,Austria
+AZ,azerbaijan,Azerbaijan
+BS,bahamas,"Bahamas, The"
+BH,bahrain,Bahrain
+BD,bangladesh,Bangladesh
+BB,barbados,Barbados
+BY,belarus,Belarus
+BE,belgium,Belgium
+BZ,belize,Belize
+BJ,benin,Benin
+BM,bermuda,Bermuda
+BT,bhutan,Bhutan
+BO,bolivia,Bolivia
+BQ,bonaire-sint-eustatius-and-saba,"Bonaire, Sint Eustatius, and Saba"
+BA,bosnia-and-herzegowina,Bosnia and Herzegowina
+BW,botswana,Botswana
+BV,bouvet-island,Bouvet Island
+BR,brazil,Brazil
+IO,british-indian-ocean-territory,British Indian Ocean Territory
+BN,brunei-darussalam,Brunei Darussalam
+BG,bulgaria,Bulgaria
+BF,burkina-faso,Burkina Faso
+BI,burundi,Burundi
+KH,cambodia,Cambodia
+CM,cameroon,Cameroon
+CV,cape-verde,Cape Verde
+KY,cayman-islands,Cayman Islands
+CF,central-african-republic,Central African Republic
+TD,chad,Chad
+CL,chile,Chile
+CN,china,China
+CX,christmas-island,Christmas Island
+CC,cocos-islands,Cocos (Keeling) Islands
+CO,colombia,Colombia
+KM,comoros,Comoros
+CD,democratic-republic-of-the-congo,"Congo, Democratic Republic Of The (was Zaire)"
+CG,peoples-republic-of-congo,"Congo, People's Republic Of The"
+CK,cook-islands,Cook Islands
+CR,costa-rica,Costa Rica
+CI,cote-divoire,Cote d'Ivoire
+HR,croatia,Croatia (local name: Hrvatska)
+CU,cuba,Cuba
+CW,curacao,Curacao
+CY,cyprus,Cyprus
+CZ,czech-republic,Czech Republic
+DK,denmark,Denmark
+DJ,djibouti,Djibouti
+DM,dominica,Dominica
+DO,dominican-republic,Dominican Republic
+TL,east-timor,East Timor (also known as Timor Leste)
+EC,ecuador,Ecuador
+EG,egypt,Egypt
+SV,el-salvador,El Salvador
+GQ,equatorial-guinea,Equatorial Guinea
+ER,eritrea,Eritrea
+EE,estonia,Estonia
+ET,ethiopia,Ethiopia
+FK,falkland-islands,Falkland Islands (Malvinas)
+FO,faroe-islands,Faroe Islands
+FJ,fiji,Fiji
+FI,finland,Finland
+FR,france,France
+GF,french-guiana,French Guiana
+PF,french-polynesia,French Polynesia
+TF,french-southern-territories,French Southern Territories
+GA,gabon,Gabon
+GM,gambia,Gambia
+GE,georgia,Georgia
+DE,germany,Germany
+GH,ghana,Ghana
+GI,gibraltar,Gibraltar
+GR,greece,Greece
+GL,greenland,Greenland
+GD,grenada,Grenada
+GP,guadeloupe,Guadeloupe
+GT,guatemala,Guatemala
+GG,guernsey,Guernsey
+GN,guinea,Guinea
+GW,guinea-bissau,Guinea-Bissau
+GY,guyana,Guyana
+HT,haiti,Haiti
+HM,heard-and-mcdonald-islands,Heard and McDonald Islands
+HN,honduras,Honduras
+HK,hong-kong,Hong Kong
+HU,hungary,Hungary
+IS,iceland,Iceland
+IN,india,India
+ID,indonesia,Indonesia
+IR,iran,Iran (Islamic Republic Of)
+IQ,iraq,Iraq
+IE,ireland,Ireland
+IM,isle-of-man,Isle of Man
+IL,israel,Israel
+IT,italy,Italy
+JM,jamaica,Jamaica
+JP,japan,Japan
+JE,jersey,Jersey
+JO,jordan,Jordan
+KZ,kazakhstan,Kazakhstan
+KE,kenya,Kenya
+KI,kiribati,Kiribati
+KP,korea-north,"Korea, Democratic People's Republic Of"
+KR,korea-south,"Korea, Republic Of"
+KW,kuwait,Kuwait
+KG,kyrgyz-republic,Kyrgyzstan
+LA,laos,Lao People's Democratic Republic
+LV,latvia,Latvia
+LB,lebanon,Lebanon
+LS,lesotho,Lesotho
+LR,liberia,Liberia
+LY,libya,Libyan Arab Jamahiriya
+LI,liechtenstein,Liechtenstein
+LT,lithuania,Lithuania
+LU,luxembourg,Luxembourg
+MO,macau,Macau
+MK,macedonia,"Macedonia, The Former Yugoslav Republic Of"
+MG,madagascar,Madagascar
+MW,malawi,Malawi
+MY,malaysia,Malaysia
+MV,maldives,Maldives
+ML,mali,Mali
+MT,malta,Malta
+MQ,martinique,Martinique
+MR,mauritania,Mauritania
+MU,mauritius,Mauritius
+YT,mayotte,Mayotte
+MX,mexico,Mexico
+MD,moldova,"Moldova, Republic Of"
+MC,monaco,Monaco
+MN,mongolia,Mongolia
+ME,montenegro,Montenegro
+MS,montserrat,Montserrat
+MA,morocco,Morocco
+MZ,mozambique,Mozambique
+MM,myanmar,Myanmar
+NA,namibia,Namibia
+NR,nauru,Nauru
+NP,nepal,Nepal
+NL,netherlands,Netherlands
+NC,new-caledonia,New Caledonia
+NZ,new-zealand,New Zealand
+NI,nicaragua,Nicaragua
+NE,niger,Niger
+NG,nigeria,Nigeria
+NU,niue,Niue
+NF,norfolk-island,Norfolk Island
+NO,norway,Norway
+OM,oman,Oman
+PK,pakistan,Pakistan
+PS,palestine,"Palestinian Territory, Occupied"
+PA,panama,Panama
+PG,papua-new-guinea,Papua New Guinea
+PY,paraguay,Paraguay
+PE,peru,Peru
+PH,philippines,Philippines
+PN,pitcairn-islands,Pitcairn
+PL,poland,Poland
+PT,portugal,Portugal
+QA,qatar,Qatar
+RE,reunion-island,Reunion
+RO,romania,Romania
+RU,russia,Russian Federation
+RW,rwanda,Rwanda
+BL,saint-barthelemy,Saint Barthelemy
+KN,saint-kitts-and-nevis,Saint Kitts and Nevis
+LC,saint-lucia,Saint Lucia
+MF,saint-martin,Saint Martin
+VC,saint-vincent-and-the-grenadines,Saint Vincent and the Grenadines
+WS,samoa,Samoa
+SM,san-marino,San Marino
+ST,sao-tome-and-principe,Sao Tome and Principe
+SA,saudi-arabia,Saudi Arabia
+SN,senegal-republic,Senegal
+RS,serbia,Serbia
+SC,seychelles,Seychelles
+SL,sierra-leone,Sierra Leone
+SG,singapore,Singapore
+SX,sint-maarten,Sint Maarten
+SK,slovak-republic,Slovakia (Slovak Republic)
+SI,slovenia,Slovenia
+SB,solomon-islands,Solomon Islands
+SO,somalia,Somalia
+ZA,south-africa,South Africa
+GS,south-georgia-and-the-south-sandwich-islands,South Georgia and the South Sandwich Islands
+SS,south-sudan,South Sudan
+ES,spain,Spain
+LK,sri-lanka,Sri Lanka
+SH,st-helena,St. Helena
+PM,st-pierre-and-miquelon,St. Pierre And Miquelon
+SD,sudan,Sudan
+SR,suriname,Suriname
+SJ,svalbard,Svalbard and Jan Mayen Islands
+SZ,swaziland,Swaziland
+SE,sweden,Sweden
+CH,switzerland,Switzerland
+SY,syria,Syrian Arab Republic
+TW,taiwan-republic-of-china,Taiwan
+TJ,tajikistan,Tajikistan
+TZ,tanzania,"Tanzania, United Republic Of"
+TH,thailand,Thailand
+TG,togo,Togo
+TK,tokelau,Tokelau
+TO,tonga,Tonga
+TT,trinidad-and-tobago,Trinidad and Tobago
+TN,tunisia,Tunisia
+TR,turkey,Turkey
+TM,turkmenistan,Turkmenistan
+TC,turks-and-caicos-islands,Turks and Caicos Islands
+TV,tuvalu,Tuvalu
+UG,uganda,Uganda
+UA,ukraine,Ukraine
+AE,united-arab-emirates,United Arab Emirates
+GB,united-kingdom,United Kingdom
+UM,united-states-minor-outlying-islands,United States Minor Outlying Islands
+UY,uruguay,Uruguay
+UZ,uzbekistan,Uzbekistan
+VU,vanuatu,Vanuatu
+VA,vatican-city,Vatican City State (Holy See)
+VE,venezuela,Venezuela
+VN,vietnam,Viet Nam
+VG,virgin-islands,Virgin Islands (British)
+WF,wallis-and-futuna,Wallis and Futuna Islands
+EH,western-sahara,Western Sahara
+YE,yemen,Yemen
+ZM,zambia,Zambia
+ZW,zimbabwe,Zimbabwe

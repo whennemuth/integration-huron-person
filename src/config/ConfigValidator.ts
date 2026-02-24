@@ -95,6 +95,9 @@ export class ConfigValidator {
 
     // Validate storage configuration based on type
     this.validateStorageConfig(this.config.storage);
+    
+    // Validate optional S3 CSV configs if present
+    this.validateS3CsvConfigs();
 
     // Validate URLs
     try {
@@ -150,6 +153,41 @@ export class ConfigValidator {
 
       default:
         throw new Error(`Unsupported storage type: ${storage.type}`);
+    }
+  }
+
+  /**
+   * Validate optional S3 CSV configurations for states and countries
+   */
+  private validateS3CsvConfigs(): void {
+    const { dataSource } = this.config;
+    
+    // Validate statesCsvS3Config if present
+    if (dataSource?.statesCsvS3Config) {
+      const { bucketName, key, region } = dataSource.statesCsvS3Config;
+      if (!bucketName) {
+        throw new Error('statesCsvS3Config requires bucketName');
+      }
+      if (!key) {
+        throw new Error('statesCsvS3Config requires key (full S3 object path)');
+      }
+      if (!region) {
+        throw new Error('statesCsvS3Config requires region');
+      }
+    }
+    
+    // Validate countriesCsvS3Config if present
+    if (dataSource?.countriesCsvS3Config) {
+      const { bucketName, key, region } = dataSource.countriesCsvS3Config;
+      if (!bucketName) {
+        throw new Error('countriesCsvS3Config requires bucketName');
+      }
+      if (!key) {
+        throw new Error('countriesCsvS3Config requires key (full S3 object path)');
+      }
+      if (!region) {
+        throw new Error('countriesCsvS3Config requires region');
+      }
     }
   }
 

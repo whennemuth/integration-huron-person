@@ -1,3 +1,7 @@
+import { Config } from "../config/Config";
+import { ConfigManager } from "../config/ConfigManager";
+import { HuronOrganization } from "../data-target/crud/Organization";
+import { ReadOrganizations } from "../data-target/crud/ReadOrganizations";
 import { isEmpty, isNotEmpty, nullsToUndefined } from "../Utils";
 
 export type OrgType = { priority: number; type: string; source?: string; }
@@ -92,3 +96,35 @@ export const OrgMapper = (person: any, convertNullstoUndefined:boolean = true): 
     }
   };
 };
+
+
+export const loadOrgMap = async (config: Config): Promise<Map<string, string>> => {
+  const reader = new ReadOrganizations(config);
+  console.log('Reading all organizations...');
+  const allOrganizations: HuronOrganization[] = await reader.readAllOrganizationsNonTokenized({
+    pagination: { pageSize: 500 },
+    includeFields: [ 'hrn', 'id', 'sourceIdentifier' ]
+  });
+  // Turn the array into a map of sourceIdentifier to HRN for easy lookup, and log any records that are missing sourceIdentifier or HRN
+  const orgMap = new Map<string, string>();
+  for (const org of allOrganizations) {
+    const { hrn, id } = org;
+    const { sourceIdentifier = id } = org;
+    if( ! isEmpty(hrn) && ! isEmpty(sourceIdentifier)) {
+      orgMap.set(sourceIdentifier, hrn!);
+    } else {
+      console.warn(`Organization missing HRN or sourceIdentifier: ${JSON.stringify(org)}`);
+    }
+  }
+  console.log(`Found ${orgMap.size} organizations`);
+  return orgMap;
+}
+
+
+
+if(require.main === module) {
+  (async () => {
+    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const orgMap = await loadOrgMap(config);
+    console.log(`Organization Map: ${JSON.stringify(Array.from(orgMap.entries()).slice(0, 10), null, 2)}...`); // Log first 10 entries for brevity
+  })()};

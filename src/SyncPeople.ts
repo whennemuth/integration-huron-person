@@ -1,13 +1,12 @@
 import { EndToEnd } from 'integration-core';
+import { Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper } from './data-mapper/DataMapper';
-import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 import { BuCdmPeopleDataSource } from './data-source/PeopleDataSource';
-import { BuCdmCurrentTermsDataSource } from './data-source/CurrentTermsDataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
+import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { Cache } from './Cache';
+import { getDataMapper } from './data-mapper/DataMapper';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 /**
@@ -33,29 +32,26 @@ class HuronPersonIntegration {
    */
   async run(): Promise<void> {
     try {
-      console.log('Starting Huron Person Integration...');
-      console.log(`Client ID: ${this.config.integration.clientId}`);
-      console.log(`Storage Type: ${this.config.storage.type}`);
+      const { config, config: { 
+        dataSource: { people: { fieldsOfInterest } = {} } = {},
+        integration: { clientId } = {},
+        storage: { type } = {}
+      } } = this;
       
-      // Fetch current terms before initializing DataMapper
-      console.log('Fetching current terms...');
-      const termsDataSource = new BuCdmCurrentTermsDataSource({ config: this.config });
-      const currentTerms = await termsDataSource.fetchRaw();
-      console.log(`Fetched ${currentTerms.length} current term(s)`);
+      console.log('Starting Huron Person Integration...');
+      console.log(`Client ID: ${clientId}`);
+      console.log(`Storage Type: ${type}`);
 
       // Create integration components with currentTerms
-      const dataMapper = new DataMapper({ currentTerms });
+      const dataMapper = await getDataMapper(config);
+
       let responseFilter: ResponseProcessor | undefined;
-
-      // Destructure for easier access
-      const fieldsOfInterest = this.config.dataSource.people?.fieldsOfInterest;
-
       if (fieldsOfInterest) {
         responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
       }
-      const dataSource = new BuCdmPeopleDataSource({ config: this.config, responseFilter });
-      const dataTarget = new HuronPersonDataTarget(this.config, this.config.cache as any);
-      const deltaStrategy = DeltaStrategyFactory.createStrategy(this.config);
+      const dataSource = new BuCdmPeopleDataSource({ config, responseFilter });
+      const dataTarget = new HuronPersonDataTarget(config, config.cache as any);
+      const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
 
       // Initialize EndToEnd integration
       this.endToEnd = new EndToEnd({
@@ -102,3 +98,4 @@ if (require.main === module) {
 }
 
 export { HuronPersonIntegration };
+

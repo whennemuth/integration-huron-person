@@ -1,24 +1,21 @@
 import { CrudOperation, DataSource, DataTarget, Input } from 'integration-core';
+import { Character, LooneyTunes } from '../test/LooneyTunes';
+import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper } from './data-mapper/DataMapper';
+import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
-import { BuCdmCurrentTermsDataSource } from './data-source/CurrentTermsDataSource';
-import { Term } from './data-source/CurrentTermsDataSource';
+import { HuronPerson } from './data-target/crud/Person';
+import { ReadPerson } from './data-target/crud/ReadPerson';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { BasicCache, Cache } from './Cache';
 import { isEmpty } from './Utils';
-import { Character, LooneyTunes } from '../test/LooneyTunes';
-import { ReadPerson } from './data-target/crud/ReadPerson';
-import { HuronPerson } from './data-target/crud/Person';
 
 type PersonSyncParams = {
   config: Config;
   cache?: Cache<string, string>;
-  orgHrn?: (sourceOrgId: string) => string | undefined;
+  dataMapper?: DataMapper;
   preview?: boolean;
-  currentTerms?: Term[]; // Optional for backward compatibility, will be fetched if not provided
 };
 
 type SinglePersonSyncParams = PersonSyncParams & {
@@ -40,17 +37,13 @@ class SinglePersonSync {
   private dataMapper: DataMapper | undefined;
   private buid: string;
   private targetPerson: HuronPerson | undefined;
-  private currentTerms: Term[] | undefined;
-  private orgHrn: ((sourceOrgId: string) => string | undefined) | undefined;
 
-  private constructor(private params: SinglePersonSyncParams) {
-    const { config, cache, buid, orgHrn, currentTerms } = params;
+  constructor(private params: SinglePersonSyncParams) {
+    const { config, cache, buid, dataMapper } = params;
     this.config = config;
     this.buid = buid;
-    this.orgHrn = orgHrn;
-    this.currentTerms = currentTerms;
+    this.dataMapper = dataMapper;
 
-    // DataMapper will be initialized in ensureInitialized()
     let responseFilter: ResponseProcessor | undefined;
     if (this.config.dataSource.person?.fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.person.fieldsOfInterest });
@@ -64,37 +57,8 @@ class SinglePersonSync {
     this.dataTarget = new HuronPersonDataTarget(this.config, cache);
   }
 
-  /**
-   * Static factory method to create SinglePersonSync with currentTerms fetched
-   */
-  public static async create(params: SinglePersonSyncParams): Promise<SinglePersonSync> {
-    const instance = new SinglePersonSync(params);
-    await instance.ensureInitialized();
-    return instance;
-  }
-
-  /**
-   * Ensure DataMapper is initialized with currentTerms
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (!this.dataMapper) {
-      if (!this.currentTerms) {
-        console.log('Fetching current terms for person sync...');
-        const termsDataSource = new BuCdmCurrentTermsDataSource({ config: this.config });
-        this.currentTerms = await termsDataSource.fetchRaw();
-        console.log(`Fetched ${this.currentTerms.length} current term(s)`);
-      }
-      this.dataMapper = new DataMapper({ 
-        currentTerms: this.currentTerms,
-        orgHrn: this.orgHrn
-      });
-    }
-  }
-
   private getMappedPerson = async (rawData?: any[]): Promise<Input> => {
     try { 
-      // Ensure DataMapper is initialized
-      await this.ensureInitialized();
 
       // Fetch person data from source if not provided
       if (rawData === undefined) {
@@ -202,27 +166,11 @@ class SinglePersonSync {
    * @returns 
    */
   public static syncAll = async (params: SinglePersonSyncAllParams) => {
-    const { buids, preview, config, currentTerms } = params;
-    
-    // Fetch current terms once if not already provided
-    let sharedCurrentTerms = currentTerms;
-    if (!sharedCurrentTerms) {
-      console.log('Fetching current terms for batch sync...');
-      const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
-      sharedCurrentTerms = await termsDataSource.fetchRaw();
-      console.log(`Fetched ${sharedCurrentTerms.length} current term(s) to be shared across all syncs`);
-    }
+    const { buids } = params;
     
     for (let i=0; i<buids.length; i++) {
       try {
-        const singleSync = await SinglePersonSync.create({ 
-          config: params.config, 
-          cache: params.cache, 
-          orgHrn: params.orgHrn, 
-          preview,
-          buid: buids[i],
-          currentTerms: sharedCurrentTerms
-        });
+        const singleSync = new SinglePersonSync({ ...params, buid: buids[i] });
         await singleSync.sync({ });
       } 
       catch (error) {
@@ -234,6 +182,7 @@ class SinglePersonSync {
     }
   }
 }
+
 
 /**
  * Main entry point for command line execution
@@ -271,7 +220,10 @@ async function main() {
       const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
 
       // Sync (create/update) the person and exit
-      const sync = await SinglePersonSync.create({ config, buid, cache, orgHrn, preview });
+      const sync = new SinglePersonSync({ 
+        config, buid, cache, dataMapper, preview 
+      });
+
       await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
     } 
     catch (error) {
@@ -298,7 +250,9 @@ async function main() {
       // Turn the comma-separated BUIDs into an array
       const buids = buidsString.split(',').map(buid => buid.trim());
 
-      await SinglePersonSync.syncAll({ config, buids, cache, orgHrn, preview });
+      await SinglePersonSync.syncAll({ 
+        config, buids, cache, dataMapper, preview 
+      });
     }
     catch (error) {
       console.error('Multiple Person Sync failed:', error);
@@ -306,15 +260,14 @@ async function main() {
     }
   }
 
+
+
   // Load configuration
   const configManager = ConfigManager.getInstance();
   const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
 
-  // Create a custom hrn expression that goes to a map for the actual hrn given a source org id key
-  const orgs = await import('./data-mapper/OrgMap.json');
-  const orgHrn = (sourceOrgId: string) => orgs.map.find((entry: any) => {
-    return entry.id === sourceOrgId;
-  })?.hrn;
+  // Instantiate a single DataMapper to be shared across all syncs in this execution.
+  const dataMapper = await getDataMapper(config);
 
   // Determine whether to sync one or multiple people based on SYNC_TASK environment variable
   const { 
@@ -333,7 +286,7 @@ async function main() {
       await syncOne({ buid: SYNC_BUID!, crudOperation: SYNC_CRUD, preview: preview() });
       break;
     case 'all':
-      await syncMultiple(SYNC_BUIDS!, preview());
+      await syncMultiple( SYNC_BUIDS!, preview() );
       break;
     default:
       console.error('Please set SYNC_TASK environment variable to either "one" or "all"');
@@ -347,3 +300,4 @@ if (require.main === module) {
 }
 
 export { SinglePersonSync, SinglePersonSyncParams };
+

@@ -616,5 +616,134 @@ describe('ConfigValidator', () => {
         expect(() => validator.validateConfig('person')).toThrow('Unsupported storage type: unsupported');
       });
     });
+
+    describe('S3 CSV configuration validation', () => {
+      describe('statesCsvS3Config validation', () => {
+        it('should validate valid statesCsvS3Config successfully', () => {
+          const config = getValidConfig();
+          config.dataSource.statesCsvS3Config = {
+            bucketName: 'test-bucket',
+            key: 'data/states.csv',
+            region: 'us-east-1'
+          };
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).not.toThrow();
+        });
+
+        it('should validate when statesCsvS3Config is not provided (optional)', () => {
+          const config = getValidConfig();
+          // statesCsvS3Config not provided - should be valid
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).not.toThrow();
+        });
+
+        it('should throw error when statesCsvS3Config bucketName is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.statesCsvS3Config = {
+            key: 'data/states.csv',
+            region: 'us-east-1'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('statesCsvS3Config requires bucketName');
+        });
+
+        it('should throw error when statesCsvS3Config key is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.statesCsvS3Config = {
+            bucketName: 'test-bucket',
+            region: 'us-east-1'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('statesCsvS3Config requires key (full S3 object path)');
+        });
+
+        it('should throw error when statesCsvS3Config region is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.statesCsvS3Config = {
+            bucketName: 'test-bucket',
+            key: 'data/states.csv'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('statesCsvS3Config requires region');
+        });
+      });
+
+      describe('countriesCsvS3Config validation', () => {
+        it('should validate valid countriesCsvS3Config successfully', () => {
+          const config = getValidConfig();
+          config.dataSource.countriesCsvS3Config = {
+            bucketName: 'test-bucket',
+            key: 'data/countries.csv',
+            region: 'us-east-1'
+          };
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).not.toThrow();
+        });
+
+        it('should validate when countriesCsvS3Config is not provided (optional)', () => {
+          const config = getValidConfig();
+          // countriesCsvS3Config not provided - should be valid
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).not.toThrow();
+        });
+
+        it('should throw error when countriesCsvS3Config bucketName is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.countriesCsvS3Config = {
+            key: 'data/countries.csv',
+            region: 'us-east-1'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('countriesCsvS3Config requires bucketName');
+        });
+
+        it('should throw error when countriesCsvS3Config key is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.countriesCsvS3Config = {
+            bucketName: 'test-bucket',
+            region: 'us-east-1'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('countriesCsvS3Config requires key (full S3 object path)');
+        });
+
+        it('should throw error when countriesCsvS3Config region is missing', () => {
+          const config = getValidConfig();
+          config.dataSource.countriesCsvS3Config = {
+            bucketName: 'test-bucket',
+            key: 'data/countries.csv'
+          } as any;
+          
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).toThrow('countriesCsvS3Config requires region');
+        });
+      });
+
+      it('should validate when both S3 CSV configs are provided', () => {
+        const config = getValidConfig();
+        config.dataSource.statesCsvS3Config = {
+          bucketName: 'test-bucket',
+          key: 'data/states.csv',
+          region: 'us-east-1'
+        };
+        config.dataSource.countriesCsvS3Config = {
+          bucketName: 'test-bucket',
+          key: 'data/countries.csv',
+          region: 'us-east-1'
+        };
+        
+        const validator = new ConfigValidator(config);
+        expect(() => validator.validateConfig('person')).not.toThrow();
+      });
+    });
   });
 });

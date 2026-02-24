@@ -1,0 +1,85 @@
+Code,ID,Name
+AL,alabama,Alabama
+AK,alaska,Alaska
+AZ,arizona,Arizona
+AR,arkansas,Arkansas
+CA,california,California
+CO,colorado,Colorado
+CT,connecticut,Connecticut
+DE,delaware,Delaware
+DC,district-of-columbia,District of Columbia
+FL,florida,Florida
+GA,georgia,Georgia
+HI,hawaii,Hawaii
+ID,idaho,Idaho
+IL,illinois,Illinois
+IN,indiana,Indiana
+IA,iowa,Iowa
+KS,kansas,Kansas
+KY,kentucky,Kentucky
+LA,louisiana,Louisiana
+ME,maine,Maine
+MD,maryland,Maryland
+MA,massachusetts,Massachusetts
+MI,michigan,Michigan
+MN,minnesota,Minnesota
+MS,mississippi,Mississippi
+MO,missouri,Missouri
+MT,montana,Montana
+NE,nebraska,Nebraska
+NV,nevada,Nevada
+NH,new-hampshire,New Hampshire
+NJ,new-jersey,New Jersey
+NM,new-mexico,New Mexico
+NY,new-york,New York
+NC,north-carolina,North Carolina
+ND,north-dakota,North Dakota
+OH,ohio,Ohio
+OK,oklahoma,Oklahoma
+OR,oregon,Oregon
+PA,pennsylvania,Pennsylvania
+RI,rhode-island,Rhode Island
+SC,south-carolina,South Carolina
+SD,south-dakota,South Dakota
+TN,tennessee,Tennessee
+TX,texas,Texas
+UT,utah,Utah
+VT,vermont,Vermont
+VA,virginia,Virginia
+WA,washington,Washington
+WV,west-virginia,West Virginia
+WI,wisconsin,Wisconsin
+WY,wyoming,Wyoming
+AS,america-samoa,America Samoa
+GU,guam,Guam
+MP,northern-mariana-islands,Northern Mariana Islands
+PR,puerto-rico,Puerto Rico
+VI,virgin-islands-of-the-us,Virgin Islands of the U.S.
+FM,federated-states-of-micronesia,Federated States of Micronesia
+MH,marshall-islands,Marshall Islands
+PW,palau,Palau
+UM,baker-island,Baker Island
+UM,howard-island,Howard Island
+UM,jarvis-island,Jarvis Island
+UM,johnston-atoll,Johnston Atoll
+UM,kingman-reef,Kingman Reef
+UM,midway-islands,Midway Islands
+UM,navassa-island,Navassa Island
+UM,palmyra-atoll,Palmyra Atoll
+UM,wake-island,Wake Island
+AA,apo-fpo-central-and-south-america,APO/FPO Central and South America
+AE,apo-fpo-europe-middle-east-and-africa,"APO/FPO Europe, Middle East, and Africa"
+AP,apo-fpo-korea-japan-philippines-other-pacific,"APO/FPO Korea, Japan, Philippines, Other Pacific"
+AB,alberta,Alberta
+BC,british-columbia,British Columbia
+MB,manitoba,Manitoba
+NB,new-brunswick,New Brunswick
+NL,newfoundland-and-labrador,Newfoundland and Labrador
+NT,northwest-territories,Northwest Territories
+NS,nova-scotia,Nova Scotia
+NU,nunavut,Nunavut
+ON,ontario,Ontario
+PE,prince-edward-island,Prince Edward Island
+QC,quebec,Quebec
+SK,saskatchewan,Saskatchewan
+YT,yukon,Yukon

@@ -10,7 +10,7 @@ export type ExecutionMode = 'person' | 'people' | 'terms' | 'none';
 /**
  * Configuration for data source endpoints
  */
-type DataSourceConfig = {
+export type DataSourceConfig = {
   /** API client configuration */
   endpointConfig: EndpointConfigForApiKey;
   /** Endpoint for fetching person data */
@@ -18,6 +18,15 @@ type DataSourceConfig = {
   /** Optional fields to keep during response filtering */
   fieldsOfInterest?: string[];
 };
+
+export type S3CsvConfig = {
+  /** Base bucket name */
+  bucketName: string;
+  /** Full S3 object key (path + filename, e.g., 'data/states.csv') */
+  key: string;
+  /** AWS region */
+  region: string;
+}
 
 /**
  * Configuration interface for Huron Person Integration
@@ -31,6 +40,10 @@ export interface Config {
     people?: DataSourceConfig;
     /** Configuration for aquiring list of terms */
     terms?: DataSourceConfig;
+    /** Configuration for aquiring list of states */
+    statesCsvS3Config?: S3CsvConfig;
+    /** Configuration for aquiring list of countries */
+    countriesCsvS3Config?: S3CsvConfig;
   };
   
   /** DataTarget configuration (where we push data to) - uses JWT authentication */

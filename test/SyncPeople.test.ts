@@ -3,7 +3,7 @@ import {
   DataMapper,
   HuronApiClient,
   HuronDeltaStrategyFactory,
-  HuronPersonDataSource,
+  BuCdmPersonDataSource,
   HuronPersonDataTarget,
   HuronPersonIntegration
 } from '../bin/index';
@@ -21,14 +21,15 @@ describe('Package Exports', () => {
       expect(typeof HuronApiClient).toBe('function');
     });
 
+
     it('should export HuronDeltaStrategyFactory', () => {
       expect(HuronDeltaStrategyFactory).toBeDefined();
       expect(typeof HuronDeltaStrategyFactory).toBe('function');
     });
 
-    it('should export HuronPersonDataSource', () => {
-      expect(HuronPersonDataSource).toBeDefined();
-      expect(typeof HuronPersonDataSource).toBe('function');
+    it('should export BuCdmPersonDataSource', () => {
+      expect(BuCdmPersonDataSource).toBeDefined();
+      expect(typeof BuCdmPersonDataSource).toBe('function');
     });
 
     it('should export HuronPersonDataTarget', () => {
@@ -47,7 +48,7 @@ describe('Package Exports', () => {
       expect(ConfigManager.prototype.constructor).toBe(ConfigManager);
       expect(HuronApiClient.prototype.constructor).toBe(HuronApiClient);
       expect(HuronDeltaStrategyFactory.prototype.constructor).toBe(HuronDeltaStrategyFactory);
-      expect(HuronPersonDataSource.prototype.constructor).toBe(HuronPersonDataSource);
+      expect(BuCdmPersonDataSource.prototype.constructor).toBe(BuCdmPersonDataSource);
       expect(HuronPersonDataTarget.prototype.constructor).toBe(HuronPersonDataTarget);
       expect(HuronPersonIntegration.prototype.constructor).toBe(HuronPersonIntegration);
     });
@@ -101,7 +102,7 @@ describe('Package Exports', () => {
         password: 'pass'
       })).not.toThrow();
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
-      expect(() => new HuronPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
+      expect(() => new BuCdmPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
       expect(() => new HuronPersonDataTarget(mockConfig)).not.toThrow();
       expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
     });
@@ -111,13 +112,12 @@ describe('Package Exports', () => {
     it('should maintain consistent naming convention', () => {
       const exports = [
         'ConfigManager',
-        'HuronApiClient', 
+        'HuronApiClient',
         'HuronDeltaStrategyFactory',
-        'HuronPersonDataSource',
+        'BuCdmPersonDataSource',
         'HuronPersonDataTarget',
         'HuronPersonIntegration'
       ];
-
       exports.forEach(exportName => {
         expect(exportName).toMatch(/^[A-Z][a-zA-Z]*$/);
       });
@@ -126,12 +126,10 @@ describe('Package Exports', () => {
     it('should have Huron prefix for domain-specific classes', () => {
       const huronClasses = [
         'HuronApiClient',
-        'HuronDeltaStrategyFactory', 
-        'HuronPersonDataSource',
+        'HuronDeltaStrategyFactory',
         'HuronPersonDataTarget',
         'HuronPersonIntegration'
       ];
-
       huronClasses.forEach(className => {
         expect(className).toMatch(/^Huron/);
       });

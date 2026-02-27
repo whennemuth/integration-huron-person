@@ -1,11 +1,11 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "personDevSchema.json",
-  "title": "personDev",
-  "description": "personDev schema",
+  "$id": "personUltraSchema.json",
+  "title": "personUltra",
+  "description": "personUltra schema",
   "type": "object",
   "properties": {
-    "personId": {
+    "personid": {
       "type": "string",
       "properties": {
         "Source(s)": {
@@ -29,8 +29,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": "",
+                      "  SAP (SAP)": "",
                       " PersonRegistryVDS (VDS)": "",
                       " BBEC (DARS)": ""
                     }
@@ -57,8 +56,7 @@
                       "VDS - PersonFirstName": "",
                       "VDS - PersonDisplayFirstName": "",
                       "BBEC - FirstName": "",
-                      "BBEC - First_Name": "",
-                      "IAMDB - FIRST_MIXED_CASE_NAME": ""
+                      "BBEC - First_Name": ""
                     }
                   }
                 }
@@ -73,8 +71,7 @@
                       "VDS - PersonMiddleName": "",
                       "VDS - PersonDisplayMiddleName": "",
                       "BBEC - MiddleName": "",
-                      "BBEC - Middle_Name": "",
-                      "IAMDB - MIDDLE_MIXED_CASE_NAME": ""
+                      "BBEC - Middle_Name": ""
                     }
                   }
                 }
@@ -89,8 +86,7 @@
                       "VDS - PersonLastName": "",
                       "VDS - PersonDisplayLastName": "",
                       "BBEC - LastName": "",
-                      "BBEC - Last_Name": "",
-                      "IAMDB - LAST_MIXED_CASE_NAME": ""
+                      "BBEC - Last_Name": ""
                     }
                   }
                 }
@@ -104,8 +100,7 @@
                       "SAP - SUFFIX": "",
                       "VDS - PersonNameSuffix": "",
                       "VDS - PersonDisplayNameSuffix": "",
-                      "BBEC - Suffix": "",
-                      "IAMDB - SUFFIX_MIXED_CASE_NAME": ""
+                      "BBEC - Suffix": ""
                     }
                   }
                 }
@@ -178,66 +173,6 @@
             }
           }
         },
-        "firstName": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
-        "middleName": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
-        "lastName": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
-        "suffix": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
-        "prefix": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
-        "nickname": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
         "birthDate": {
           "type": "array",
           "items": {
@@ -252,8 +187,7 @@
                       "SAP - DOB": "",
                       "VDS - PersonDateOfBirth": "",
                       "BBEC - Birth_Date": "",
-                      "IAMDB - dob": "",
-                      "IAMDB - BIRTH_DT": ""
+                      "IAMDB - dob": ""
                     }
                   }
                 }
@@ -264,45 +198,12 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": "",
+                      "  SAP (SAP)": "",
                       " PersonRegistryVDS (VDS)": "",
                       " BBEC (DARS)": ""
                     }
                   }
                 }
-              }
-            }
-          }
-        },
-        "gender": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "CS - SEX": ""
-              }
-            }
-          }
-        },
-        "genderDescription": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "CS - SEX_DESCR": ""
-              }
-            }
-          }
-        },
-        "ssn": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "CS - NATIONAL_ID": "",
-                "SAP - SSN": "",
-                "IAMDB - SOCIAL_SECURITY_NUM": ""
               }
             }
           }
@@ -319,8 +220,7 @@
                     "properties": {
                       "CS - SEX": "",
                       "SAP - GENDER": "",
-                      "IAMDB - Sex": "",
-                      "IAMDB - SEX_CD": ""
+                      "IAMDB - Sex": ""
                     }
                   }
                 }
@@ -342,8 +242,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": "",
+                      "  SAP (SAP)": "",
                       " PersonRegistryVDS (VDS)": "",
                       " BBEC (DARS)": ""
                     }
@@ -364,8 +263,7 @@
                   "Source(s)": {
                     "properties": {
                       "CS - NATIONAL_ID": "",
-                      "SAP - SSN": "",
-                      "IAMDB - SOCIAL_SECURITY_NUM": ""
+                      "SAP - SSN": ""
                     }
                   }
                 }
@@ -376,8 +274,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": ""
+                      "  SAP (SAP)": ""
                     }
                   }
                 }
@@ -451,8 +348,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": ""
+                      "  SAP (SAP)": ""
                     }
                   }
                 }
@@ -483,8 +379,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": "",
+                      "  SAP (SAP)": "",
                       " PersonRegistryVDS (VDS)": "",
                       " BBEC (DARS)": ""
                     }
@@ -747,7 +642,6 @@
                   "SAP - PERSONALEMAIL": "",
                   "VDS - PersonPersonalEmail": "",
                   "VDS - PersonUniversityEmail": "",
-                  "IAMDB - EMAIL_ADDRESS_TEXT1": "",
                   "BBEC - Email_address": ""
                 }
               }
@@ -759,8 +653,7 @@
               "Source of Records": {
                 "properties": {
                   "Campus Solutions (CS)": "",
-                  " ID_DIRECTORY (IAMDB)": "",
-                  " SAP (SAP)": "",
+                  "  SAP (SAP)": "",
                   " PersonRegistryVDS (VDS)": "",
                   " BBEC (DARS)": ""
                 }
@@ -873,8 +766,7 @@
               "Source of Records": {
                 "properties": {
                   "Campus Solutions (CS)": "",
-                  " ID_DIRECTORY (IAMDB)": "",
-                  " SAP (SAP)": "",
+                  "  SAP (SAP)": "",
                   " PersonRegistryVDS (VDS)": "",
                   " BBEC (DARS)": ""
                 }
@@ -985,7 +877,7 @@
             "properties": {
               "Source of Records": {
                 "properties": {
-                  "N/A": ""
+                  "BBEC (DARS)": ""
                 }
               }
             }
@@ -1036,20 +928,6 @@
             }
           }
         },
-        "affiliationType": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "CS - DESCR": "",
-                "IAMDB - PRIMARY_AFFILIATION_DESC": ""
-              }
-            }
-          }
-        },
         "affiliation": {
           "type": "array",
           "items": {
@@ -1069,56 +947,6 @@
             "Source(s)": {
               "properties": {
                 "VDS - PersonPrimaryAffiliation": ""
-              }
-            }
-          }
-        },
-        "ethnicity": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "SAP - ETHNICITYCODE": "",
-                "IAMDB - Ethinicity": ""
-              }
-            }
-          }
-        },
-        "race": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "SAP - RACECODE": "",
-                "IAMDB - Race": ""
-              }
-            }
-          }
-        },
-        "maritalStatus": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "SAP - MARITALSTATUS": ""
-              }
-            }
-          }
-        },
-        "accountName": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "SAP - USERID": "",
-                "VDS - AccountBULoginAccountName": "",
-                "CS - OPRID": ""
               }
             }
           }
@@ -1351,86 +1179,61 @@
           }
         },
         "emergencyContact": {
-          "type": "object",
-          "properties": {
-            "v2": {
-              "type": "array",
-              "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - CONTACT_NAME": "",
+                      "SAP - EMERGCONTACTNAME": ""
+                    }
+                  }
+                }
+              },
+              "phone": {
                 "type": "object",
                 "properties": {
-                  "name": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - CONTACT_NAME": "",
-                          "SAP - EMERGCONTACTNAME": ""
-                        }
-                      }
-                    }
-                  },
-                  "phone": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - ": ""
-                            }
-                          }
-                        }
-                      },
-                      "number": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - PHONE": "",
-                              "SAP - EMERGCONTACTPHONE": ""
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "isPrimary": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - PRIMARY_CONTACT": ""
-                        }
-                      }
-                    }
-                  },
-                  "relationship": {
-                    "type": "object",
-                    "properties": {
-                      "code": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - RELATIONSHIP": ""
-                            }
-                          }
-                        }
-                      },
-                      "description": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - RELATION_DESCR": ""
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
                   "type": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - ": ""
+                        }
+                      }
+                    }
+                  },
+                  "number": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - PHONE": "",
+                          "SAP - EMERGCONTACTPHONE": ""
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "isPrimary": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - PRIMARY_CONTACT": ""
+                    }
+                  }
+                }
+              },
+              "relationship": {
+                "type": "object",
+                "properties": {
+                  "code": {
                     "type": "string",
                     "properties": {
                       "Source(s)": {
@@ -1440,15 +1243,35 @@
                       }
                     }
                   },
-                  "source": {
+                  "description": {
                     "type": "string",
                     "properties": {
-                      "Source of Records": {
+                      "Source(s)": {
                         "properties": {
-                          "Campus Solutions (CS)": "",
-                          " SAP (SAP)": ""
+                          "CS - RELATION_DESCR": ""
                         }
                       }
+                    }
+                  }
+                }
+              },
+              "type": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - RELATIONSHIP": ""
+                    }
+                  }
+                }
+              },
+              "source": {
+                "type": "string",
+                "properties": {
+                  "Source of Records": {
+                    "properties": {
+                      "Campus Solutions (CS)": "",
+                      " SAP (SAP)": ""
                     }
                   }
                 }
@@ -2174,7 +1997,7 @@
                   }
                 }
               },
-              "instructionType": {
+              "academicTitle": {
                 "type": "object",
                 "properties": {
                   "code": {
@@ -2182,7 +2005,7 @@
                     "properties": {
                       "Source(s)": {
                         "properties": {
-                          "N/A": ""
+                          "CS - INSTR_TYPE": ""
                         }
                       }
                     }
@@ -2192,9 +2015,19 @@
                     "properties": {
                       "Source(s)": {
                         "properties": {
-                          "N/A": ""
+                          "CS - INSTR_TYPE_DESCR": ""
                         }
                       }
+                    }
+                  }
+                }
+              },
+              "effectiveDate": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - EFFDT": ""
                     }
                   }
                 }
@@ -2635,214 +2468,32 @@
             }
           }
         },
-        "deseasedDate": {
-          "type": "object",
-          "properties": {
-            "date": {
-              "type": "string",
-              "properties": {
-                "Source(s)": {
-                  "properties": {
-                    "SAP - DECEASEDDATE": ""
-                  }
-                }
-              }
-            }
-          }
-        },
-        "v2": {
-          "type": "object",
-          "properties": {
-            "deseasedDate": {
-              "type": "array",
-              "items": {
-                "type": "object",
+        "deceasedDate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
                 "properties": {
-                  "date": {
-                    "type": "string",
+                  "Source(s)": {
                     "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - DT_OF_DEATH": "",
-                          "SAP - DECEASEDDATE": "",
-                          "BBEC - Deceased_Date": ""
-                        }
-                      }
-                    }
-                  },
-                  "source": {
-                    "type": "string",
-                    "properties": {
-                      "Source of Records": {
-                        "properties": {
-                          "Campus Solutions (CS)": "",
-                          " ID_DIRECTORY (IAMDB)": "",
-                          " SAP (SAP)": "",
-                          " PersonRegistryVDS (VDS)": "",
-                          " BBEC (DARS)": ""
-                        }
-                      }
+                      "CS - DT_OF_DEATH": "",
+                      "SAP - DECEASEDDATE": "",
+                      "BBEC - Deceased_Date": ""
                     }
                   }
                 }
-              }
-            },
-            "maritalStatus": {
-              "type": "array",
-              "items": {
-                "type": "object",
+              },
+              "source": {
+                "type": "string",
                 "properties": {
-                  "code": {
-                    "type": "string",
+                  "Source of Records": {
                     "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - MAR_STATUS": "",
-                          "SAP - MARITALSTATUS": ""
-                        }
-                      }
-                    }
-                  },
-                  "description": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - MAR_STATUS_DESCR": "",
-                          "BBEC - Marital_Status": ""
-                        }
-                      }
-                    }
-                  },
-                  "source": {
-                    "type": "string",
-                    "properties": {
-                      "Source of Records": {
-                        "properties": {
-                          "Campus Solutions (CS)": "",
-                          " ID_DIRECTORY (IAMDB)": "",
-                          " SAP (SAP)": "",
-                          " PersonRegistryVDS (VDS)": "",
-                          " BBEC (DARS)": ""
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "account": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "SAP - USERID": "",
-                          "VDS - AccountBULoginAccountName": "",
-                          "CS - OPRID": ""
-                        }
-                      }
-                    }
-                  },
-                  "source": {
-                    "type": "string",
-                    "properties": {
-                      "Source of Records": {
-                        "properties": {
-                          "Campus Solutions (CS)": "",
-                          " SAP (SAP)": ""
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "ethnicity": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "isHispanicLatino": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - HISP_LATINO": "",
-                          "IAMDB - Ethnicity": "",
-                          "BBEC - Ethnicity": "",
-                          "SAP - ETHNICITYCODE": ""
-                        }
-                      }
-                    }
-                  },
-                  "group": {
-                    "type": "object",
-                    "properties": {
-                      "code": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - ETHNIC_GRP_CD": "",
-                              "IAMDB - Race": "",
-                              "SAP - RACECODE": ""
-                            }
-                          }
-                        }
-                      },
-                      "description": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - DESCR50": "",
-                              "SAP - RACE_DESC": "",
-                              "IAMDB - ": ""
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "percentageNumerator": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - ETHNIC_PCT_NUMRATR": "",
-                          "SAP - ": ""
-                        }
-                      }
-                    }
-                  },
-                  "percentageDenumerator": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - ETHNIC_PCT_DENMRTR": "",
-                          "SAP - ": ""
-                        }
-                      }
-                    }
-                  },
-                  "source": {
-                    "type": "string",
-                    "properties": {
-                      "Source of Records": {
-                        "properties": {
-                          "Campus Solutions (CS)": "",
-                          " ID_DIRECTORY (IAMDB)": "",
-                          " SAP (SAP)": "",
-                          " PersonRegistryVDS (VDS)": "",
-                          " BBEC (DARS)": ""
-                        }
-                      }
+                      "Campus Solutions (CS)": "",
+                      "  SAP (SAP)": "",
+                      " PersonRegistryVDS (VDS)": "",
+                      " BBEC (DARS)": ""
                     }
                   }
                 }
@@ -2898,8 +2549,7 @@
                   "Source of Records": {
                     "properties": {
                       "Campus Solutions (CS)": "",
-                      " ID_DIRECTORY (IAMDB)": "",
-                      " SAP (SAP)": "",
+                      "  SAP (SAP)": "",
                       " PersonRegistryVDS (VDS)": "",
                       " BBEC (DARS)": ""
                     }
@@ -3056,22 +2706,171 @@
               }
             }
           }
+        },
+        "maritalStatus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - MAR_STATUS": "",
+                      "SAP - MARITALSTATUS": ""
+                    }
+                  }
+                }
+              },
+              "description": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - MAR_STATUS_DESCR": "",
+                      "BBEC - Marital_Status": ""
+                    }
+                  }
+                }
+              },
+              "source": {
+                "type": "string",
+                "properties": {
+                  "Source of Records": {
+                    "properties": {
+                      "Campus Solutions (CS)": "",
+                      "  SAP (SAP)": "",
+                      " PersonRegistryVDS (VDS)": "",
+                      " BBEC (DARS)": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "account": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "SAP - USERID": "",
+                      "VDS - AccountBULoginAccountName": "",
+                      "CS - OPRID": ""
+                    }
+                  }
+                }
+              },
+              "source": {
+                "type": "string",
+                "properties": {
+                  "Source of Records": {
+                    "properties": {
+                      "Campus Solutions (CS)": "",
+                      " SAP (SAP)": "",
+                      " PersonRegistryVDS (VDS)": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ethnicity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "isHispanicLatino": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - HISP_LATINO": "",
+                      "IAMDB - Ethnicity": "",
+                      "BBEC - Ethnicity": "",
+                      "SAP - ETHNICITYCODE": ""
+                    }
+                  }
+                }
+              },
+              "group": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - ETHNIC_GRP_CD": "",
+                          "IAMDB - Race": "",
+                          "SAP - RACECODE": ""
+                        }
+                      }
+                    }
+                  },
+                  "description": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - DESCR50": "",
+                          "SAP - RACE_DESC": ""
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "percentageNumerator": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - ETHNIC_PCT_NUMRATR": "",
+                      "SAP - ": ""
+                    }
+                  }
+                }
+              },
+              "percentageDenumerator": {
+                "type": "string",
+                "properties": {
+                  "Source(s)": {
+                    "properties": {
+                      "CS - ETHNIC_PCT_DENMRTR": "",
+                      "SAP - ": ""
+                    }
+                  }
+                }
+              },
+              "source": {
+                "type": "string",
+                "properties": {
+                  "Source of Records": {
+                    "properties": {
+                      "Campus Solutions (CS)": "",
+                      "  SAP (SAP)": "",
+                      " PersonRegistryVDS (VDS)": "",
+                      " BBEC (DARS)": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     "studentInfo": {
       "type": "object",
       "properties": {
-        "gpa": {
-          "type": "string",
-          "properties": {
-            "Source(s)": {
-              "properties": {
-                "N/A": ""
-              }
-            }
-          }
-        },
         "address": {
           "type": "array",
           "items": {
@@ -5235,210 +5034,10 @@
               "studentSemesterInfo": {
                 "type": "object",
                 "properties": {
-                  "v2": {
+                  "academicTerm": {
                     "type": "object",
                     "properties": {
-                      "academicTerm": {
-                        "type": "object",
-                        "properties": {
-                          "term": {
-                            "type": "object",
-                            "properties": {
-                              "code": {
-                                "type": "string",
-                                "properties": {
-                                  "Source(s)": {
-                                    "properties": {
-                                      "CS - STRM": ""
-                                    }
-                                  }
-                                }
-                              },
-                              "description": {
-                                "type": "string",
-                                "properties": {
-                                  "Source(s)": {
-                                    "properties": {
-                                      "CS - DESCR": ""
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          "termBeginDate": {
-                            "type": "string",
-                            "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - TERM_BEGIN_DT": ""
-                                }
-                              }
-                            }
-                          },
-                          "termEndDate": {
-                            "type": "string",
-                            "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - TERM_END_DT": ""
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "currentGpa": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - CUR_GPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "cumulativeGpa": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - CUM_GPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "academicLevelBot": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - ACAD_LEVEL_BOT": ""
-                            }
-                          }
-                        }
-                      },
-                      "academicLevelDescription": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - ACAD_LEVEL_DESCR": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsTermTotal": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_TERM_TOT": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsCumulative": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - TOT_CUMULATIVE": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsTakenGPA": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_TAKEN_GPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsTakenNoGPA": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_TAKEN_NOGPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsProgressGPA": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_INPROG_GPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsProgressNoGPA": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_INPROG_NOGPA": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsTakenProgress": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_TAKEN_PRGRSS": ""
-                            }
-                          }
-                        }
-                      },
-                      "unitsAudit": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - UNT_AUDIT": ""
-                            }
-                          }
-                        }
-                      },
-                      "transferGPA": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - SSR_TRF_CUR_GPA ": ""
-                            }
-                          }
-                        }
-                      },
-                      "academicProgramPrimary": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - ACAD_PROG_PRIMARY ": ""
-                            }
-                          }
-                        }
-                      },
-                      "careerNumber": {
-                        "type": "string",
-                        "properties": {
-                          "Source(s)": {
-                            "properties": {
-                              "CS - STDNT_CAR_NBR": ""
-                            }
-                          }
-                        }
-                      },
-                      "academicCareer": {
+                      "term": {
                         "type": "object",
                         "properties": {
                           "code": {
@@ -5446,7 +5045,7 @@
                             "properties": {
                               "Source(s)": {
                                 "properties": {
-                                  "CS - ACAD_CAREER": ""
+                                  "CS - STRM": ""
                                 }
                               }
                             }
@@ -5456,94 +5055,289 @@
                             "properties": {
                               "Source(s)": {
                                 "properties": {
-                                  "CS - ACAD_CAR_DESCR": ""
+                                  "CS - DESCR": ""
                                 }
                               }
                             }
                           }
                         }
                       },
-                      "billingCareer": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "string",
-                            "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - BILLING_CAREER": ""
-                                }
-                              }
-                            }
-                          },
-                          "description": {
-                            "type": "string",
-                            "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "N/A": ""
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "formOfStudy": {
+                      "termBeginDate": {
                         "type": "string",
                         "properties": {
                           "Source(s)": {
                             "properties": {
-                              "CS - FORM_OF_STUDY": ""
+                              "CS - TERM_BEGIN_DT": ""
                             }
                           }
                         }
                       },
-                      "specialStudyProgram": {
-                        "type": "object",
+                      "termEndDate": {
+                        "type": "string",
                         "properties": {
-                          "code": {
-                            "type": "string",
+                          "Source(s)": {
                             "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - STUDY_AGREEMENT": ""
-                                }
-                              }
+                              "CS - TERM_END_DT": ""
                             }
-                          },
-                          "description": {
-                            "type": "string",
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "currentGpa": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - CUR_GPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "cumulativeGpa": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - CUM_GPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "academicLevelBot": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - ACAD_LEVEL_BOT": ""
+                        }
+                      }
+                    }
+                  },
+                  "academicLevelDescription": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - ACAD_LEVEL_DESCR": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsTermTotal": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_TERM_TOT": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsCumulative": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - TOT_CUMULATIVE": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsTakenGPA": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_TAKEN_GPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsTakenNoGPA": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_TAKEN_NOGPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsProgressGPA": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_INPROG_GPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsProgressNoGPA": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_INPROG_NOGPA": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsTakenProgress": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_TAKEN_PRGRSS": ""
+                        }
+                      }
+                    }
+                  },
+                  "unitsAudit": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - UNT_AUDIT": ""
+                        }
+                      }
+                    }
+                  },
+                  "transferGPA": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - SSR_TRF_CUR_GPA ": ""
+                        }
+                      }
+                    }
+                  },
+                  "academicProgramPrimary": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - ACAD_PROG_PRIMARY ": ""
+                        }
+                      }
+                    }
+                  },
+                  "careerNumber": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - STDNT_CAR_NBR": ""
+                        }
+                      }
+                    }
+                  },
+                  "academicCareer": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
                             "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - STUDY_AGREEMENT_DESCR": ""
-                                }
-                              }
+                              "CS - ACAD_CAREER": ""
                             }
                           }
                         }
                       },
-                      "agreement": {
-                        "type": "object",
+                      "description": {
+                        "type": "string",
                         "properties": {
-                          "startDate": {
-                            "type": "string",
+                          "Source(s)": {
                             "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - START_DATE": ""
-                                }
-                              }
+                              "CS - ACAD_CAR_DESCR": ""
                             }
-                          },
-                          "endDate": {
-                            "type": "string",
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "billingCareer": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
                             "properties": {
-                              "Source(s)": {
-                                "properties": {
-                                  "CS - END_DATE": ""
-                                }
-                              }
+                              "CS - BILLING_CAREER": ""
+                            }
+                          }
+                        }
+                      },
+                      "description": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
+                            "properties": {
+                              "N/A": ""
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "formOfStudy": {
+                    "type": "string",
+                    "properties": {
+                      "Source(s)": {
+                        "properties": {
+                          "CS - FORM_OF_STUDY": ""
+                        }
+                      }
+                    }
+                  },
+                  "specialStudyProgram": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
+                            "properties": {
+                              "CS - STUDY_AGREEMENT": ""
+                            }
+                          }
+                        }
+                      },
+                      "description": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
+                            "properties": {
+                              "CS - STUDY_AGREEMENT_DESCR": ""
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "agreement": {
+                    "type": "object",
+                    "properties": {
+                      "startDate": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
+                            "properties": {
+                              "CS - START_DATE": ""
+                            }
+                          }
+                        }
+                      },
+                      "endDate": {
+                        "type": "string",
+                        "properties": {
+                          "Source(s)": {
+                            "properties": {
+                              "CS - END_DATE": ""
                             }
                           }
                         }
@@ -5828,656 +5622,12 @@
                       }
                     }
                   },
-                  "projectedGraduationDate": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "CS - EXP_TERM_ENDDT": ""
-                        }
-                      }
-                    }
-                  },
                   "degreeProgram": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "properties": {
-                        "v2": {
-                          "type": "object",
-                          "properties": {
-                            "academicCareer": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_CAREER": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "N/A": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "programCareerNumber": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - STDNT_CAR_NBR": ""
-                                  }
-                                }
-                              }
-                            },
-                            "academicGroup": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_GROUP": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_GROUP_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "academicOrganization": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_ORG": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_ORG_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "academicPlan": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "plan": {
-                                    "type": "object",
-                                    "properties": {
-                                      "code": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_PLAN": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_PLAN_DESCR": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "descriptionLong": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - DESCRFORMAL": ""
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "degree": {
-                                    "type": "object",
-                                    "properties": {
-                                      "code": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - DEGREE": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - DEGREE_DESCR": ""
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "type": {
-                                    "type": "object",
-                                    "properties": {
-                                      "code": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_PLAN_TYPE": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - PLAN_TYPE_DESCR": ""
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "academicOrganization": {
-                                    "type": "object",
-                                    "properties": {
-                                      "code": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_ORG": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_ORG_DESCR": ""
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "previousEducationLevel": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - EDUCATION_LVL": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "classCredentialLevel": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - SSR_NSC_CRD_LVL": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "transcriptDescription": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - TRNSCR_DESCR": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "planSequence": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - PLAN_SEQUENCE": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "actualGraduationDate": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - DEGR_CONFER_DT": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "completionTerm": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          "CS - COMPLETION_TERM": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "cipCode": {
-                                    "type": "string",
-                                    "properties": {
-                                      "Source(s)": {
-                                        "properties": {
-                                          " - CIP_CODE": ""
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "degreeStatus": {
-                                    "type": "object",
-                                    "properties": {
-                                      "code": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "CS - ACAD_DEGR_STATUS": ""
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "description": {
-                                        "type": "string",
-                                        "properties": {
-                                          "Source(s)": {
-                                            "properties": {
-                                              "N/A": ""
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "degreeHonors": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "object",
-                                      "properties": {
-                                        "code": {
-                                          "type": "string",
-                                          "properties": {
-                                            "Source(s)": {
-                                              "properties": {
-                                                "CS - HONORS_CODE": ""
-                                              }
-                                            }
-                                          }
-                                        },
-                                        "description": {
-                                          "type": "string",
-                                          "properties": {
-                                            "Source(s)": {
-                                              "properties": {
-                                                "CS - DESCR": ""
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                  "subPlans": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "object",
-                                      "properties": {
-                                        "subPlan": {
-                                          "type": "object",
-                                          "properties": {
-                                            "code": {
-                                              "type": "string",
-                                              "properties": {
-                                                "Source(s)": {
-                                                  "properties": {
-                                                    "CS - ACAD_SUB_PLAN": ""
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            "description": {
-                                              "type": "string",
-                                              "properties": {
-                                                "Source(s)": {
-                                                  "properties": {
-                                                    "CS - ACAD_SUB_PLAN_DESCR": ""
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        },
-                                        "type": {
-                                          "type": "object",
-                                          "properties": {
-                                            "code": {
-                                              "type": "string",
-                                              "properties": {
-                                                "Source(s)": {
-                                                  "properties": {
-                                                    "CS - ACAD_SUBPLAN_TYPE": ""
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            "description": {
-                                              "type": "string",
-                                              "properties": {
-                                                "Source(s)": {
-                                                  "properties": {
-                                                    "CS - PLAN_TYPE_DESCR": ""
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "admitTerm": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ADMIT_TERM": ""
-                                  }
-                                }
-                              }
-                            },
-                            "admitTermDescription": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ADMIT_TERM_DESCR": ""
-                                  }
-                                }
-                              }
-                            },
-                            "completionTerm": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - COMPLETION_TERM": ""
-                                  }
-                                }
-                              }
-                            },
-                            "effectiveDate": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - EFFDT": ""
-                                  }
-                                }
-                              }
-                            },
-                            "effectiveSequence": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - EFFSEQ": ""
-                                  }
-                                }
-                              }
-                            },
-                            "isCurrentAcademicProgram": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - CURRENT_IND": ""
-                                  }
-                                }
-                              }
-                            },
-                            "isJointProgram": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - JOINT_PROG_APPR": ""
-                                  }
-                                }
-                              }
-                            },
-                            "isFinAidEligible": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - FA_ELIGIBILITY": ""
-                                  }
-                                }
-                              }
-                            },
-                            "campus": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - CAMPUS": ""
-                                  }
-                                }
-                              }
-                            },
-                            "program": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_PROG": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_PROG_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "action": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_ACTION": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_ACTION_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "reason": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_REASON": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_REASON_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "registrationStatus": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_STATUS": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - PROG_STATUS_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "expectedGradTerm": {
-                              "type": "object",
-                              "properties": {
-                                "code": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - EXP_GRAD_TERM": ""
-                                      }
-                                    }
-                                  }
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - EXP_TERM_DESCR": ""
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "expectedGraduationDate": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - EXP_TERM_ENDDT": ""
-                                  }
-                                }
-                              }
-                            },
-                            "degreeCheckoutStatus": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - DEGR_CHKOUT_STAT": ""
-                                  }
-                                }
-                              }
-                            },
-                            "applicationNumber": {
-                              "type": "string",
-                              "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ADM_APPL_NBR": ""
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        },
-                        "college": {
+                        "academicCareer": {
                           "type": "object",
                           "properties": {
                             "code": {
@@ -6485,7 +5635,7 @@
                               "properties": {
                                 "Source(s)": {
                                   "properties": {
-                                    "N/A": ""
+                                    "CS - ACAD_CAREER": ""
                                   }
                                 }
                               }
@@ -6502,7 +5652,611 @@
                             }
                           }
                         },
+                        "programCareerNumber": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - STDNT_CAR_NBR": ""
+                              }
+                            }
+                          }
+                        },
+                        "academicGroup": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_GROUP": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_GROUP_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "academicOrganization": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_ORG": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_ORG_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "academicPlan": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "plan": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_PLAN": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_PLAN_DESCR": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "descriptionLong": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - DESCRFORMAL": ""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "degree": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - DEGREE": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - DEGREE_DESCR": ""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "type": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_PLAN_TYPE": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - PLAN_TYPE_DESCR": ""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "academicOrganization": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_ORG": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_ORG_DESCR": ""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "previousEducationLevel": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - EDUCATION_LVL": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "classCredentialLevel": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - SSR_NSC_CRD_LVL": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "transcriptDescription": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - TRNSCR_DESCR": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "planSequence": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - PLAN_SEQUENCE": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "actualGraduationDate": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - DEGR_CONFER_DT": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "completionTerm": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      "CS - COMPLETION_TERM": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "cipCode": {
+                                "type": "string",
+                                "properties": {
+                                  "Source(s)": {
+                                    "properties": {
+                                      " - CIP_CODE": ""
+                                    }
+                                  }
+                                }
+                              },
+                              "degreeStatus": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "CS - ACAD_DEGR_STATUS": ""
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "properties": {
+                                      "Source(s)": {
+                                        "properties": {
+                                          "N/A": ""
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "degreeHonors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "code": {
+                                      "type": "string",
+                                      "properties": {
+                                        "Source(s)": {
+                                          "properties": {
+                                            "CS - HONORS_CODE": ""
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "properties": {
+                                        "Source(s)": {
+                                          "properties": {
+                                            "CS - DESCR": ""
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "subPlans": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "subPlan": {
+                                      "type": "object",
+                                      "properties": {
+                                        "code": {
+                                          "type": "string",
+                                          "properties": {
+                                            "Source(s)": {
+                                              "properties": {
+                                                "CS - ACAD_SUB_PLAN": ""
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "description": {
+                                          "type": "string",
+                                          "properties": {
+                                            "Source(s)": {
+                                              "properties": {
+                                                "CS - ACAD_SUB_PLAN_DESCR": ""
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "type": {
+                                      "type": "object",
+                                      "properties": {
+                                        "code": {
+                                          "type": "string",
+                                          "properties": {
+                                            "Source(s)": {
+                                              "properties": {
+                                                "CS - ACAD_SUBPLAN_TYPE": ""
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "description": {
+                                          "type": "string",
+                                          "properties": {
+                                            "Source(s)": {
+                                              "properties": {
+                                                "CS - PLAN_TYPE_DESCR": ""
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "admitTerm": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - ADMIT_TERM": ""
+                              }
+                            }
+                          }
+                        },
+                        "admitTermDescription": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - ADMIT_TERM_DESCR": ""
+                              }
+                            }
+                          }
+                        },
+                        "completionTerm": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - COMPLETION_TERM": ""
+                              }
+                            }
+                          }
+                        },
+                        "effectiveDate": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - EFFDT": ""
+                              }
+                            }
+                          }
+                        },
+                        "effectiveSequence": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - EFFSEQ": ""
+                              }
+                            }
+                          }
+                        },
+                        "isCurrentAcademicProgram": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - CURRENT_IND": ""
+                              }
+                            }
+                          }
+                        },
+                        "isJointProgram": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - JOINT_PROG_APPR": ""
+                              }
+                            }
+                          }
+                        },
+                        "isFinAidEligible": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - FA_ELIGIBILITY": ""
+                              }
+                            }
+                          }
+                        },
+                        "campus": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - CAMPUS": ""
+                              }
+                            }
+                          }
+                        },
                         "program": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_PROG": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - ACAD_PROG_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_ACTION": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_ACTION_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_REASON": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_REASON_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "registrationStatus": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_STATUS": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - PROG_STATUS_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "expectedGradTerm": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - EXP_GRAD_TERM": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - EXP_TERM_DESCR": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "expectedGraduationDate": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - EXP_TERM_ENDDT": ""
+                              }
+                            }
+                          }
+                        },
+                        "degreeCheckoutStatus": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - DEGR_CHKOUT_STAT": ""
+                              }
+                            }
+                          }
+                        },
+                        "applicationNumber": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - ADM_APPL_NBR": ""
+                              }
+                            }
+                          }
+                        },
+                        "college": {
                           "type": "object",
                           "properties": {
                             "code": {
@@ -6698,6 +6452,49 @@
                       }
                     }
                   },
+                  "fee": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "N/A": ""
+                                  }
+                                }
+                              }
+                            },
+                            "description": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "N/A": ""
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "eligibility": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
+                              "properties": {
+                                "CS - BU_HWFEE": ""
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
                   "studentClass": {
                     "type": "array",
                     "items": {
@@ -6821,127 +6618,132 @@
                         "course": {
                           "type": "object",
                           "properties": {
-                            "v2": {
-                              "type": "object",
+                            "sessionCode": {
+                              "type": "string",
                               "properties": {
-                                "sessionCode": {
-                                  "type": "string",
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - SESSION_CODE": ""
-                                      }
-                                    }
+                                    "CS - SESSION_CODE": ""
                                   }
-                                },
-                                "academicGroup": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "academicGroup": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_GROUP": ""
-                                      }
-                                    }
+                                    "CS - ACAD_GROUP": ""
                                   }
-                                },
-                                "academicOrganization": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "academicOrganization": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - ACAD_ORG": ""
-                                      }
-                                    }
+                                    "CS - ACAD_ORG": ""
                                   }
-                                },
-                                "subject": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "subject": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - SUBJECT": ""
-                                      }
-                                    }
+                                    "CS - SUBJECT": ""
                                   }
-                                },
-                                "catalogNumber": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "catalogNumber": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - CATALOG_NBR": ""
-                                      }
-                                    }
+                                    "CS - CATALOG_NBR": ""
                                   }
-                                },
-                                "classNumber": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "classNumber": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - CLASS_NBR": ""
-                                      }
-                                    }
+                                    "CS - CLASS_NBR": ""
                                   }
-                                },
-                                "unitsMaximum": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "unitsMaximum": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "N/A": ""
-                                      }
-                                    }
+                                    "N/A": ""
                                   }
-                                },
-                                "unitsMinimum": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "unitsMinimum": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - UNITS_MINIMUM": ""
-                                      }
-                                    }
+                                    "CS - UNITS_MINIMUM": ""
                                   }
-                                },
-                                "unitsTaken": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "unitsTaken": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - UNT_TAKEN": ""
-                                      }
-                                    }
+                                    "CS - UNT_TAKEN": ""
                                   }
-                                },
-                                "unitsBillable": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "unitsBillable": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - UNT_BILLING": ""
-                                      }
-                                    }
+                                    "CS - UNT_BILLING": ""
                                   }
-                                },
-                                "officialCourseGrade": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "officialCourseGrade": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - CRSE_GRADE_OFF": ""
-                                      }
-                                    }
+                                    "CS - CRSE_GRADE_OFF": ""
                                   }
-                                },
-                                "gradingBasis": {
-                                  "type": "string",
+                                }
+                              }
+                            },
+                            "gradingBasis": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
                                   "properties": {
-                                    "Source(s)": {
-                                      "properties": {
-                                        "CS - GRADING_BASIS_ENRL": ""
-                                      }
-                                    }
+                                    "CS - GRADING_BASIS_ENRL": ""
+                                  }
+                                }
+                              }
+                            },
+                            "classType": {
+                              "type": "string",
+                              "properties": {
+                                "Source(s)": {
+                                  "properties": {
+                                    "CS - SSR_COMPONENT": ""
                                   }
                                 }
                               }
@@ -7081,16 +6883,6 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "meetingNumber": {
-                                "type": "string",
-                                "properties": {
-                                  "Source(s)": {
-                                    "properties": {
-                                      "CS - CLASS_MTG_NBR": ""
-                                    }
-                                  }
-                                }
-                              },
                               "instructionType": {
                                 "type": "object",
                                 "properties": {
@@ -7129,7 +6921,7 @@
                                       }
                                     }
                                   },
-                                  "buId": {
+                                  "buid": {
                                     "type": "string",
                                     "properties": {
                                       "Source(s)": {
@@ -7652,117 +7444,112 @@
                     "course": {
                       "type": "object",
                       "properties": {
-                        "v2": {
-                          "type": "object",
+                        "sessionCode": {
+                          "type": "string",
                           "properties": {
-                            "sessionCode": {
-                              "type": "string",
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - SESSION_CODE": ""
-                                  }
-                                }
+                                "CS - SESSION_CODE": ""
                               }
-                            },
-                            "academicGroup": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "academicGroup": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ACAD_GROUP": ""
-                                  }
-                                }
+                                "CS - ACAD_GROUP": ""
                               }
-                            },
-                            "academicOrganization": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "academicOrganization": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ACAD_ORG": ""
-                                  }
-                                }
+                                "CS - ACAD_ORG": ""
                               }
-                            },
-                            "academicCareer": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "academicCareer": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - ACAD_CAREER": ""
-                                  }
-                                }
+                                "CS - ACAD_CAREER": ""
                               }
-                            },
-                            "subject": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "subject": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - SUBJECT": ""
-                                  }
-                                }
+                                "CS - SUBJECT": ""
                               }
-                            },
-                            "catalogNumber": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "catalogNumber": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - CATALOG_NBR": ""
-                                  }
-                                }
+                                "CS - CATALOG_NBR": ""
                               }
-                            },
-                            "classNumber": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "classNumber": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "CS - CLASS_NBR": ""
-                                  }
-                                }
+                                "CS - CLASS_NBR": ""
                               }
-                            },
-                            "unitsMaximum": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "unitsMaximum": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "N/A": ""
-                                  }
-                                }
+                                "N/A": ""
                               }
-                            },
-                            "unitsMinimum": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "unitsMinimum": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "N/A": ""
-                                  }
-                                }
+                                "N/A": ""
                               }
-                            },
-                            "unitsTaken": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "unitsTaken": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "N/A": ""
-                                  }
-                                }
+                                "N/A": ""
                               }
-                            },
-                            "officialCourseGrade": {
-                              "type": "string",
+                            }
+                          }
+                        },
+                        "officialCourseGrade": {
+                          "type": "string",
+                          "properties": {
+                            "Source(s)": {
                               "properties": {
-                                "Source(s)": {
-                                  "properties": {
-                                    "N/A": ""
-                                  }
-                                }
+                                "N/A": ""
                               }
                             }
                           }
@@ -8265,16 +8052,6 @@
               "positionInfo": {
                 "type": "object",
                 "properties": {
-                  "personid": {
-                    "type": "string",
-                    "properties": {
-                      "Source(s)": {
-                        "properties": {
-                          "N/A": ""
-                        }
-                      }
-                    }
-                  },
                   "basicData": {
                     "type": "object",
                     "properties": {

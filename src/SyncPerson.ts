@@ -299,5 +299,5 @@ if (require.main === module) {
   main();
 }
 
-export { SinglePersonSync, SinglePersonSyncParams };
+export { SinglePersonSync, SinglePersonSyncParams, SinglePersonSyncAllParams };
 

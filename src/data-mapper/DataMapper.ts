@@ -1,10 +1,10 @@
 import { DataMapper as CoreDataMapper, Field, Input } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
-import { AddressMapper } from './DataMapperAddress';
+import { AddressMapper, AddressType } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
-import { loadOrgMap, OrgMapper } from './DataMapperOrg';
+import { loadOrgMap, OrgAssignments, OrgMapper } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
 import { UserIdMapper } from './DataMapperUserId';
 import { StateLookup, StateRow } from './DataMapperState';
@@ -15,12 +15,13 @@ import { ConfigManager } from '../config/ConfigManager';
 /**
  * Parameters for DataMapper constructor
  */
-interface DataMapperParams {
+export interface DataMapperParams {
   currentTerms: Term[];
   stateMap: Map<string, StateRow>;
   countryMap: Map<string, CountryRow>;
   orgHrn?: (sourceOrgId: string) => string | undefined;
   orgMap?: Map<string, string>;
+  addressTypes?: Set<AddressType>;
 }
 
 /**
@@ -101,6 +102,7 @@ export class DataMapper implements CoreDataMapper {
       { name: 'employer', type: 'object' as const, required: true },
       { name: 'organization', type: 'object' as const, required: true },
       { name: 'secondaryUnit', type: 'object' as const, required: false },
+      { name: 'additionalUnit', type: 'object' as const, required: false },
       { name: 'contactInformation', type: 'object' as const, required: true },
       { name: 'roles', type: 'array' as const, required: false },
       { name: '__arrayFieldOperations', type: 'object' as const, required: true } // Special field for conveying array operation instructions (e.g. for roles)
@@ -119,8 +121,22 @@ export class DataMapper implements CoreDataMapper {
       const userId = UserIdMapper(person, false).getUserId();
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();
-      const addressLine1 = AddressMapper(person, false).getAddressLine1();
-      const orgIds: Set<string> = OrgMapper(person, false).getOrgs();
+      const addressMapper = AddressMapper({
+        person,
+        stateMap: this.stateMap ?? new Map<string, StateRow>(), 
+        countryMap: this.countryMap ?? new Map<string, CountryRow>(),
+        addressTypes: this._params.addressTypes
+      });
+      const addressLine1 = addressMapper.getAddressLine1();
+      const city = addressMapper.getCity();
+      const stateProvince = addressMapper.getStateProvince();
+      const postalCode = addressMapper.getPostalCode();
+      const country = addressMapper.getCountry();
+      const orgAssignments: OrgAssignments = OrgMapper({ 
+        person, 
+        currentTerms: this._params.currentTerms, 
+        convertNullstoUndefined: false 
+      }).getOrgs();
 
       // Basic data check
       if(isEmpty(personid)) {
@@ -129,14 +145,13 @@ export class DataMapper implements CoreDataMapper {
       if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
         this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
       }
-      if(orgIds.size === 0 && !this._criticalValidationFailureMessage) {
+      // For affiliates, organization is EXEMPTED per CSV spec (employer="AFFILIATE", organization=undefined)
+      // For employees and students, organization is required
+      if(!orgAssignments.organization && orgAssignments.employer !== 'AFFILIATE' && !this._criticalValidationFailureMessage) {
         this._criticalValidationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
       }
       
-      const orgHrn = this._orgHrn(Array.from(orgIds)[0]);
-      if(isEmpty(orgHrn) && !this._criticalValidationFailureMessage) {
-        this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${Array.from(orgIds)[0]}: ${JSON.stringify(person)}`;
-      }
+      const employerHrn = this._orgHrn(orgAssignments.employer ?? '');
       
       const fieldValues = [
         { id: personid },
@@ -146,13 +161,21 @@ export class DataMapper implements CoreDataMapper {
         { firstName },
         { middleName },
         { lastName },
-        { contactInformation: { email, addressLine1 } },
+        { contactInformation: { email, addressLine1, city, stateProvince, postalCode, country } },
         { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
-        { employer: { hrn: orgHrn } },
-        { organization: { hrn: orgHrn } },
+        { employer: { hrn: employerHrn } },
         // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
         { __arrayFieldOperations: { append: [ 'roles' ] } }
       ] as Field[];
+      
+      // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
+      if(orgAssignments.organization) {
+        const orgHrn = this._orgHrn(orgAssignments.organization);
+        if(isEmpty(orgHrn) && !this._criticalValidationFailureMessage) {
+          this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+        }
+        fieldValues.push({ organization: { hrn: orgHrn } });
+      }
 
       if(personHrn) {
         fieldValues.push({ hrn: personHrn });
@@ -162,14 +185,22 @@ export class DataMapper implements CoreDataMapper {
         fieldValues.push({ title });
       }
 
-      if( orgIds.size > 1 ) {
-        // Must be a dual-appointee employee, or student with multiple colleges
-        const secondOrgId = Array.from(orgIds)[1];
-        const secondaryHrn = this._orgHrn(secondOrgId);
+      // Add secondaryUnit if present
+      if(orgAssignments.secondaryUnit) {
+        const secondaryHrn = this._orgHrn(orgAssignments.secondaryUnit);
         if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
-          this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${secondOrgId}: ${JSON.stringify(person)}`;
+          this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
         }
         fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
+      }
+      
+      // Add additionalUnit if present
+      if(orgAssignments.additionalUnit) {
+        const additionalHrn = this._orgHrn(orgAssignments.additionalUnit);
+        if(isEmpty(additionalHrn) && !this._infoValidationFailureMessage) {
+          this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+        }
+        fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
       }
 
       return { fieldValues };

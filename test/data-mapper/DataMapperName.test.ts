@@ -60,7 +60,46 @@ describe('NameMapper', () => {
       });
     });
 
-    it('should select PRI from SAP (priority 1) over PRF from Campus Solutions (priority 2)', () => {
+    it('should select PRF from SAP (priority 1) over all other types', () => {
+      const person = {
+        personBasic: {
+          names: [
+            {
+              nameType: 'PRI',
+              source: 'SAP',
+              firstName: 'Primary',
+              middleName: 'P',
+              lastName: 'SAP'
+            },
+            {
+              nameType: 'PRF',
+              source: 'SAP',
+              firstName: 'Preferred',
+              middleName: 'P',
+              lastName: 'SAP'
+            },
+            {
+              nameType: 'PRF',
+              source: 'Campus Solutions',
+              firstName: 'Preferred',
+              middleName: 'P',
+              lastName: 'CS'
+            }
+          ]
+        }
+      };
+
+      const mapper = NameMapper(person);
+      const result = mapper.getName();
+
+      expect(result).toEqual({
+        firstName: 'Preferred',
+        middleName: 'P',
+        lastName: 'SAP'
+      });
+    });
+
+    it('should select PRF from Campus Solutions (priority 2) over PRI from SAP (priority 3)', () => {
       const person = {
         personBasic: {
           names: [
@@ -86,13 +125,13 @@ describe('NameMapper', () => {
       const result = mapper.getName();
 
       expect(result).toEqual({
-        firstName: 'John',
-        middleName: 'Q',
-        lastName: 'Doe'
+        firstName: 'Jane',
+        middleName: 'R',
+        lastName: 'Smith'
       });
     });
 
-    it('should select PRF from Campus Solutions (priority 2) over PRI from Campus Solutions (priority 3)', () => {
+    it('should select PRF from Campus Solutions (priority 2) over PRI from Campus Solutions (priority 4)', () => {
       const person = {
         personBasic: {
           names: [
@@ -124,7 +163,7 @@ describe('NameMapper', () => {
       });
     });
 
-    it('should select PRI from SAP (priority 1) over PRI from Campus Solutions (priority 3)', () => {
+    it('should select PRI from SAP (priority 3) over PRI from Campus Solutions (priority 4)', () => {
       const person = {
         personBasic: {
           names: [

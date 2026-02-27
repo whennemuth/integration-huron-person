@@ -80,7 +80,8 @@ describe('EmailMapper', () => {
       const mapper = EmailMapper(person);
       const result = mapper.getEmail();
 
-      expect(result).toEqual('john.doe@gmail.com');
+      // BUEM from Campus Solutions now has higher priority than PERSONAL from SAP
+      expect(result).toEqual('john.doe@bu.edu');
     });
 
     it('should select BUEM from Campus Solutions (priority 3) over PERS from Campus Solutions (priority 4)', () => {
@@ -210,9 +211,8 @@ describe('EmailMapper', () => {
       const mapper = EmailMapper(person);
       const result = mapper.getEmail();
 
-      // Both emails don't match defined EmailTypes (university without source doesn't match, UNKNOWN not defined)
-      // So both get MAX_VALUE priority, and first email in array is selected
-      expect(result).toEqual('john.doe@unknown.com');
+      // Heuristics now match 'university' type, so it is selected
+      expect(result).toEqual('john.doe@bu.edu');
     });
 
     it('should handle emails with missing address', () => {
@@ -334,9 +334,8 @@ describe('EmailMapper', () => {
       const mapper = EmailMapper(person);
       const result = mapper.getEmail();
 
-      // UNIVERSITY (uppercase) doesn't match 'university' (lowercase) in EmailTypes
-      // personal matches priority 2
-      expect(result).toEqual('john.doe@gmail.com');
+      // UNIVERSITY (uppercase) now matches via heuristics, so it is selected
+      expect(result).toEqual('john.doe@bu.edu');
     });
 
     it('should handle emails with different case in source field', () => {
@@ -358,9 +357,8 @@ describe('EmailMapper', () => {
       const mapper = EmailMapper(person);
       const result = mapper.getEmail();
 
-      // university with 'sap' (lowercase) doesn't match 'SAP' in EmailTypes
-      // personal with 'SAP' matches priority 2
-      expect(result).toEqual('john.doe@gmail.com');
+      // university with 'sap' (lowercase) now matches SAP via heuristics, so it is selected
+      expect(result).toEqual('john.doe@bu.edu');
     });
 
     it('should handle null email property', () => {

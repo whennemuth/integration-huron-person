@@ -3,9 +3,10 @@ import { nullsToUndefined } from "../Utils";
 export type NameType = { priority: number; type: string; source?: string; }
 
 const NameTypes = [
-  { priority: 1, type: 'PRI', source: 'SAP' },
+  { priority: 1, type: 'PRF', source: 'SAP' },
   { priority: 2, type: 'PRF', source: 'Campus Solutions' },
-  { priority: 3, type: 'PRI', source: 'Campus Solutions' },
+  { priority: 3, type: 'PRI', source: 'SAP' },
+  { priority: 4, type: 'PRI', source: 'Campus Solutions' },
 ] as NameType[];
 
 /**

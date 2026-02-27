@@ -5,12 +5,16 @@ import { ConfigManager } from '../src/config/ConfigManager';
 import { DataMapper } from '../src/data-mapper/DataMapper';
 import { Config } from '../src/config/Config';
 import { Status, CrudOperation } from 'integration-core';
+import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
+import { ReadPerson } from '../src/data-target/crud/ReadPerson';
 
 // Mock the external dependencies
 jest.mock('../src/config/ConfigManager');
 jest.mock('../src/data-source/PersonDataSource');
 jest.mock('../src/data-target/PersonDataTarget');
 jest.mock('../src/data-mapper/DataMapper');
+jest.mock('../src/data-source/CurrentTermsDataSource');
+jest.mock('../src/data-target/crud/ReadPerson');
 
 describe('SinglePersonSync', () => {
   let singlePersonSync: SinglePersonSync;
@@ -18,6 +22,18 @@ describe('SinglePersonSync', () => {
   let mockDataSource: jest.Mocked<BuCdmPersonDataSource>;
   let mockDataTarget: jest.Mocked<HuronPersonDataTarget>;
   let mockDataMapper: jest.Mocked<DataMapper>;
+  let mockCurrentTermsDataSource: jest.Mocked<BuCdmCurrentTermsDataSource>;
+
+  const mockCurrentTerms: Term[] = [
+    {
+      term: '2261',
+      termDescription: 'Spring 2026',
+      academicCareer: 'GRAD',
+      termBeginDate: '20260120',
+      termEndDate: '20260508',
+      currentInd: 'Y'
+    }
+  ];
 
   const mockConfig: Config = {
     dataSource: {
@@ -114,7 +130,7 @@ describe('SinglePersonSync', () => {
     ]
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset mocks
     jest.clearAllMocks();
 
@@ -150,13 +166,32 @@ describe('SinglePersonSync', () => {
     // Mock DataMapper
     mockDataMapper = {
       getMappedData: jest.fn().mockReturnValue(mockInput),
-      map: jest.fn().mockReturnValue(mockInput)
+      map: jest.fn().mockReturnValue(mockInput),
+      currentTerms: mockCurrentTerms,
+      stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
+      countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
+      orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
+      orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
+      criticalValidationErrorMessage: undefined,
+      infoValidationErrorMessage: undefined
     } as any;
     (DataMapper as jest.Mock).mockImplementation(() => mockDataMapper);
 
-    singlePersonSync = new SinglePersonSync({ 
+    // Mock CurrentTermsDataSource
+    mockCurrentTermsDataSource = {
+      fetchRaw: jest.fn().mockResolvedValue(mockCurrentTerms)
+    } as any;
+    (BuCdmCurrentTermsDataSource as jest.Mock).mockImplementation(() => mockCurrentTermsDataSource);
+
+    // Mock ReadPerson
+    (ReadPerson as jest.Mock).mockImplementation(() => ({
+      readPersonById: jest.fn().mockResolvedValue([])
+    }));
+
+    singlePersonSync =  new SinglePersonSync({ 
       buid: 'U12345678', 
-      config: mockConfig
+      config: mockConfig,
+      dataMapper: mockDataMapper
     });
   });
 
@@ -166,9 +201,9 @@ describe('SinglePersonSync', () => {
       expect(singlePersonSync).toBeDefined();
     });
 
-    it('should create instance with custom config', () => {
+    it('should create instance with custom config', async () => {
       const customConfig = { ...mockConfig, integration: { ...mockConfig.integration, clientId: 'custom-client' } };
-      const customSync = new SinglePersonSync({ buid: 'U87654321', config: customConfig });
+      const customSync = new SinglePersonSync({ buid: 'U87654321', config: customConfig, dataMapper: mockDataMapper });
       expect(customSync).toBeDefined();
     });
 
@@ -397,7 +432,7 @@ describe('SinglePersonSync', () => {
 
 
   describe('environment config override', () => {
-    it('should apply environment overrides to config', () => {
+    it('should apply environment overrides to config', async () => {
       const envOverrides = {
         integration: {
           clientId: 'env-override-client',
@@ -406,10 +441,155 @@ describe('SinglePersonSync', () => {
         }
       };
 
-      const syncWithOverrides = new SinglePersonSync({ buid: 'U12345678', config: { ...mockConfig, ...envOverrides } });
+      const syncWithOverrides = new SinglePersonSync({ buid: 'U12345678', config: { ...mockConfig, ...envOverrides }, dataMapper: mockDataMapper });
       
       // Verify that the config with overrides was passed correctly
       expect(syncWithOverrides).toBeDefined();
+    });
+  });
+
+  describe('syncAll', () => {
+    it('should sync multiple BUIDs without dataMapper provided', async () => {
+      const buids = ['U11111111', 'U22222222', 'U33333333'];
+      
+      // Create fresh mocks for this test
+      const freshDataSource = {
+        fetchRaw: jest.fn().mockResolvedValue(mockRawData)
+      };
+      const freshDataMapper = {
+        getMappedData: jest.fn().mockReturnValue(mockInput),
+        map: jest.fn().mockReturnValue(mockInput),
+        currentTerms: mockCurrentTerms,
+        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
+        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
+        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
+        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
+        criticalValidationErrorMessage: undefined,
+        infoValidationErrorMessage: undefined
+      };
+      const freshDataTarget = {
+        pushOne: jest.fn().mockResolvedValue({
+          status: Status.SUCCESS,
+          message: 'Person pushed successfully',
+          timestamp: new Date(),
+          primaryKey: [{ id: 'U12345678' }],
+          crud: CrudOperation.CREATE
+        })
+      };
+      
+      // Clear and setup mocks
+      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
+      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
+      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
+      
+      await SinglePersonSync.syncAll({
+        config: mockConfig,
+        buids
+      });
+      
+      // Verify person data was fetched for each BUID
+      expect(freshDataSource.fetchRaw).toHaveBeenCalledTimes(buids.length);
+    });
+
+    it('should reuse dataMapper when provided', async () => {
+      const buids = ['U11111111', 'U22222222'];
+      
+      // Create fresh mocks for this test
+      const freshDataSource = {
+        fetchRaw: jest.fn().mockResolvedValue(mockRawData)
+      };
+      const freshDataMapper = {
+        getMappedData: jest.fn().mockReturnValue(mockInput),
+        map: jest.fn().mockReturnValue(mockInput),
+        currentTerms: mockCurrentTerms,
+        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
+        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
+        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
+        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
+        criticalValidationErrorMessage: undefined,
+        infoValidationErrorMessage: undefined
+      };
+      const freshDataTarget = {
+        pushOne: jest.fn().mockResolvedValue({
+          status: Status.SUCCESS,
+          message: 'Person pushed successfully',
+          timestamp: new Date(),
+          primaryKey: [{ id: 'U12345678' }],
+          crud: CrudOperation.CREATE
+        })
+      };
+      
+      // Clear and setup mocks
+      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
+      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
+      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
+      
+      // Provide dataMapper upfront
+      await SinglePersonSync.syncAll({
+        config: mockConfig,
+        buids,
+        dataMapper: freshDataMapper as any
+      });
+      
+      // Verify syncs still happened for each BUID
+      expect(freshDataSource.fetchRaw).toHaveBeenCalledTimes(buids.length);
+      
+      // Verify the same dataMapper was used (getMappedData called for each BUID)
+      expect(freshDataMapper.getMappedData).toHaveBeenCalledTimes(buids.length);
+    });
+
+    it('should continue to next BUID on sync failure', async () => {
+      const buids = ['U11111111', 'U22222222', 'U33333333'];
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      // Create fresh mocks for this test
+      const freshDataSource = {
+        fetchRaw: jest.fn()
+          .mockResolvedValueOnce(mockRawData) // First BUID succeeds
+          .mockRejectedValueOnce(new Error('Network error')) // Second BUID fails
+          .mockResolvedValueOnce(mockRawData) // Third BUID succeeds
+      };
+      const freshDataMapper = {
+        getMappedData: jest.fn().mockReturnValue(mockInput),
+        map: jest.fn().mockReturnValue(mockInput),
+        currentTerms: mockCurrentTerms,
+        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
+        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
+        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
+        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
+        criticalValidationErrorMessage: undefined,
+        infoValidationErrorMessage: undefined
+      };
+      const freshDataTarget = {
+        pushOne: jest.fn().mockResolvedValue({
+          status: Status.SUCCESS,
+          message: 'Person pushed successfully',
+          timestamp: new Date(),
+          primaryKey: [{ id: 'U12345678' }],
+          crud: CrudOperation.CREATE
+        })
+      };
+      
+      // Clear and setup mocks
+      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
+      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
+      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
+      
+      await SinglePersonSync.syncAll({
+        config: mockConfig,
+        buids,
+        dataMapper: freshDataMapper as any
+      });
+
+      // Verify it tried to sync all three
+      expect(BuCdmPersonDataSource).toHaveBeenCalledTimes(buids.length);
+      
+      // Verify the continuation message was logged
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Moving on to next BUID: U33333333 after failure with BUID: U22222222')
+      );
+      
+      consoleSpy.mockRestore();
     });
   });
 });

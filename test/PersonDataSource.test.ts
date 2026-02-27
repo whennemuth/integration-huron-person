@@ -5,6 +5,8 @@ import { IApiClient } from '../src/ApiClient';
 import { Config } from '../src/config/Config';
 import { AxiosResponseStreamFilter } from '../src/stream/AxiosResponseStreamFilter';
 import { Term } from '../src/data-source/CurrentTermsDataSource';
+import { StateRow } from '../src/data-mapper/DataMapperState';
+import { CountryRow } from '../src/data-mapper/DataMapperCountry';
 
 // Mock ApiClient
 class MockApiClient implements IApiClient {
@@ -203,10 +205,19 @@ describe('BuCdmPersonDataSource', () => {
     }
   ];
 
+  // Mock state and country maps for DataMapper
+  const mockStateMap = new Map<string, StateRow>([
+    ['MA', { huronCode: 'MA', huronName: 'Massachusetts' }]
+  ]);
+
+  const mockCountryMap = new Map<string, CountryRow>([
+    ['US', { huronCode: 'US', huronName: 'United States' }]
+  ]);
+
   beforeEach(() => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
-    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms });
+    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
     dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;

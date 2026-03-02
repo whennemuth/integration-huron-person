@@ -57,7 +57,7 @@ class SinglePersonSync {
     this.dataTarget = new HuronPersonDataTarget(this.config, cache);
   }
 
-  private getMappedPerson = async (rawData?: any[]): Promise<Input> => {
+  public getMappedPerson = async (rawData?: any[]): Promise<Input> => {
     try { 
 
       // Fetch person data from source if not provided

@@ -18,7 +18,7 @@
       "endpointConfig": {
         "baseUrl": "https://prod-budev-fm.snaplogic.io",
         "apiKey": "your-api-key-here",
-        "timeout": 3600000
+        "timeout": 7200000
       },
       "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
       "fieldsOfInterest": [

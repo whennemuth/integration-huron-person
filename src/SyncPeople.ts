@@ -10,7 +10,7 @@ import { getDataMapper } from './data-mapper/DataMapper';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 /**
- * Main integration runner for Huron Person data. All data is pulled from Boston University CRM
+ * Main integration runner for Huron Person data. All data is pulled from Boston University CDM
  * system via the CDM API, transformed/mapped, and pushed to the Huron target API.
  */
 class HuronPersonIntegration {

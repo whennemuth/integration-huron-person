@@ -225,8 +225,8 @@ describe('BuCdmPersonDataSource', () => {
 
   describe('constructor', () => {
     it('should create instance with correct name and description', () => {
-      expect(dataSource.name).toBe('Boston University CRM Person Data Source');
-      expect(dataSource.description).toBe('Fetches single person data from Boston University CRM API endpoint');
+      expect(dataSource.name).toBe('Boston University CDM Person Data Source');
+      expect(dataSource.description).toBe('Fetches single person data from Boston University CDM API endpoint');
     });
   });
 

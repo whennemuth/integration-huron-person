@@ -7,11 +7,11 @@ import { EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { BuCdmDataSource } from './DataSource';
 
 /**
- * DataSource implementation for fetching single person data from Boston University CRM API
+ * DataSource implementation for fetching single person data from Boston University CDMAPI
  */
 class BuCdmPersonDataSource extends BuCdmDataSource implements DataSource {
-  public readonly name = 'Boston University CRM Person Data Source';
-  public readonly description = 'Fetches single person data from Boston University CRM API endpoint';
+  public readonly name = 'Boston University CDM Person Data Source';
+  public readonly description = 'Fetches single person data from Boston University CDM API endpoint';
 
   constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
     super(params);

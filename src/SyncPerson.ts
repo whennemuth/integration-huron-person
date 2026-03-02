@@ -27,7 +27,7 @@ type SinglePersonSyncAllParams = PersonSyncParams & {
 };
 
 /**
- * Single person synchronization between Boston University CRM and Huron systems.
+ * Single person synchronization between Boston University CDM and Huron systems.
  * Fetches a specific person by BUID, transforms the data, and pushes to Huron.
  */
 class SinglePersonSync {

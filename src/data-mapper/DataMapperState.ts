@@ -15,8 +15,14 @@ export type StateRow = {
  * Runs in a static context so the data is loaded once and shared across instances.
  */
 export class StateLookup {
+  private static cachedStates: Map<string, StateRow> | null = null;
 
   static async loadStates(config?: Config): Promise<Map<string, StateRow>> {
+    // Return cached map if already loaded
+    if (StateLookup.cachedStates) {
+      return StateLookup.cachedStates;
+    }
+
     if( ! config ) {
       config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none'); 
     }
@@ -24,6 +30,9 @@ export class StateLookup {
     if(map.size === 0) {
       map = await StateLookup.loadStatesLocal();
     }
+    
+    // Cache the loaded map for future calls
+    StateLookup.cachedStates = map;
     return map;
   }
 

@@ -15,8 +15,14 @@ export type CountryRow = {
  * Runs in a static context so the data is loaded once and shared across instances.
  */
 export class CountryLookup {
+  private static cachedCountries: Map<string, CountryRow> | null = null;
 
   static async loadCountries(config?: Config): Promise<Map<string, CountryRow>> {
+    // Return cached map if already loaded
+    if (CountryLookup.cachedCountries) {
+      return CountryLookup.cachedCountries;
+    }
+
     if( ! config ) {
       config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none'); 
     }
@@ -24,6 +30,9 @@ export class CountryLookup {
     if(map.size === 0) {
       map = await CountryLookup.loadCountriesLocal();
     }
+    
+    // Cache the loaded map for future calls
+    CountryLookup.cachedCountries = map;
     return map;
   }
 

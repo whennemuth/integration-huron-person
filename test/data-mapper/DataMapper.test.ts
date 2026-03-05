@@ -79,7 +79,7 @@ describe('DataMapper', () => {
       const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
       const invalidPerson = {
         personid: '123',
-        personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] }
+        personBasic: { names: [{ firstName: 'Test', lastName: 'User', nameType: 'PRF', effectiveDate: '03052026' }] }
       };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required organization field');

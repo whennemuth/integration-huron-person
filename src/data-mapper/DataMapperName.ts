@@ -1,4 +1,5 @@
 import { nullsToUndefined } from "../Utils";
+import { compareMMDDYYYYDates } from "./DataMapperDateSorter";
 
 export type NameType = { priority: number; type: string; source?: string; }
 
@@ -17,11 +18,17 @@ const NameTypes = [
  * @param person 
  * @returns The selected name object mapped over to the target Huron structure.
  */
-export const NameMapper = (person: any, convertNullstoUndefined:boolean = true): { getName: () => any } => {
+export const NameMapper = (params: { person: any, convertNullstoUndefined:boolean, preferredOnly?: boolean }): { getName: () => any } => {
+  let { person, convertNullstoUndefined = true, preferredOnly = true } = params;
 
   if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
   }
+
+  const compareEffectiveDates = (a:any, b: any): number => {
+    return compareMMDDYYYYDates(a.effectiveDate, b.effectiveDate);
+  }
+  
 
   const { personBasic: { names = [] } = {}} = person;
 
@@ -31,7 +38,48 @@ export const NameMapper = (person: any, convertNullstoUndefined:boolean = true):
     getName: () => {
       if(names.length === 0) {
         return name;      
-      } else {
+      }
+      if(preferredOnly) {
+        // For now we are not using names that do not have a "PRF" type.
+        let filteredNames = names.filter((n: any) => {
+          const nt = `${n.nameType}`.trim().toUpperCase();
+          const ed = `${n.effectiveDate}`.trim();
+          return nt === 'PRF' && /^\d{8}$/.test(ed); // Ensure effectiveDate is in YYYYMMDD format
+        });
+
+        if(filteredNames.length === 0) {
+          filteredNames = names.filter((n: any) => {
+            const nt = `${n.nameType}`.trim().toUpperCase();
+            return nt === 'PRF' && n.effectiveDate; // effectiveDate exists but may not be in expected format
+          });
+          if(filteredNames.length === 0) {
+            console.warn(`No preferred names found with valid effectiveDate format for person ${person.personid}. This may lead to non-deterministic name selection. Please check the source data for these names: ${JSON.stringify(names)}`);
+            // No preferred names with effective dates at all, so fall back to any preferred name regardless of effective date.
+            return name;
+          } 
+          else if(filteredNames.length === 1) {
+            // There is only one preferred name with an effective date (albeit unrecognizable), so use it.
+            const { firstName, middleName, lastName } = filteredNames[0] as any;
+            return { firstName, middleName, lastName };
+          }
+          else {
+            // There are multiple preferred names with effective dates that are unrecognizable. Log a warning and continue with the filtering logic which will select the first name in this case.
+            console.warn(`Multiple preferred names found with unrecognizable effectiveDate format for person ${person.personid}. This may lead to non-deterministic name selection. Please check the source data for these names: ${JSON.stringify(filteredNames)}`);
+            return name;
+          }
+        }
+        else {
+          // Return the "PRF" name with the most recent effective date (largest YYYYMMDD value). 
+          // This handles the case where there are multiple "PRF" names by selecting the one that is currently 
+          // in effect based on the effectiveDate.
+          const sortedNames = filteredNames.slice().sort(compareEffectiveDates);
+          name = sortedNames[0];
+          const { firstName, middleName, lastName } = name as any;
+          return { firstName, middleName, lastName };
+        }
+      }
+      else {
+
         // Sort names based on defined priorities
         const sortedNames = names.slice().sort((a: any, b: any) => {
           const aType = NameTypes.find(nt => nt.type === a.nameType && (nt.source ? nt.source === a.source : true));
@@ -40,6 +88,12 @@ export const NameMapper = (person: any, convertNullstoUndefined:boolean = true):
           const bPriority = bType ? bType.priority : Number.MAX_VALUE;
           return aPriority - bPriority;
         });
+        
+        // Return empty object if no names remain after filtering
+        if(sortedNames.length === 0) {
+          return name;
+        }
+        
         name = sortedNames[0];
         const { firstName, middleName, lastName } = name as any;
         return { firstName, middleName, lastName };

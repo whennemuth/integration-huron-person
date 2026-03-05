@@ -118,7 +118,7 @@ export class DataMapper implements CoreDataMapper {
       person = nullsToUndefined(person);
 
       const { personid } = person;
-      const { firstName, middleName, lastName } = NameMapper(person, false).getName() ?? {};
+      const { firstName, middleName, lastName } = NameMapper({ person, convertNullstoUndefined: false }).getName() ?? {};
       const userId = UserIdMapper(person, false).getUserId(crudOperation);
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();

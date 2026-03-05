@@ -1,8 +1,7 @@
-import path from "path";
-import fs from "fs/promises";
 import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { STATES_CSV } from './csv/states-csv';
 
 export type StateRow = {
   huronCode: string;
@@ -37,9 +36,8 @@ export class StateLookup {
   }
 
   static async loadStatesLocal(): Promise<Map<string, StateRow>> {
-    const filePath = path.join(__dirname, 'csv/states.csv');
-    const csv = await fs.readFile(filePath, 'utf-8');
-    return StateLookup.loadStatesCSV(() => Promise.resolve(csv));
+    // Use imported CSV constant instead of file system access
+    return StateLookup.loadStatesCSV(() => Promise.resolve(STATES_CSV));
   }
 
   static async loadStatesFromS3Bucket(config: Config): Promise<Map<string, StateRow>> {

@@ -1,4 +1,8 @@
-Code,ID,Name
+/**
+ * US States and territories CSV data as a TypeScript constant
+ * This allows bundlers like esbuild to include the data without file system access
+ */
+export const STATES_CSV = `Code,ID,Name
 AL,alabama,Alabama
 AK,alaska,Alaska
 AZ,arizona,Arizona
@@ -83,3 +87,4 @@ PE,prince-edward-island,Prince Edward Island
 QC,quebec,Quebec
 SK,saskatchewan,Saskatchewan
 YT,yukon,Yukon
+`;

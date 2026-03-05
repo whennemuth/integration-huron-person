@@ -1,4 +1,8 @@
-Alpha-2,ID,Name
+/**
+ * Countries CSV data as a TypeScript constant
+ * This allows bundlers like esbuild to include the data without file system access
+ */
+export const COUNTRIES_CSV = `Alpha-2,ID,Name
 US,usa,United States
 CA,canada,Canada
 AF,afghanistan,Afghanistan
@@ -239,3 +243,4 @@ EH,western-sahara,Western Sahara
 YE,yemen,Yemen
 ZM,zambia,Zambia
 ZW,zimbabwe,Zimbabwe
+`;

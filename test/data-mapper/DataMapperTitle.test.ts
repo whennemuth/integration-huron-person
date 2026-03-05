@@ -17,7 +17,7 @@ describe('TitleMapper', () => {
     });
 
     describe('Employee titles', () => {
-      it('should return employee position shortDescription', () => {
+      it('should return employee position description', () => {
         const person = {
           employeeInfo: {
             positions: [
@@ -25,7 +25,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: 'Professor'
+                      description: 'Professor'
                     }
                   }
                 }
@@ -37,7 +37,7 @@ describe('TitleMapper', () => {
         expect(mapper.getTitle()).toBe('Professor');
       });
 
-      it('should trim whitespace from employee position shortDescription', () => {
+      it('should trim whitespace from employee position description', () => {
         const person = {
           employeeInfo: {
             positions: [
@@ -45,7 +45,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: '  Director  '
+                      description: '  Director  '
                     }
                   }
                 }
@@ -57,7 +57,7 @@ describe('TitleMapper', () => {
         expect(mapper.getTitle()).toBe('Director');
       });
 
-      it('should return first non-empty position shortDescription', () => {
+      it('should return first non-empty position description', () => {
         const person = {
           employeeInfo: {
             positions: [
@@ -65,7 +65,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: ''
+                      description: ''
                     }
                   }
                 }
@@ -74,7 +74,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: 'Manager'
+                      description: 'Manager'
                     }
                   }
                 }
@@ -86,7 +86,7 @@ describe('TitleMapper', () => {
         expect(mapper.getTitle()).toBe('Manager');
       });
 
-      it('should return undefined when employee positions have no shortDescription', () => {
+      it('should return undefined when employee positions have no description or shortDescription', () => {
         const person = {
           employeeInfo: {
             positions: [
@@ -114,7 +114,7 @@ describe('TitleMapper', () => {
         expect(mapper.getTitle()).toBeUndefined();
       });
 
-      it('should handle null position shortDescription', () => {
+      it('should handle null position description', () => {
         const person = {
           employeeInfo: {
             positions: [
@@ -122,7 +122,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: null
+                      description: null
                     }
                   }
                 }
@@ -132,6 +132,116 @@ describe('TitleMapper', () => {
         };
         const mapper = TitleMapper(person);
         expect(mapper.getTitle()).toBeUndefined();
+      });
+
+      it('should use shortDescription when description is empty', () => {
+        const person = {
+          employeeInfo: {
+            positions: [
+              {
+                positionInfo: {
+                  BasicData: {
+                    position: {
+                      description: '',
+                      shortDescription: 'Analyst'
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const mapper = TitleMapper(person);
+        expect(mapper.getTitle()).toBe('Analyst');
+      });
+
+      it('should use shortDescription when description is null', () => {
+        const person = {
+          employeeInfo: {
+            positions: [
+              {
+                positionInfo: {
+                  BasicData: {
+                    position: {
+                      description: null,
+                      shortDescription: 'Coordinator'
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const mapper = TitleMapper(person);
+        expect(mapper.getTitle()).toBe('Coordinator');
+      });
+
+      it('should prefer description over shortDescription when both present', () => {
+        const person = {
+          employeeInfo: {
+            positions: [
+              {
+                positionInfo: {
+                  BasicData: {
+                    position: {
+                      description: 'Senior Engineer',
+                      shortDescription: 'Engineer'
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const mapper = TitleMapper(person);
+        expect(mapper.getTitle()).toBe('Senior Engineer');
+      });
+
+      it('should truncate employee position description to 255 characters', () => {
+        const longTitle = 'A'.repeat(300);
+        const person = {
+          employeeInfo: {
+            positions: [
+              {
+                positionInfo: {
+                  BasicData: {
+                    position: {
+                      description: longTitle
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const mapper = TitleMapper(person);
+        const result = mapper.getTitle();
+        expect(result.length).toBe(255);
+        expect(result).toBe('A'.repeat(255));
+      });
+
+      it('should truncate employee shortDescription to 255 characters', () => {
+        const longShortDesc = 'B'.repeat(300);
+        const person = {
+          employeeInfo: {
+            positions: [
+              {
+                positionInfo: {
+                  BasicData: {
+                    position: {
+                      description: '',
+                      shortDescription: longShortDesc
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const mapper = TitleMapper(person);
+        const result = mapper.getTitle();
+        expect(result.length).toBe(255);
+        expect(result).toBe('B'.repeat(255));
       });
     });
 
@@ -282,7 +392,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: 'Manager'
+                      description: 'Manager'
                     }
                   }
                 }
@@ -305,7 +415,7 @@ describe('TitleMapper', () => {
                 positionInfo: {
                   BasicData: {
                     position: {
-                      shortDescription: 'Engineer'
+                      description: 'Engineer'
                     }
                   }
                 }

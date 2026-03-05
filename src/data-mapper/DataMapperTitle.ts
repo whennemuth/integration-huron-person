@@ -1,4 +1,4 @@
-import { isNotEmpty, nullsToUndefined } from "../Utils";
+import { isEmpty, isNotEmpty, nullsToUndefined } from "../Utils";
 import { PersonHeuristics } from "./DataMapperHeuristics";
 
 export const TitleMapper = (person: any, convertNullstoUndefined:boolean = true): { getTitle: () => any } => {
@@ -7,14 +7,25 @@ export const TitleMapper = (person: any, convertNullstoUndefined:boolean = true)
     person = nullsToUndefined(person);
   }
 
+  const truncate = (title: string): string => {
+    const maxLength = 255; // Huron max length for title field
+    return title.length > maxLength ? title.substring(0, maxLength) : title;
+  }
+
   const { employeeInfo: { positions = []} = {} } = person;
 
-  // Priority 1: Employee title from position shortDescription
+  // Priority 1: Employee title from position description (fallback to shortDescription if description is empty)
   for (const pos of positions) {
-    const { positionInfo: { BasicData: { position: { shortDescription } = {} } = {}} = {} } = pos;
-    if(isNotEmpty(shortDescription)) {
+    const { positionInfo: { BasicData: { position: { description, shortDescription } = {} } = {}} = {} } = pos;
+    if(isNotEmpty(description)) {
       return {
-        getTitle: () => `${shortDescription}`.trim()
+        getTitle: () => truncate(`${description}`.trim())
+      }
+    }
+    // Only use shortDescription if description is empty
+    if(isEmpty(description) && isNotEmpty(shortDescription)) {
+      return {
+        getTitle: () => truncate(`${shortDescription}`.trim())
       }
     }
   }

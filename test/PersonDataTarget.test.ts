@@ -467,7 +467,7 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.FAILURE);
       expect(result.crud).toBe(CrudOperation.CREATE);
-      expect(result.message).toBe('API request failed: Error: Mock API Error');
+      expect(result.message).toBe('Mock API Error');
     });
   });
 

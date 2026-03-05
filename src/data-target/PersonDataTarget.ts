@@ -55,6 +55,16 @@ export class HuronPersonDataTarget implements DataTarget {
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
   }
 
+  private getResponseData = (data: any): string | undefined => {
+    if(!data) return undefined;
+    if (typeof data === 'string') {
+      return data;
+    } else if (typeof data === 'object' && data !== null) {
+      return JSON.stringify(data);
+    }
+    return String(data);
+  } 
+
   /**
    * Push a single person record to Huron API
    */
@@ -116,6 +126,7 @@ export class HuronPersonDataTarget implements DataTarget {
       // API returns {hrn: string} on success
       return {
         status: Status.SUCCESS,
+        message: `Successfully pushed person record: ${this.getResponseData(result)}`,
         timestamp: new Date(),
         primaryKey: [{ hrn: result.hrn }],
         crud
@@ -131,7 +142,7 @@ export class HuronPersonDataTarget implements DataTarget {
       }
       return {
         status: Status.FAILURE,
-        message: `API request failed: ${error}`,
+        message: this.getResponseData(response?.data) || (error instanceof Error ? error.message : String(error)),
         timestamp: new Date(),
         primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
         crud

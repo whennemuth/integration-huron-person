@@ -65,7 +65,7 @@ describe('DataMapper', () => {
       const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
       const invalidPerson = { personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] } };
       mapper.map([invalidPerson]);
-      expect(mapper.criticalValidationErrorMessage).toContain('missing required personId');
+      expect(mapper.criticalValidationErrorMessage).toContain('missing required personid');
     });
 
     it('should set validationFailureMessage for missing names', () => {

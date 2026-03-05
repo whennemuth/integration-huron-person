@@ -32,8 +32,8 @@ export interface DataMapperParams {
  *   2) Cherry-picking out only "fields of interest" that the target endpoint is interested in.
  */
 export class DataMapper implements CoreDataMapper {
-  private _criticalValidationFailureMessage:string;
-  private _infoValidationFailureMessage:string;
+  private _criticalValidationFailureMessage:string | undefined;
+  private _infoValidationFailureMessage:string | undefined;
   private _params: DataMapperParams;
   private _orgHrn: (sourceOrgId: string) => string | undefined
 
@@ -48,11 +48,16 @@ export class DataMapper implements CoreDataMapper {
     }
   }
 
-  public get criticalValidationErrorMessage(): string {
+  public clearMessages = () => {
+    this._criticalValidationFailureMessage = undefined;
+    this._infoValidationFailureMessage = undefined;
+  }
+
+  public get criticalValidationErrorMessage(): string | undefined {
     return this._criticalValidationFailureMessage;
   }
 
-  public get infoValidationErrorMessage(): string {
+  public get infoValidationErrorMessage(): string | undefined {
     return this._infoValidationFailureMessage;
   }
 
@@ -141,7 +146,7 @@ export class DataMapper implements CoreDataMapper {
 
       // Basic data check
       if(isEmpty(personid)) {
-        this._criticalValidationFailureMessage = `Person record is missing required personId field: ${JSON.stringify(person)}`;
+        this._criticalValidationFailureMessage = `Person record is missing required personid field: ${JSON.stringify(person)}`;
       }
       if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
         this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;

@@ -1,4 +1,4 @@
-import { DataMapper as CoreDataMapper, Field, Input } from 'integration-core';
+import { DataMapper as CoreDataMapper, CrudOperation, Field, Input } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
@@ -80,8 +80,8 @@ export class DataMapper implements CoreDataMapper {
    * Convert raw person data to Input format (implementing core interface)
    * @param rawData Array of person data objects from Boston University CDM API
    */
-  map(rawData: any[]): Input {
-    return this.getMappedData(rawData);
+  map(rawData: any[], crudOperation?: CrudOperation): Input {
+    return this.getMappedData({ rawData, crudOperation: crudOperation });
   }
 
   /**
@@ -89,8 +89,9 @@ export class DataMapper implements CoreDataMapper {
    * @param rawData Array of person data objects from Boston University CDM API
    * @param hrn Optional person HRN to use applying to the returned data to indicate a put/patch operation
    */
-  getMappedData(rawData: any[], personHrn?: string): Input {
-    
+  getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
+    const { rawData, personHrn, crudOperation } = params;
+
     const fieldDefinitions = [
       { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
       { name: 'sourceIdentifier', type: 'string' as const, required: false },
@@ -118,7 +119,7 @@ export class DataMapper implements CoreDataMapper {
 
       const { personid } = person;
       const { firstName, middleName, lastName } = NameMapper(person, false).getName() ?? {};
-      const userId = UserIdMapper(person, false).getUserId();
+      const userId = UserIdMapper(person, false).getUserId(crudOperation);
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();
       const addressMapper = AddressMapper({

@@ -50,7 +50,7 @@ class HuronPersonIntegration {
         responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
       }
       const dataSource = new BuCdmPeopleDataSource({ config, responseFilter });
-      const dataTarget = new HuronPersonDataTarget(config, config.cache as any);
+      const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any });
       const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
 
       // Initialize EndToEnd integration

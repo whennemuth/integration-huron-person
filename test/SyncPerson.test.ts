@@ -216,7 +216,11 @@ describe('SinglePersonSync', () => {
     });
 
     it('should create data target with config', () => {
-      expect(HuronPersonDataTarget as unknown as jest.Mock).toHaveBeenCalledWith(mockConfig, undefined);
+      expect(HuronPersonDataTarget as unknown as jest.Mock).toHaveBeenCalledWith({
+        config: mockConfig,
+        responseFilter: undefined,
+        buid: undefined
+      });
     });
   });
 

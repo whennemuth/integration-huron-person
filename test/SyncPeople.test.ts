@@ -103,7 +103,7 @@ describe('Package Exports', () => {
       })).not.toThrow();
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
       expect(() => new BuCdmPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
-      expect(() => new HuronPersonDataTarget(mockConfig)).not.toThrow();
+      expect(() => new HuronPersonDataTarget({ config: mockConfig })).not.toThrow();
       expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
     });
   });

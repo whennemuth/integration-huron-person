@@ -1,3 +1,4 @@
+import { CrudOperation } from 'integration-core';
 import { nullsToUndefined } from "../Utils";
 
 export type UserIdType = { priority: number; source?: string; }
@@ -7,7 +8,7 @@ const UserIdTypes = [
   { priority: 2, source: 'Campus Solutions' }
 ] as UserIdType[];
 
-export const UserIdMapper = (person: any, convertNullstoUndefined:boolean = true): { getUserId: () => any } => {
+export const UserIdMapper = (person: any, convertNullstoUndefined:boolean = true): { getUserId: (crud?: CrudOperation) => any } => {
 
   if(convertNullstoUndefined) {
     person = nullsToUndefined(person);
@@ -19,7 +20,12 @@ export const UserIdMapper = (person: any, convertNullstoUndefined:boolean = true
   let userId = personid;
 
   return {
-    getUserId: () => {
+    getUserId: (crud?: CrudOperation) => {
+      const crudOperation = crud || CrudOperation.CREATE;
+      if(crudOperation === CrudOperation.UPDATE) {
+        // For put operations, we don't want to include the UserID as this value should never be changed.
+        return undefined;
+      }
       if(account.length === 0) {
         return userId;      
       } else {

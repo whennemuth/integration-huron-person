@@ -1,4 +1,5 @@
 import { UserIdMapper } from '../../src/data-mapper/DataMapperUserId';
+import { CrudOperation } from 'integration-core';
 
 describe('UserIdMapper', () => {
   describe('getUserId', () => {
@@ -405,6 +406,141 @@ describe('UserIdMapper', () => {
 
       // Should return the first account name since none have SAP or Campus Solutions source
       expect(result).toEqual('aduser789');
+    });
+
+    describe('crudOperation parameter', () => {
+      it('should return undefined when crudOperation is UPDATE', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: [
+              {
+                source: 'SAP',
+                name: 'sap123456'
+              }
+            ]
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.UPDATE);
+
+        expect(result).toEqual(undefined);
+      });
+
+      it('should return userId when crudOperation is CREATE', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: [
+              {
+                source: 'SAP',
+                name: 'sap123456'
+              }
+            ]
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.CREATE);
+
+        expect(result).toEqual('sap123456');
+      });
+
+      it('should return userId when crudOperation is undefined (defaults to CREATE)', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: [
+              {
+                source: 'Campus Solutions',
+                name: 'cs789012'
+              }
+            ]
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId();
+
+        expect(result).toEqual('cs789012');
+      });
+
+      it('should return undefined for UPDATE even when account array is empty', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: []
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.UPDATE);
+
+        expect(result).toEqual(undefined);
+      });
+
+      it('should return personid for CREATE when account array is empty', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: []
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.CREATE);
+
+        expect(result).toEqual('U12345678');
+      });
+
+      it('should return undefined for UPDATE with multiple accounts prioritizing SAP', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: [
+              {
+                source: 'Campus Solutions',
+                name: 'cs789012'
+              },
+              {
+                source: 'SAP',
+                name: 'sap123456'
+              },
+              {
+                source: 'Active Directory',
+                name: 'aduser123'
+              }
+            ]
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.UPDATE);
+
+        // Should return undefined regardless of which account has priority
+        expect(result).toEqual(undefined);
+      });
+
+      it('should return undefined for DELETE operation', () => {
+        const person = {
+          personid: 'U12345678',
+          personDetails: {
+            account: [
+              {
+                source: 'SAP',
+                name: 'sap123456'
+              }
+            ]
+          }
+        };
+
+        const mapper = UserIdMapper(person);
+        const result = mapper.getUserId(CrudOperation.DELETE);
+
+        // DELETE defaults to CREATE behavior for now (returns userId)
+        expect(result).toEqual('sap123456');
+      });
     });
   });
 });

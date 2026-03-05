@@ -1,4 +1,4 @@
-import { CrudOperation, DataSource, DataTarget, Input } from 'integration-core';
+import { CrudOperation, DataSource, DataTarget, Input, SinglePushResult } from 'integration-core';
 import { Character, LooneyTunes } from '../test/LooneyTunes';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
@@ -20,6 +20,7 @@ type PersonSyncParams = {
 
 type SinglePersonSyncParams = PersonSyncParams & {
   buid: string;
+  hrn?: string;
 };
 
 type SinglePersonSyncAllParams = PersonSyncParams & {
@@ -31,70 +32,92 @@ type SinglePersonSyncAllParams = PersonSyncParams & {
  * Fetches a specific person by BUID, transforms the data, and pushes to Huron.
  */
 class SinglePersonSync {
-  private config: Config;
   private dataSource: DataSource;
   private dataTarget: DataTarget;
-  private dataMapper: DataMapper | undefined;
-  private buid: string;
   private targetPerson: HuronPerson | undefined;
+  private pushResult: SinglePushResult;
 
-  constructor(private params: SinglePersonSyncParams) {
-    const { config, cache, buid, dataMapper } = params;
-    this.config = config;
-    this.buid = buid;
-    this.dataMapper = dataMapper;
+  constructor(private instanceParams: SinglePersonSyncParams) {
+    const { config, cache, buid, hrn } = instanceParams;
 
     let responseFilter: ResponseProcessor | undefined;
-    if (this.config.dataSource.person?.fieldsOfInterest) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: this.config.dataSource.person.fieldsOfInterest });
+    if (config.dataSource.person?.fieldsOfInterest) {
+      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: config.dataSource.person.fieldsOfInterest });
     }
-    this.dataSource = new BuCdmPersonDataSource({ 
-      config: this.config, 
-      responseFilter,
-      buid: this.buid 
-    });
 
-    this.dataTarget = new HuronPersonDataTarget(this.config, cache);
+    this.dataSource = new BuCdmPersonDataSource({ config, responseFilter, buid: buid });
+
+    this.dataTarget = new HuronPersonDataTarget({ config, cache, hrn });
   }
 
-  public getMappedPerson = async (rawData?: any[]): Promise<Input> => {
+  private getHrn = (): string | undefined => {
+    const { instanceParams: { hrn }, targetPerson } = this;
+    if(targetPerson) {
+      return targetPerson.hrn;
+    }
+    if(hrn) {
+      return hrn;
+    }
+    return undefined;
+  }
+
+  public getMappedPerson = async (params: { rawData?: any[], crudOperation?: CrudOperation }): Promise<Input> => {
+    const { instanceParams: { dataMapper, buid }, getHrn } = this;
+    let { rawData, crudOperation } = params;
     try { 
 
       // Fetch person data from source if not provided
       if (rawData === undefined) {
-        console.log(`SOURCE CHECK: Looking up raw person data for BUID: ${this.buid} from source...`);
+        console.log(`SOURCE CHECK: Looking up raw person data for BUID: ${buid} from source...`);
         rawData = await this.dataSource.fetchRaw();
       }
       
       // Bail out if no data found
       if (!rawData || rawData.length === 0) {
-        console.log(`Did not find ${this.buid} in source`);
+        console.log(`Did not find ${buid} in source`);
         return { } as Input;
       }
       else {
-        console.log(`Found ${this.buid} in source`);
+        console.log(`Found ${buid} in source`);
       }
 
       // Convert data to integration format
-      const input: Input = this.dataMapper!.getMappedData(rawData, this.targetPerson?.hrn);
+      const input: Input = dataMapper!.getMappedData({ rawData, personHrn: getHrn(), crudOperation: crudOperation });
 
       // Bail out if there are critical validation errors
-      if (this.dataMapper!.criticalValidationErrorMessage) {
-        console.error(`Critical validation error for BUID: ${this.buid}: ${this.dataMapper!.criticalValidationErrorMessage}`);
+      if (dataMapper!.criticalValidationErrorMessage) {
+        console.error(`Critical validation error for BUID: ${buid}: ${dataMapper!.criticalValidationErrorMessage}`);
         return { } as Input;
       }
       
       // Bail out if no field sets generated
       if (!input.fieldSets || input.fieldSets.length === 0) {
-        console.log(`No valid field sets generated for BUID: ${this.buid}`);
+        console.log(`No valid field sets generated for BUID: ${buid}`);
         return { } as Input;
       }
 
       return input;
     } catch (error) {
-      console.error(`Single Person Sync failed for BUID: ${this.buid}:`, error);
+      console.error(`Single Person Sync failed for BUID: ${buid}:`, error);
       throw error;
     }
+  }
+
+  public getMappingError = (): string | undefined => {
+    const { dataMapper } = this.instanceParams;
+    const { criticalValidationErrorMessage, infoValidationErrorMessage} = dataMapper || {};
+    if(criticalValidationErrorMessage) {
+      return criticalValidationErrorMessage;
+    }
+    if(infoValidationErrorMessage) {
+      return infoValidationErrorMessage;
+    }
+    return undefined;
+  }
+
+  public clearMappingMessages = (): void => {
+    const { dataMapper } = this.instanceParams;
+    dataMapper?.clearMessages();
   }
 
   private getTargetPerson = async (buid: string, config: Config): Promise<HuronPerson | undefined> => {
@@ -115,48 +138,56 @@ class SinglePersonSync {
    * Execute the single person synchronization
    */
   public sync = async (params: { crudOperation?: CrudOperation, rawData?: any[] }): Promise<void> => {
+    const { instanceParams: { config, buid }, getHrn } = this;
     try {
 
       const line = '----------------------------------------------------------------------------------';
-      console.log(`\n${line}\n        Syncing ${this.buid} \n${line}`);
+      console.log(`\n${line}\n        Syncing ${buid} \n${line}`);
 
-      console.log(`Client ID: ${this.config.integration.clientId}`);
+      console.log(`Client ID: ${config.integration.clientId}`);
 
-      const { preview } = this.params;
+      const { preview } = this.instanceParams;
       let { crudOperation, rawData } = params;
 
       if( ! crudOperation ) {
-        this.targetPerson = await this.getTargetPerson(this.buid, this.config);
-        crudOperation = this.targetPerson ? CrudOperation.UPDATE : CrudOperation.CREATE;
+        if( ! getHrn() ) {
+          this.targetPerson = await this.getTargetPerson(buid, config);
+        }        
+        crudOperation = getHrn() ? CrudOperation.UPDATE : CrudOperation.CREATE;
       }
       
       // Get the person data mapped to integration format
-      const input = await this.getMappedPerson(rawData);      
+      const input = await this.getMappedPerson({ rawData, crudOperation });      
 
       // Bail out if no data to push
       if(isEmpty(input)) {
-        console.log(`No data to push for BUID: ${this.buid}, exiting sync.`);
+        console.log(`No data to push for BUID: ${buid}, exiting sync.`);
         return;
       }
 
       // Push the field set to target
       for (const fieldSet of input.fieldSets) {
         if(preview) {
-          console.log(`Preview mode enabled - skipping push to target for BUID: ${this.buid}.`);
+          console.log(`Preview mode enabled - skipping push to target for BUID: ${buid}.`);
           continue;
         }
         const result = await this.dataTarget.pushOne({
           data: fieldSet,
           crud: crudOperation
         });
-        console.log(`Push result for ${this.buid}:`, result.status, result.message);
+        this.pushResult = result;
+        console.log(`Push result for ${buid}:`, result.status, result.message);
       }
       
-      console.log(`Single Person Sync completed successfully for BUID: ${this.buid}`);
+      console.log(`Single Person Sync completed successfully for BUID: ${buid}`);
     } catch (error) {
-      console.error(`Single Person Sync failed for BUID: ${this.buid}:`, error);
+      console.error(`Single Person Sync failed for BUID: ${buid}:`, error);
       throw error;
     }
+  }
+
+  public getPushResult = (): SinglePushResult => {
+    return this.pushResult;
   }
 
   /**

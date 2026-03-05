@@ -366,7 +366,7 @@ describe('BuCdmPersonDataSource', () => {
 
   describe('DataMapper integration', () => {
     it('should convert raw data to Input format correctly via DataMapper', () => {
-      const result = dataMapper.getMappedData(mockRawPersonData);
+      const result = dataMapper.getMappedData({ rawData: mockRawPersonData });
 
       expect(result.fieldDefinitions).toBeDefined();
       expect(result.fieldSets).toHaveLength(3);
@@ -381,7 +381,7 @@ describe('BuCdmPersonDataSource', () => {
     });
 
     it('should handle empty raw data', () => {
-      const result = dataMapper.getMappedData([]);
+      const result = dataMapper.getMappedData({ rawData: [] });
 
       expect(result.fieldSets).toEqual([]);
       expect(result.fieldDefinitions).toBeDefined();
@@ -423,7 +423,7 @@ describe('BuCdmPersonDataSource', () => {
         }
       }];
 
-      const result = dataMapper.getMappedData(incompleteData);
+      const result = dataMapper.getMappedData({ rawData: incompleteData });
 
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();
@@ -455,7 +455,7 @@ describe('BuCdmPersonDataSource', () => {
 
       // This should either throw an error or handle gracefully
       // depending on your validation strategy
-      const result = dataMapper.getMappedData(invalidData);
+      const result = dataMapper.getMappedData({ rawData: invalidData });
       
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();
@@ -497,7 +497,7 @@ describe('BuCdmPersonDataSource', () => {
         }
       }];
 
-      const result = dataMapper.getMappedData(malformedData);
+      const result = dataMapper.getMappedData({ rawData: malformedData });
 
       expect(result.fieldSets).toHaveLength(1);
       expect(result.fieldDefinitions).toBeDefined();

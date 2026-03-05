@@ -39,9 +39,13 @@ export class HuronPersonDataTarget implements DataTarget {
 
   private apiClient: ApiClientForJWT;
   private config: Config;
+  private hrn: string | undefined;
 
-  constructor(config: Config, cache?: Cache<string, string>) {
+  constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string }) {
+  // constructor(config: Config, cache?: Cache<string, string>) {
+    const { config, cache, hrn } = params;
     this.config = config;
+    this.hrn = hrn;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout

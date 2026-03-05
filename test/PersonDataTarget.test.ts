@@ -168,7 +168,7 @@ describe('HuronPersonDataTarget', () => {
 
   beforeEach(() => {
     mockApiClient = new MockApiClient();
-    dataTarget = new HuronPersonDataTarget(mockConfig);
+    dataTarget = new HuronPersonDataTarget({ config: mockConfig });
     // Replace the real ApiClient with our mock
     (dataTarget as any).apiClient = mockApiClient;
   });
@@ -223,7 +223,7 @@ describe('HuronPersonDataTarget', () => {
       };
 
       // Create instance and test that endpoint timeout is prioritized
-      const dataTarget = new HuronPersonDataTarget(configWithBothTimeouts);
+      const dataTarget = new HuronPersonDataTarget({ config: configWithBothTimeouts });
       
       // Access the private apiClient to verify the timeout configuration
       const apiClient = (dataTarget as any).apiClient;
@@ -275,7 +275,7 @@ describe('HuronPersonDataTarget', () => {
       };
 
       // Create instance and test that integration timeout is used as fallback
-      const dataTarget = new HuronPersonDataTarget(configWithOnlyIntegrationTimeout);
+      const dataTarget = new HuronPersonDataTarget({ config: configWithOnlyIntegrationTimeout });
       
       // Access the private apiClient to verify the timeout configuration
       const apiClient = (dataTarget as any).apiClient;

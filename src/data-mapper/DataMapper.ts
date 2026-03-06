@@ -97,6 +97,8 @@ export class DataMapper implements CoreDataMapper {
   getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
     const { rawData, personHrn, crudOperation } = params;
 
+    this.clearMessages();
+
     const fieldDefinitions = [
       { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
       { name: 'sourceIdentifier', type: 'string' as const, required: false },

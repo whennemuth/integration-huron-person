@@ -84,10 +84,11 @@ export class HuronPersonDataTarget implements DataTarget {
         // CREATE: Use POST to /api/v2/persons
         response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
       } else if (crud === CrudOperation.UPDATE) {
-        // UPDATE: Use PUT to /api/v2/persons/{hrn} if hrn is available
+        // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
         if (personRequest.data?.hrn) {
           endpoint = `${endpoint}/${personRequest.data.hrn}`;
-          response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
+          // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
+          response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
         } else {
           // No HRN available for update, treat as create
           console.warn(`No HRN provided for UPDATE operation, treating as CREATE for person:`, personRequest.data?.id);
@@ -236,7 +237,8 @@ export class HuronPersonDataTarget implements DataTarget {
         break;
       case CrudOperation.UPDATE:
         path = SchemaPath.PERSONS_BY_HRN;
-        method = Method.PUT;
+        // method = Method.PUT;
+        method = Method.PATCH;
         data = new HuronSchemaBroker({ path, method }).getConvertedFieldSet(fieldSet);
         break;
       case CrudOperation.DELETE:

@@ -66,6 +66,35 @@ export const nullsToUndefined = (obj: any): any => {
   return obj;
 }
 
+/**
+ * Recursively iterate over an object and convert all empty values to undefined.
+ * This helps destructuring assignments where missing fields are expected to be undefined 
+ * and default value assignment expressions are in use in the destructuring syntax.
+ * @param obj 
+ * @returns 
+ */
+export const emptysToUndefined = (obj: any): any => {
+  if (isEmpty(obj)) {
+    return undefined;
+  }
+  if (typeof obj !== 'object' || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(emptysToUndefined);
+  }
+  if (obj.constructor === Object) {
+    const result: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        result[key] = emptysToUndefined(obj[key]);
+      }
+    }
+    return result;
+  }
+  return obj;
+}
+
 export const debugLog = (o:any, msg?:string) => {
   if(process.env.DEBUG == 'true') {
     log(o, msg);
@@ -111,3 +140,5 @@ export const warn = (o:any, msg?:string) => {
 export const error = (o:any, msg?:string) => {
   toConsole(o, (s:string) => console.error(s), msg);
 }
+
+export const isABuid = (id:string) => /^U[0-9]{8,9}$/.test(id);

@@ -9,6 +9,11 @@ import {
 import { IApiClient } from '../src/ApiClient';
 import { Config } from '../src/config/Config';
 import { HuronPersonDataTarget, PersonPushResponse } from '../src/data-target/PersonDataTarget';
+import { ReadPerson } from '../src/data-target/crud/ReadPerson';
+import { HuronPerson } from '../src/data-target/crud/Person';
+
+// Mock ReadPerson
+jest.mock('../src/data-target/crud/ReadPerson');
 
 // Mock ApiClient
 class MockApiClient implements IApiClient {
@@ -388,7 +393,7 @@ describe('HuronPersonDataTarget', () => {
       expect(result.crud).toBe(CrudOperation.CREATE);
     });
 
-    it('should handle single UPDATE operation', async () => {
+    it('should handle single UPDATE operation with HRN provided', async () => {
       const mockResponse: PersonPushResponse = {
         hrn: 'hrn:hrs:persons:12345'
       };
@@ -396,6 +401,7 @@ describe('HuronPersonDataTarget', () => {
       (dataTarget as any).apiClient = mockApiClient;
 
       const fieldSet = createFieldSet({
+        hrn: 'hrn:hrs:persons:12345',
         id: 'person-1',
         firstName: 'Updated',
         lastName: 'Name'
@@ -410,6 +416,95 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.crud).toBe(CrudOperation.UPDATE);
+      expect(result.primaryKey).toEqual([{ hrn: 'hrn:hrs:persons:12345' }]);
+    });
+
+    it('should handle single UPDATE operation without HRN by looking up via readPersonByHailMary', async () => {
+      const mockResponse: PersonPushResponse = {
+        hrn: 'hrn:hrs:persons:67890'
+      };
+      mockApiClient = new MockApiClient(mockResponse);
+      (dataTarget as any).apiClient = mockApiClient;
+
+      // Mock ReadPerson to return a person with HRN
+      const mockReadPersonByHailMary = jest.fn().mockResolvedValue([
+        { hrn: 'hrn:hrs:persons:67890', id: 'U12345678' } as HuronPerson
+      ]);
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: mockReadPersonByHailMary
+      } as any));
+
+      const fieldSet = createFieldSet({
+        sourceIdentifier: 'U12345678',
+        firstName: 'Updated',
+        lastName: 'Name'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.UPDATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.SUCCESS);
+      expect(result.crud).toBe(CrudOperation.UPDATE);
+      expect(mockReadPersonByHailMary).toHaveBeenCalledWith('U12345678');
+      expect(result.primaryKey).toEqual([{ hrn: 'hrn:hrs:persons:67890' }]);
+    });
+
+    it('should return FAILURE when UPDATE has no HRN and readPersonByHailMary cannot find person', async () => {
+      // Mock ReadPerson to return empty array (person not found)
+      const mockReadPersonByHailMary = jest.fn().mockResolvedValue([]);
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: mockReadPersonByHailMary
+      } as any));
+
+      const fieldSet = createFieldSet({
+        sourceIdentifier: 'U99999999',
+        firstName: 'Unknown',
+        lastName: 'Person'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.UPDATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.FAILURE);
+      expect(result.crud).toBe(CrudOperation.UPDATE);
+      expect(result.message).toContain('Cannot determine HRN for UPDATE operation for U99999999');
+      expect(mockReadPersonByHailMary).toHaveBeenCalledWith('U99999999');
+    });
+
+    it('should return FAILURE when UPDATE has no HRN and readPersonByHailMary returns person without HRN', async () => {
+      // Mock ReadPerson to return person but without HRN
+      const mockReadPersonByHailMary = jest.fn().mockResolvedValue([
+        { id: 'U12345678' } as HuronPerson // No hrn field
+      ]);
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: mockReadPersonByHailMary
+      } as any));
+
+      const fieldSet = createFieldSet({
+        sourceIdentifier: 'U12345678',
+        firstName: 'Updated',
+        lastName: 'Name'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.UPDATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.FAILURE);
+      expect(result.crud).toBe(CrudOperation.UPDATE);
+      expect(result.message).toContain('Cannot determine HRN for UPDATE operation');
+      expect(mockReadPersonByHailMary).toHaveBeenCalledWith('U12345678');
     });
 
     it('should handle single DELETE operation', async () => {
@@ -434,6 +529,34 @@ describe('HuronPersonDataTarget', () => {
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.crud).toBe(CrudOperation.DELETE);
       expect(result.primaryKey).toEqual([{ hrn: 'hrn:hrs:persons:12345' }]);
+    });
+
+    it('should return FAILURE when DELETE has no HRN available', async () => {
+      const fieldSet = createFieldSet({
+        id: 'person-1',
+        sourceIdentifier: 'U12345678',
+        firstName: 'Test',
+        lastName: 'Person'
+        // No hrn field
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.DELETE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.FAILURE);
+      expect(result.crud).toBe(CrudOperation.DELETE);
+      expect(result.message).toBe('Cannot perform soft delete: no HRN available for person');
+      // Verify primaryKey includes sourceIdentifier (updated from hrn in bug fix)
+      expect(result.primaryKey).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'person-1' }),
+          expect.objectContaining({ sourceIdentifier: 'U12345678' })
+        ])
+      );
     });
 
     it('should handle API errors for single operation', async () => {
@@ -481,11 +604,19 @@ describe('HuronPersonDataTarget', () => {
       mockApiClient = new MockApiClient(mockResponse);
       (dataTarget as any).apiClient = mockApiClient;
 
+      // Mock ReadPerson for UPDATE operation lookup
+      const mockReadPersonByHailMary = jest.fn().mockResolvedValue([
+        { hrn: 'hrn:hrs:persons:2', id: 'person-2' } as HuronPerson
+      ]);
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: mockReadPersonByHailMary
+      } as any));
+
       const addedData = [
         createFieldSet({ firstName: 'John', lastName: 'Doe' })
       ];
       const updatedData = [
-        createFieldSet({ id: 'person-2', firstName: 'Jane' })
+        createFieldSet({ id: 'person-2', sourceIdentifier: 'person-2', firstName: 'Jane' })
       ];
       const removedData = [
         createFieldSet({ id: 'person-3', hrn: 'hrn:hrs:persons:3' })
@@ -501,9 +632,18 @@ describe('HuronPersonDataTarget', () => {
       expect(result.status).toBe(BatchStatus.SUCCESS);
       expect(result.successes).toHaveLength(3);
       expect(result.failures).toHaveLength(0);
+      expect(mockReadPersonByHailMary).toHaveBeenCalledWith('person-2');
     });
 
     it('should handle mixed success/failure batch operations', async () => {
+      // Mock ReadPerson for UPDATE operation lookup
+      const mockReadPersonByHailMary = jest.fn().mockResolvedValue([
+        { hrn: 'hrn:hrs:persons:3', id: 'person-3' } as HuronPerson
+      ]);
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: mockReadPersonByHailMary
+      } as any));
+
       // Create a custom mock that throws on the second call
       let callCount = 0;
       const customMockApiClient = {
@@ -521,6 +661,15 @@ describe('HuronPersonDataTarget', () => {
             headers: {},
             config: {}
           };
+        },
+        async patch<T = any>(url: string, data?: any): Promise<{ data: T; status: number; statusText: string; headers: {}; config: any; }> {
+          return {
+            data: { hrn: 'hrn:hrs:persons:3' } as T,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {}
+          };
         }
       };
       (dataTarget as any).apiClient = customMockApiClient;
@@ -530,7 +679,7 @@ describe('HuronPersonDataTarget', () => {
         createFieldSet({ email: 'invalid-email' })
       ];
       const updatedData = [
-        createFieldSet({ id: 'person-3', firstName: 'Updated' })
+        createFieldSet({ id: 'person-3', sourceIdentifier: 'person-3', firstName: 'Updated' })
       ];
       const removedData: FieldSet[] = [];
 

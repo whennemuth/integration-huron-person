@@ -1,6 +1,6 @@
 import { DataMapper as CoreDataMapper, CrudOperation, Field, Input } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
-import { anyEmpty, isEmpty, nullsToUndefined } from '../Utils';
+import { anyEmpty, isEmpty, emptysToUndefined } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
@@ -122,7 +122,7 @@ export class DataMapper implements CoreDataMapper {
 
     const fieldSets = rawData.map(person => {
 
-      person = nullsToUndefined(person);
+      person = emptysToUndefined(person);
 
       const { personid } = person;
       const { firstName, middleName, lastName } = NameMapper({ person, convertNullstoUndefined: false }).getName() ?? {};

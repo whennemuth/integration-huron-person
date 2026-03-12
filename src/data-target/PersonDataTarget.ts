@@ -14,6 +14,8 @@ import { Config } from '../config/Config';
 import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 import { error as logError } from '../Utils';
+import { ReadPerson } from './crud/ReadPerson';
+import { HuronPerson } from './crud/Person';
 
 /**
  * Request format for pushing person data to Huron API
@@ -90,9 +92,24 @@ export class HuronPersonDataTarget implements DataTarget {
           // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
           response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
         } else {
-          // No HRN available for update, treat as create
-          console.warn(`No HRN provided for UPDATE operation, treating as CREATE for person:`, personRequest.data?.id);
-          response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
+          // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
+          const reader = new ReadPerson(this.config);
+          const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
+          const hrn = result?.[0]?.hrn;
+          if( ! hrn) {
+            return {
+              status: Status.FAILURE,
+              message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
+              timestamp: new Date(),
+              primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv || 'id' in fv),
+              crud
+            };
+          }
+
+          // Perform the patch now that the hrn is known
+          personRequest.data.hrn = hrn;
+          endpoint = `${endpoint}/${hrn}`;
+          response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
         }
       } else if (crud === CrudOperation.DELETE) {
         // DELETE: Implement as soft delete by setting active: false
@@ -108,7 +125,7 @@ export class HuronPersonDataTarget implements DataTarget {
             status: Status.FAILURE,
             message: 'Cannot perform soft delete: no HRN available for person',
             timestamp: new Date(),
-            primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
+            primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'sourceIdentifier' in fv),
             crud
           };
         }

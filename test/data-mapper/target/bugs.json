@@ -4,7 +4,6 @@
   { "userId": "bbunny" },
   { "sourceIdentifier": "U12345678" },
   { "firstName": "Bugs" },
-  { "middleName": "" },
   { "lastName": "Bunny" },
   { "contactInformation": { 
       "addressLine1": "123 Acme Way", 

@@ -74,10 +74,19 @@ class ReadPerson {
   }
 
   private async readPersonBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {
-  const persons: any[] = await new ReadPeople(this.config).readAllPeople({
+    const persons: any[] = await new ReadPeople(this.config).readAllPeople({
       filters: [
         ReadPeople.createFilter({ field, value })
       ],
+      includeFields
+    });
+    return persons;
+  }
+
+  public async readPersonByMultipleFilters(fields: string[], value: string, includeFields?: string[]): Promise<any[]> {
+    const filters = fields.map(field => ReadPeople.createFilter({ field, value, logicalOperator: 'or' }));
+    const persons: any[] = await new ReadPeople(this.config).readAllPeople({
+      filters,
       includeFields
     });
     return persons;
@@ -113,6 +122,28 @@ class ReadPerson {
     } catch (error) {
       console.error(`Failed to read person with sourceIdentifier ${sourceIdentifier}:`, error);
       throw new Error(`Failed to read person by sourceIdentifier ${sourceIdentifier}: ${error}`);
+    }
+  }
+
+  public async readPersonByEmployeeId(employeeId: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      return await this.readPersonBySingleFilter('employeeId', employeeId, includeFields);
+    } catch (error) {
+      console.error(`Failed to read person with employeeId ${employeeId}:`, error);
+      throw new Error(`Failed to read person by employeeId ${employeeId}: ${error}`);
+    }
+  }
+
+  /**
+   * Try to find a Huron person where the specified buid matches any of the "usual suspects" fields.
+   */
+  public async readPersonByHailMary(buid: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    try {
+      return await this.readPersonByMultipleFilters(['id', 'sourceIdentifier'], buid, includeFields);
+    } catch (error) {
+      const msg = `Failed to read person with id or sourceIdentifier of ${buid}:`;
+      console.error(msg, error);
+      throw new Error(msg);
     }
   }
 }

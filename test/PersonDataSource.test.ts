@@ -5,8 +5,8 @@ import { IApiClient } from '../src/ApiClient';
 import { Config } from '../src/config/Config';
 import { AxiosResponseStreamFilter } from '../src/stream/AxiosResponseStreamFilter';
 import { Term } from '../src/data-source/CurrentTermsDataSource';
-import { StateRow } from '../src/data-mapper/DataMapperState';
-import { CountryRow } from '../src/data-mapper/DataMapperCountry';
+import { StateRow, StateMappings } from '../src/data-mapper/DataMapperState';
+import { CountryRow, CountryMappings } from '../src/data-mapper/DataMapperCountry';
 
 // Mock ApiClient
 class MockApiClient implements IApiClient {
@@ -205,19 +205,29 @@ describe('BuCdmPersonDataSource', () => {
     }
   ];
 
-  // Mock state and country maps for DataMapper
-  const mockStateMap = new Map<string, StateRow>([
-    ['MA', { huronCode: 'MA', huronName: 'Massachusetts' }]
-  ]);
+  // Mock state and country mappings for DataMapper
+  const mockStateMappings: StateMappings = {
+    forwardMap: new Map<string, StateRow>([
+      ['MA', { huronCode: 'MA', huronName: 'Massachusetts' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['MA', 'MA']
+    ])
+  };
 
-  const mockCountryMap = new Map<string, CountryRow>([
-    ['US', { huronCode: 'US', huronName: 'United States' }]
-  ]);
+  const mockCountryMappings: CountryMappings = {
+    forwardMap: new Map<string, CountryRow>([
+      ['US', { huronCode: 'US', huronName: 'United States' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['US', 'US']
+    ])
+  };
 
   beforeEach(() => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
-    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
     dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;

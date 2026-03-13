@@ -1,4 +1,4 @@
-import { nullsToUndefined } from "../Utils";
+import { removeNullValues as removeNulls } from "../Utils";
 import { compareMMDDYYYYDates } from "./DataMapperDateSorter";
 
 export type NameType = { priority: number; type: string; source?: string; }
@@ -18,11 +18,11 @@ const NameTypes = [
  * @param person 
  * @returns The selected name object mapped over to the target Huron structure.
  */
-export const NameMapper = (params: { person: any, convertNullstoUndefined:boolean, preferredOnly?: boolean }): { getName: () => any } => {
-  let { person, convertNullstoUndefined = true, preferredOnly = true } = params;
+export const NameMapper = (params: { person: any, removeNullValues:boolean, preferredOnly?: boolean }): { getName: () => any } => {
+  let { person, removeNullValues = true, preferredOnly = true } = params;
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const compareEffectiveDates = (a:any, b: any): number => {

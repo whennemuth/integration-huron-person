@@ -1,10 +1,10 @@
-import { isEmpty, isNotEmpty, nullsToUndefined } from "../Utils";
+import { isEmpty, isNotEmpty, removeNullValues as removeNulls } from "../Utils";
 import { PersonHeuristics } from "./DataMapperHeuristics";
 
-export const TitleMapper = (person: any, convertNullstoUndefined:boolean = true): { getTitle: () => any } => {
+export const TitleMapper = (person: any, removeNullValues:boolean = true): { getTitle: () => any } => {
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const truncate = (title: string): string => {

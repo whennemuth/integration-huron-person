@@ -1,15 +1,15 @@
-import { isEmpty, nullsToUndefined } from '../Utils';
+import { isEmpty, removeNullValues as removeNulls } from '../Utils';
 import { AddressSorter, AddressType } from './DataMapperAddressSorter';
-import { CountryRow } from './DataMapperCountry';
-import { StateRow } from './DataMapperState';
+import { CountryMappings } from './DataMapperCountry';
+import { StateMappings } from './DataMapperState';
 
 export { AddressType };
 
 export type AddressMapperParms = {
   person: any;
-  stateMap: Map<string, StateRow>;
-  countryMap: Map<string, CountryRow>;
-  convertNullstoUndefined?:boolean;
+  stateMappings: StateMappings;
+  countryMappings: CountryMappings;
+  removeNullValues?:boolean;
   addressTypes?: Set<AddressType>;
 }
 
@@ -33,12 +33,12 @@ export type MappedAddress = {
 export const AddressMapper = (params: AddressMapperParms): MappedAddress => {
 
   let { 
-    person, stateMap, countryMap, convertNullstoUndefined = true, 
+    person, stateMappings, countryMappings, removeNullValues = true, 
     addressTypes = new Set<AddressType>([ AddressType.EMPLOYEE ]) 
   } = params;
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const addressList: { source: string; address: any }[] = [];
@@ -142,7 +142,7 @@ export const AddressMapper = (params: AddressMapperParms): MappedAddress => {
       if(stateKey === '') {
         return undefined;
       }
-      const stateObj = stateMap.get(stateKey);
+      const stateObj = stateMappings.forwardMap.get(stateKey);
       if(!stateObj) {
         console.log(`State code ${stateKey} not found in state map`);
         return undefined;
@@ -176,7 +176,7 @@ export const AddressMapper = (params: AddressMapperParms): MappedAddress => {
       if(countryKey === '') {
         return undefined;
       }
-      const countryObj = countryMap.get(countryKey);
+      const countryObj = countryMappings.forwardMap.get(countryKey);
       if(!countryObj) {
         console.log(`Country code ${countryKey} not found in country map`);
         return undefined;

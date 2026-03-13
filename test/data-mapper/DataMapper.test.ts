@@ -1,7 +1,7 @@
 import { DataMapper } from '../../src/data-mapper/DataMapper';
 import { Term } from '../../src/data-source/CurrentTermsDataSource';
-import { StateRow } from '../../src/data-mapper/DataMapperState';
-import { CountryRow } from '../../src/data-mapper/DataMapperCountry';
+import { StateRow, StateMappings } from '../../src/data-mapper/DataMapperState';
+import { CountryRow, CountryMappings } from '../../src/data-mapper/DataMapperCountry';
 
 describe('DataMapper', () => {
   // Mock current terms data for tests
@@ -24,23 +24,35 @@ describe('DataMapper', () => {
     }
   ];
 
-  // Mock state and country maps for tests
-  const mockStateMap = new Map<string, StateRow>([
-    ['MA', { huronCode: 'MA', huronName: 'Massachusetts' }],
-    ['NY', { huronCode: 'NY', huronName: 'New York' }]
-  ]);
+  // Mock state and country mappings for tests
+  const mockStateMappings: StateMappings = {
+    forwardMap: new Map<string, StateRow>([
+      ['MA', { huronCode: 'MA', huronName: 'Massachusetts' }],
+      ['NY', { huronCode: 'NY', huronName: 'New York' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['MA', 'MA'],
+      ['NY', 'NY']
+    ])
+  };
 
-  const mockCountryMap = new Map<string, CountryRow>([
-    ['US', { huronCode: 'US', huronName: 'United States' }],
-    ['CA', { huronCode: 'CA', huronName: 'Canada' }]
-  ]);
+  const mockCountryMappings: CountryMappings = {
+    forwardMap: new Map<string, CountryRow>([
+      ['US', { huronCode: 'US', huronName: 'United States' }],
+      ['CA', { huronCode: 'CA', huronName: 'Canada' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['US', 'US'],
+      ['CA', 'CA']
+    ])
+  };
 
   describe('map', () => {
     it('should map bugs.json source to bugs.json target', () => {
       const source = require('./source/bugs.json');
       const expectedTarget = require('./target/bugs.json');
 
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.map([source]);
 
       // The result should have fieldSets with one item, and fieldValues should match expectedTarget
@@ -63,28 +75,28 @@ describe('DataMapper', () => {
 
     // Add more comprehensive tests here, without repeating mapper-specific tests
     it('should handle empty array', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.map([]);
       expect(result.fieldSets).toEqual([]);
       expect(result.fieldDefinitions).toBeDefined();
     });
 
     it('should set validationFailureMessage for missing personId', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const invalidPerson = { personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] } };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required personid');
     });
 
     it('should set validationFailureMessage for missing names', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const invalidPerson = { personid: '123' };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required name fields');
     });
 
     it('should set validationFailureMessage for missing organizations', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const invalidPerson = {
         personid: '123',
         personBasic: { names: [{ firstName: 'Test', lastName: 'User', nameType: 'PRF', effectiveDate: '03052026' }] }
@@ -94,7 +106,7 @@ describe('DataMapper', () => {
     });
 
     it('should handle multiple persons', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const person1 = {
         personid: '1',
         personBasic: { names: [{ firstName: 'First', lastName: 'User' }] },
@@ -153,7 +165,7 @@ describe('DataMapper', () => {
         affiliateInfo: { address: [] },
         constituentInfo: { address: [] }
       };
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.map([dualOrgPerson]);
       expect(result.fieldSets).toHaveLength(1);
       const fields = result.fieldSets[0].fieldValues;
@@ -164,7 +176,7 @@ describe('DataMapper', () => {
     });
 
     it('should expose currentTerms via getter', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       expect(mapper.currentTerms).toEqual(mockCurrentTerms);
       expect(mapper.currentTerms).toHaveLength(2);
     });

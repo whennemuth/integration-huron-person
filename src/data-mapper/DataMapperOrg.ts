@@ -3,7 +3,7 @@ import { ConfigManager } from "../config/ConfigManager";
 import { Term } from "../data-source/CurrentTermsDataSource";
 import { HuronOrganization } from "../data-target/crud/Organization";
 import { ReadOrganizations } from "../data-target/crud/ReadOrganizations";
-import { isEmpty, isNotEmpty, nullsToUndefined } from "../Utils";
+import { isEmpty, isNotEmpty, removeNullValues as removeNulls } from "../Utils";
 
 export type OrgType = { priority: number; type: string; source?: string; }
 
@@ -155,7 +155,7 @@ export type OrgAssignments = {
 export type OrgMapperParams = {
   person: any,
   currentTerms: Term[];
-  convertNullstoUndefined?: boolean
+  removeNullValues?: boolean
 }
 
 /**
@@ -175,10 +175,10 @@ export type OrgMapperParams = {
  * @returns Object with organization field assignments
  */
 export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignments } => {
-  let { person, currentTerms, convertNullstoUndefined = true } = params;
+  let { person, currentTerms, removeNullValues = true } = params;
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const orgIdList: { source: string; orgId: string }[] = [];
@@ -330,8 +330,12 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
   };
 };
 
+export type OrgMappings = { 
+  forwardMap: Map<string, string>, 
+  reverseMap: Map<string, string> 
+};
 
-export const loadOrgMap = async (config: Config): Promise<Map<string, string>> => {
+export const loadOrgMap = async (config: Config): Promise<OrgMappings> => {
   const reader = new ReadOrganizations(config);
   console.log('Reading all organizations...');
   const allOrganizations: HuronOrganization[] = await reader.readAllOrganizationsNonTokenized({
@@ -339,18 +343,20 @@ export const loadOrgMap = async (config: Config): Promise<Map<string, string>> =
     includeFields: [ 'hrn', 'id', 'sourceIdentifier' ]
   });
   // Turn the array into a map of sourceIdentifier to HRN for easy lookup, and log any records that are missing sourceIdentifier or HRN
-  const orgMap = new Map<string, string>();
+  const forwardMap = new Map<string, string>();
+  const reverseMap = new Map<string, string>();
   for (const org of allOrganizations) {
     const { hrn, id } = org;
     const { sourceIdentifier = id } = org;
     if( ! isEmpty(hrn) && ! isEmpty(sourceIdentifier)) {
-      orgMap.set(sourceIdentifier, hrn!);
+      forwardMap.set(sourceIdentifier, hrn!);
+      reverseMap.set(hrn!, sourceIdentifier);
     } else {
       console.warn(`Organization missing HRN or sourceIdentifier: ${JSON.stringify(org)}`);
     }
   }
-  console.log(`Found ${orgMap.size} organizations`);
-  return orgMap;
+  console.log(`Found ${forwardMap.size} organizations`);
+  return { forwardMap, reverseMap };
 }
 
 
@@ -359,5 +365,5 @@ if(require.main === module) {
   (async () => {
     const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
     const orgMap = await loadOrgMap(config);
-    console.log(`Organization Map: ${JSON.stringify(Array.from(orgMap.entries()).slice(0, 10), null, 2)}...`); // Log first 10 entries for brevity
+    console.log(`Organization Map: ${JSON.stringify(Array.from(orgMap.forwardMap.entries()).slice(0, 10), null, 2)}...`); // Log first 10 entries for brevity
   })()};

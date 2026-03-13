@@ -1,14 +1,14 @@
 import { DataMapper as CoreDataMapper, CrudOperation, Field, Input } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
-import { anyEmpty, isEmpty, emptysToUndefined } from '../Utils';
+import { anyEmpty, isEmpty, removeEmptyValues } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
-import { loadOrgMap, OrgAssignments, OrgMapper } from './DataMapperOrg';
+import { loadOrgMap, OrgAssignments, OrgMapper, OrgMappings } from './DataMapperOrg';
 import { TitleMapper } from './DataMapperTitle';
 import { UserIdMapper } from './DataMapperUserId';
-import { StateLookup, StateRow } from './DataMapperState';
-import { CountryLookup, CountryRow } from './DataMapperCountry';
+import { StateLookup, StateMappings, StateRow } from './DataMapperState';
+import { CountryLookup, CountryMappings, CountryRow } from './DataMapperCountry';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 
@@ -17,12 +17,29 @@ import { ConfigManager } from '../config/ConfigManager';
  */
 export interface DataMapperParams {
   currentTerms: Term[];
-  stateMap: Map<string, StateRow>;
-  countryMap: Map<string, CountryRow>;
+  orgMappings?: OrgMappings;
+  stateMappings: StateMappings;
+  countryMappings: CountryMappings;
   orgHrn?: (sourceOrgId: string) => string | undefined;
-  orgMap?: Map<string, string>;
   addressTypes?: Set<AddressType>;
 }
+
+export const _fieldDefinitions = [
+  { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
+  { name: 'sourceIdentifier', type: 'string' as const, required: false },
+  { name: 'employeeId', type: 'string' as const, required: false },
+  { name: 'firstName', type: 'string' as const, required: true },
+  { name: 'middleName', type: 'string' as const, required: false },
+  { name: 'lastName', type: 'string' as const, required: true },
+  { name: 'title', type: 'string' as const, required: false },
+  { name: 'employer', type: 'object' as const, required: true },
+  { name: 'organization', type: 'object' as const, required: true },
+  { name: 'secondaryUnit', type: 'object' as const, required: false },
+  { name: 'additionalUnit', type: 'object' as const, required: false },
+  { name: 'contactInformation', type: 'object' as const, required: true },
+  { name: 'roles', type: 'array' as const, required: false },
+  { name: '__arrayFieldOperations', type: 'object' as const, required: true } // Special field for conveying array operation instructions (e.g. for roles)
+];
 
 /**
  * DataMapper class for:
@@ -65,56 +82,42 @@ export class DataMapper implements CoreDataMapper {
     return this._params.currentTerms;
   }
 
-  public get stateMap(): Map<string, StateRow> | undefined {
-    return this._params.stateMap;
+  public get stateMappings(): StateMappings | undefined {
+    return this._params.stateMappings;
   }
 
-  public get countryMap(): Map<string, CountryRow> | undefined {
-    return this._params.countryMap;
+  public get countryMappings(): CountryMappings | undefined {
+    return this._params.countryMappings;
   }
 
   public get orgHrn(): (sourceOrgId: string) => string | undefined {
     return this._orgHrn;
   }
 
-  public get orgMap(): Map<string, string> | undefined {
-    return this._params.orgMap;
+  public get orgMappings(): OrgMappings | undefined {
+    return this._params.orgMappings;
   }
 
   /**
-   * Convert raw person data to Input format (implementing core interface)
+   * Convert raw person data from source system to Input format (implementing core interface)
    * @param rawData Array of person data objects from Boston University CDM API
    */
-  map(rawData: any[], crudOperation?: CrudOperation): Input {
+  public map(rawData: any[], crudOperation?: CrudOperation): Input {
     return this.getMappedData({ rawData, crudOperation: crudOperation });
   }
 
+
   /**
-   * Convert raw person data to Input format
+   * Convert raw person data from source system to Input format
    * @param rawData Array of person data objects from Boston University CDM API
    * @param hrn Optional person HRN to use applying to the returned data to indicate a put/patch operation
    */
-  getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
+  public getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
     const { rawData, personHrn, crudOperation } = params;
 
     this.clearMessages();
 
-    const fieldDefinitions = [
-      { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
-      { name: 'sourceIdentifier', type: 'string' as const, required: false },
-      { name: 'employeeId', type: 'string' as const, required: false },
-      { name: 'firstName', type: 'string' as const, required: true },
-      { name: 'middleName', type: 'string' as const, required: false },
-      { name: 'lastName', type: 'string' as const, required: true },
-      { name: 'title', type: 'string' as const, required: false },
-      { name: 'employer', type: 'object' as const, required: true },
-      { name: 'organization', type: 'object' as const, required: true },
-      { name: 'secondaryUnit', type: 'object' as const, required: false },
-      { name: 'additionalUnit', type: 'object' as const, required: false },
-      { name: 'contactInformation', type: 'object' as const, required: true },
-      { name: 'roles', type: 'array' as const, required: false },
-      { name: '__arrayFieldOperations', type: 'object' as const, required: true } // Special field for conveying array operation instructions (e.g. for roles)
-    ];
+    const fieldDefinitions = [..._fieldDefinitions];
 
     if(personHrn) {
       fieldDefinitions.push({ name: 'hrn', type: 'string' as const, required: true });
@@ -122,17 +125,17 @@ export class DataMapper implements CoreDataMapper {
 
     const fieldSets = rawData.map(person => {
 
-      person = emptysToUndefined(person);
+      person = removeEmptyValues(person);
 
       const { personid } = person;
-      const { firstName, middleName, lastName } = NameMapper({ person, convertNullstoUndefined: false }).getName() ?? {};
+      const { firstName, middleName, lastName } = NameMapper({ person, removeNullValues: false }).getName() ?? {};
       const userId = UserIdMapper(person, false).getUserId(crudOperation);
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();
       const addressMapper = AddressMapper({
         person,
-        stateMap: this.stateMap ?? new Map<string, StateRow>(), 
-        countryMap: this.countryMap ?? new Map<string, CountryRow>(),
+        stateMappings: this.stateMappings ?? { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() },
+        countryMappings: this.countryMappings ?? { forwardMap: new Map<string, CountryRow>(), reverseMap: new Map<string, string>() },
         addressTypes: this._params.addressTypes
       });
       const addressLine1 = addressMapper.getAddressLine1();
@@ -143,7 +146,7 @@ export class DataMapper implements CoreDataMapper {
       const orgAssignments: OrgAssignments = OrgMapper({ 
         person, 
         currentTerms: this._params.currentTerms, 
-        convertNullstoUndefined: false 
+        removeNullValues: false 
       }).getOrgs();
 
       // Basic data check
@@ -223,6 +226,43 @@ export class DataMapper implements CoreDataMapper {
 
 
 /**
+ * Convert raw person data from target system to Input format (implementing core interface)
+ * This does not reverse-map back to source format, but rather converts Huron API response
+ * data into the Input/FieldSet structure so it can be hashed and compared with forward-mapped
+ * source data.
+ * @param rawData Array of person data objects from Huron API endpoint.
+ */
+export class ReverseDataMapper implements CoreDataMapper {
+  public map(rawData: any[], crudOperation?: CrudOperation): Input {
+
+    const fieldDefinitions = [..._fieldDefinitions];
+    
+    const fieldSets = rawData.map(person => {
+      // Convert Huron person object to FieldSet format, omitting null/undefined values
+      const fieldValues: Field[] = [];
+      
+      if (person && typeof person === 'object') {
+        Object.keys(person).forEach(key => {
+          if ( ! isEmpty(person[key]) ) {
+            if (fieldDefinitions.some(fd => fd.name === key) ) {
+              fieldValues.push({ [key]: removeEmptyValues(person[key]) });           
+            }            
+          }
+        });
+      }
+      
+      return { fieldValues };
+    });
+
+    return {
+      fieldDefinitions,
+      fieldSets
+    };
+  }
+}
+
+
+/**
  * Fetch all static mapping needed for the DataMapper, including current terms, state 
  * and country lookups, and org HRN mapping, and return a DataMapper instance with this 
  * data to be shared across syncs.
@@ -230,15 +270,25 @@ export class DataMapper implements CoreDataMapper {
  * @returns 
  */
 export const getDataMapper = async (config: Config): Promise<DataMapper> => {
-  const orgMap: Map<string, string> = await loadOrgMap(config);
-  const orgHrn = (sourceOrgId: string) => orgMap.get(sourceOrgId);
+  const maps = await getDataMapperMaps(config);
+  const { stateMappings, countryMappings, orgMappings } = maps;
+  const orgHrn = (sourceOrgId: string) => orgMappings.forwardMap.get(sourceOrgId);
   const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
   const currentTerms = await termsDataSource.fetchRaw();
-  const stateMap = await StateLookup.loadStates(config);
-  const countryMap = await CountryLookup.loadCountries(config);
   console.log(`Fetched ${currentTerms.length} current term(s)`);
-  return new DataMapper({ currentTerms, stateMap, countryMap, orgHrn, orgMap });
+  return new DataMapper({ currentTerms, stateMappings, countryMappings, orgHrn, orgMappings });
 }
+
+export const getDataMapperMaps = async (config: Config): Promise<{ 
+  stateMappings: StateMappings, 
+  countryMappings: CountryMappings, 
+  orgMappings: OrgMappings
+}> => {
+  const orgMappings: OrgMappings = await loadOrgMap(config);
+  const stateMappings = await StateLookup.loadStates(config);
+  const countryMappings = await CountryLookup.loadCountries(config);
+  return { stateMappings, countryMappings, orgMappings };
+} 
 
 
 
@@ -246,11 +296,11 @@ if(require.main === module) {
   (async () => {
     const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
     const dataMapper = await getDataMapper(config);
-    const { currentTerms=[], stateMap, countryMap, orgMap=(new Map<string, string>()) } = dataMapper;
+    const { currentTerms=[], stateMappings, countryMappings, orgMappings } = dataMapper;
     console.log(`DataMapper: ${JSON.stringify({
-      stateMapSize: stateMap?.size,
-      countryMapSize: countryMap?.size,
-      orgMapSize: orgMap.size,
+      stateMapSize: stateMappings?.forwardMap?.size,
+      countryMapSize: countryMappings?.forwardMap?.size,
+      orgMapSize: orgMappings?.forwardMap?.size,
       currentTerms
     }, null, 2)}`);
   })()

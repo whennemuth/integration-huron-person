@@ -8,15 +8,20 @@ export type StateRow = {
   huronName: string;
 }
 
+export type StateMappings = { 
+  forwardMap: Map<string, StateRow>,
+  reverseMap: Map<string, string>
+}
+
 /**
  * Utility class to load and provide access to state code and name mappings.
  * Loads data from a CSV file or S3 bucket and provides a method to get the mapping as a Map.
  * Runs in a static context so the data is loaded once and shared across instances.
  */
 export class StateLookup {
-  private static cachedStates: Map<string, StateRow> | null = null;
+  private static cachedStates: StateMappings | null = null;
 
-  static async loadStates(config?: Config): Promise<Map<string, StateRow>> {
+  static async loadStates(config?: Config): Promise<StateMappings> {
     // Return cached map if already loaded
     if (StateLookup.cachedStates) {
       return StateLookup.cachedStates;
@@ -25,26 +30,26 @@ export class StateLookup {
     if( ! config ) {
       config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none'); 
     }
-    let map = await StateLookup.loadStatesFromS3Bucket(config);
-    if(map.size === 0) {
-      map = await StateLookup.loadStatesLocal();
+    let mappings = await StateLookup.loadStatesFromS3Bucket(config);
+    if(mappings.forwardMap.size === 0) {
+      mappings = await StateLookup.loadStatesLocal();
     }
     
     // Cache the loaded map for future calls
-    StateLookup.cachedStates = map;
-    return map;
+    StateLookup.cachedStates = mappings;
+    return mappings;
   }
 
-  static async loadStatesLocal(): Promise<Map<string, StateRow>> {
+  static async loadStatesLocal(): Promise<StateMappings> {
     // Use imported CSV constant instead of file system access
     return StateLookup.loadStatesCSV(() => Promise.resolve(STATES_CSV));
   }
 
-  static async loadStatesFromS3Bucket(config: Config): Promise<Map<string, StateRow>> {
+  static async loadStatesFromS3Bucket(config: Config): Promise<StateMappings> {
     const { dataSource: { statesCsvS3Config } = {}} = config;
     if(!statesCsvS3Config) {
       console.log('No statesCsvS3Config provided, skipping S3 lookup');
-      return new Map<string, StateRow>();
+      return { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() };
     }
     
     try {
@@ -77,20 +82,21 @@ export class StateLookup {
       });
     } catch (error: any) {
       console.error(`Error in loadStatesFromS3Bucket: ${error.message}`);
-      return new Map<string, StateRow>();
+      return { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() };
     } finally {
       // Ensure we always return a map, even if empty
     }
   }
 
-  static async loadStatesCSV(csvLoader: () => Promise<string>): Promise<Map<string, StateRow>> {
+  static async loadStatesCSV(csvLoader: () => Promise<string>): Promise<StateMappings> {
     const csv = await csvLoader();
     const lines = csv.trim().split('\n');
     if(lines.length > 0 && lines[0].length > 2) {
       // Not a 2-character state code, so assume first line is header and remove it
       lines.shift();
     }
-    const map = new Map<string, StateRow>();
+    const forwardMap = new Map<string, StateRow>();
+    const reverseMap = new Map<string, string>();
     for (const line of lines) {
       let [code, huronCode, huronName] = line.split(',');
 
@@ -99,11 +105,16 @@ export class StateLookup {
       huronCode = huronCode.trim().replaceAll('"', '');
       huronName = huronName.trim().replaceAll('"', '');
 
-      // Add to map.
-      map.set(code, { huronCode, huronName });
+      // Add to the forward map.
+      forwardMap.set(code, { huronCode, huronName });
+
+      // Add to the reverse map for reverse lookups (e.g. by HRN code)
+      reverseMap.set(huronCode, code);
     }
-    return map;
+    return { forwardMap, reverseMap };
   }
+
+
 }
 
 
@@ -111,7 +122,7 @@ if(require.main === module) {
   // For testing purposes, load the states and log the map
   StateLookup.loadStates().then(map => {
     console.log('Loaded states map:');
-    for(const [key, value] of map.entries()) {
+    for(const [key, value] of map.forwardMap.entries()) {
       console.log(`${key} => ${JSON.stringify(value)}`);
     }
   }).catch(error => {

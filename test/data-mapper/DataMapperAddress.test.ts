@@ -1,26 +1,40 @@
 import { AddressMapper } from '../../src/data-mapper/DataMapperAddress';
-import { StateRow } from '../../src/data-mapper/DataMapperState';
-import { CountryRow } from '../../src/data-mapper/DataMapperCountry';
+import { StateRow, StateMappings } from '../../src/data-mapper/DataMapperState';
+import { CountryRow, CountryMappings } from '../../src/data-mapper/DataMapperCountry';
 
 describe('AddressMapper', () => {
-  // Mock state and country maps
-  const mockStateMap = new Map<string, StateRow>([
-    ['MA', { huronCode: 'massachusetts', huronName: 'Massachusetts' }],
-    ['NY', { huronCode: 'new-york', huronName: 'New York' }],
-    ['CA', { huronCode: 'california', huronName: 'California' }]
-  ]);
+  // Mock state and country mappings
+  const mockStateMappings: StateMappings = {
+    forwardMap: new Map<string, StateRow>([
+      ['MA', { huronCode: 'massachusetts', huronName: 'Massachusetts' }],
+      ['NY', { huronCode: 'new-york', huronName: 'New York' }],
+      ['CA', { huronCode: 'california', huronName: 'California' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['MA', 'MA'],
+      ['NY', 'NY'],
+      ['CA', 'CA']
+    ])
+  };
 
-  const mockCountryMap = new Map<string, CountryRow>([
-    ['US', { huronCode: 'usa', huronName: 'United States' }],
-    ['CA', { huronCode: 'canada', huronName: 'Canada' }],
-    ['UK', { huronCode: 'united-kingdom', huronName: 'United Kingdom' }]
-  ]);
+  const mockCountryMappings: CountryMappings = {
+    forwardMap: new Map<string, CountryRow>([
+      ['US', { huronCode: 'usa', huronName: 'United States' }],
+      ['CA', { huronCode: 'canada', huronName: 'Canada' }],
+      ['UK', { huronCode: 'united-kingdom', huronName: 'United Kingdom' }]
+    ]),
+    reverseMap: new Map<string, string>([
+      ['US', 'US'],
+      ['CA', 'CA'],
+      ['UK', 'UK']
+    ])
+  };
 
   describe('getAddressLine1', () => {
     it('should return undefined when no addresses are available', () => {
       const person = {};
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -33,7 +47,7 @@ describe('AddressMapper', () => {
         affiliateInfo: { address: [] }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -54,7 +68,7 @@ describe('AddressMapper', () => {
         affiliateInfo: { address: [] }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Main St');
@@ -73,7 +87,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Main St');
@@ -92,7 +106,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('456 Oak Ave');
@@ -111,7 +125,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -130,7 +144,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Main St');
@@ -149,7 +163,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Main St');
@@ -168,7 +182,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Main St');
@@ -183,7 +197,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -198,7 +212,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -217,7 +231,7 @@ describe('AddressMapper', () => {
 
       const { AddressType } = require('../../src/data-mapper/DataMapperAddressSorter');
       const addressTypes = new Set([AddressType.STUDENT]);
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap, addressTypes });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, addressTypes });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('456 College Ave');
@@ -234,7 +248,7 @@ describe('AddressMapper', () => {
 
       const { AddressType } = require('../../src/data-mapper/DataMapperAddressSorter');
       const addressTypes = new Set([AddressType.AFFILIATE]);
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap, addressTypes });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, addressTypes });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('789 Affiliate Rd');
@@ -260,7 +274,7 @@ describe('AddressMapper', () => {
 
       const { AddressType } = require('../../src/data-mapper/DataMapperAddressSorter');
       const addressTypes = new Set([AddressType.EMPLOYEE, AddressType.STUDENT]);
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap, addressTypes });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, addressTypes });
       const result = mapper.getAddressLine1();
 
       // Should prioritize EMPLOYEE over STUDENT per AddressTypePriorities
@@ -283,7 +297,7 @@ describe('AddressMapper', () => {
 
       const { AddressType } = require('../../src/data-mapper/DataMapperAddressSorter');
       const addressTypes = new Set([AddressType.STUDENT, AddressType.AFFILIATE]);
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap, addressTypes });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, addressTypes });
       const result = mapper.getAddressLine1();
 
       // Should prioritize STUDENT over AFFILIATE per AddressTypePriorities
@@ -305,7 +319,7 @@ describe('AddressMapper', () => {
 
       const { AddressType } = require('../../src/data-mapper/DataMapperAddressSorter');
       const addressTypes = new Set([AddressType.STUDENT]); // Only looking for student, but person has only employee
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap, addressTypes });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, addressTypes });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual(undefined);
@@ -326,7 +340,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCity();
 
       expect(result).toEqual('Boston');
@@ -345,7 +359,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCity();
 
       expect(result).toEqual(undefined);
@@ -364,7 +378,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCity();
 
       expect(result).toEqual('Boston');
@@ -383,7 +397,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCity();
 
       expect(result).toEqual(undefined);
@@ -404,7 +418,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getStateProvince();
 
       expect(result).toEqual({
@@ -426,7 +440,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getStateProvince();
 
       expect(result).toEqual(undefined);
@@ -446,7 +460,7 @@ describe('AddressMapper', () => {
       };
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getStateProvince();
 
       expect(result).toEqual(undefined);
@@ -467,7 +481,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getStateProvince();
 
       expect(result).toEqual({
@@ -491,7 +505,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCountry();
 
       expect(result).toEqual({
@@ -513,7 +527,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCountry();
 
       expect(result).toEqual(undefined);
@@ -533,7 +547,7 @@ describe('AddressMapper', () => {
       };
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCountry();
 
       expect(result).toEqual(undefined);
@@ -554,7 +568,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCountry();
 
       expect(result).toEqual({
@@ -578,7 +592,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getPostalCode();
 
       expect(result).toEqual('02115');
@@ -597,7 +611,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getPostalCode();
 
       expect(result).toEqual(undefined);
@@ -616,7 +630,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getPostalCode();
 
       expect(result).toEqual('02115');
@@ -631,7 +645,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getPostalCode();
 
       expect(result).toEqual(undefined);
@@ -652,7 +666,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCounty();
 
       expect(result).toEqual('Suffolk');
@@ -671,7 +685,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getCounty();
 
       expect(result).toEqual(undefined);
@@ -699,7 +713,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
 
       expect(mapper.getAddressLine1()).toEqual('123 Main St');
       expect(mapper.getCity()).toEqual('Boston');
@@ -729,7 +743,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       const result = mapper.getAddressLine1();
 
       expect(result).toEqual('123 Primary Work St');
@@ -759,7 +773,7 @@ describe('AddressMapper', () => {
         }
       };
 
-      const mapper = AddressMapper({ person, stateMap: mockStateMap, countryMap: mockCountryMap });
+      const mapper = AddressMapper({ person, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
       // The sorter should pick the primary one
       const result = mapper.getAddressLine1();
 

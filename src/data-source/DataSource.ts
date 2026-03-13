@@ -1,5 +1,5 @@
 import { DataSource, Timer } from 'integration-core';
-import { Config, ExecutionMode } from '../config/Config';
+import { Config } from '../config/Config';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 
@@ -41,7 +41,7 @@ export abstract class BuCdmDataSource implements DataSource {
   async fetchRaw(): Promise<any[]> {
     try {
       const timer = new Timer();
-      console.log(`Fetching data from ${this.name}...`);
+      console.log(`Fetching data from ${this.name}...`);     
 
       timer.start();
       const response = await this.apiClient.get<{ response: any[] }>({

@@ -7,6 +7,7 @@ import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { getDataMapper } from './data-mapper/DataMapper';
+import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 /**
@@ -52,13 +53,20 @@ class HuronPersonIntegration {
       const dataSource = new BuCdmPeopleDataSource({ config, responseFilter });
       const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any });
       const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
+      const fieldFilterParms = {
+        stateMappings: dataMapper.stateMappings,
+        countryMappings: dataMapper.countryMappings,
+        orgMappings: dataMapper.orgMappings
+      } as FieldFilterParams;
 
       // Initialize EndToEnd integration
       this.endToEnd = new EndToEnd({
         dataSource,
         dataMapper,
         dataTarget,
-        deltaStrategy
+        deltaStrategy,
+        // Apply field filtering to remove non-hashable fields before hashing
+        fieldFilter: fs => new FieldFilter({ ...fieldFilterParms, fieldSet: fs }).filter() 
       });
       
       await this.endToEnd.execute();

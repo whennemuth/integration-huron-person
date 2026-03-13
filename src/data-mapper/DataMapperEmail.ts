@@ -1,4 +1,4 @@
-import { nullsToUndefined } from "../Utils";
+import { removeNullValues as removeNulls } from "../Utils";
 import { DataMapperHeuristics, EMAIL_TYPE, SOURCE } from "./DataMapperHeuristics";
 
 export type EmailType = { priority: number; type: string; source?: string; }
@@ -24,10 +24,10 @@ const EmailTypes = [
  * @param person 
  * @returns 
  */
-export const EmailMapper = (person: any, convertNullstoUndefined:boolean = true): { getEmail: () => any } => {
+export const EmailMapper = (person: any, removeNullValues:boolean = true): { getEmail: () => any } => {
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const { email:basicEmails = [] } = person;

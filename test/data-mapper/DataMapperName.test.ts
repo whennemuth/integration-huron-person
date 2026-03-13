@@ -9,7 +9,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({});
@@ -18,7 +18,7 @@ describe('NameMapper', () => {
     it('should return empty object when personBasic is missing', () => {
       const person = {};
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({});
@@ -29,7 +29,7 @@ describe('NameMapper', () => {
         personBasic: {}
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({});
@@ -50,7 +50,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -89,7 +89,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -121,7 +121,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -153,7 +153,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -185,7 +185,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -217,7 +217,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -249,7 +249,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -281,7 +281,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -311,7 +311,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       // Both names don't match defined NameTypes (UNK not defined, PRI has no source but all PRI entries require source)
@@ -336,7 +336,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -368,7 +368,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       // Both have same priority (3), should return first one after sorting
@@ -408,7 +408,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -433,7 +433,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -458,7 +458,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({
@@ -473,7 +473,7 @@ describe('NameMapper', () => {
         personBasic: null
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({});
@@ -486,7 +486,7 @@ describe('NameMapper', () => {
         }
       };
 
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
       expect(result).toEqual({});
@@ -516,7 +516,7 @@ describe('NameMapper', () => {
         };
 
         // Omit preferredOnly parameter to test default behavior
-        const mapper = NameMapper({ person, convertNullstoUndefined: true });
+        const mapper = NameMapper({ person, removeNullValues: true });
         const result = mapper.getName();
 
         // Should return PRF name (filtered out PRI)
@@ -560,7 +560,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
         const result = mapper.getName();
 
         // Should return only the PRF name
@@ -590,7 +590,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
         const result = mapper.getName();
 
         // Should return empty object since no PRF names are available
@@ -619,7 +619,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: false });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
         const result = mapper.getName();
 
         // Should return PRF name even though preferredOnly is false (PRF has higher priority)
@@ -651,7 +651,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
         const result = mapper.getName();
 
         // Should return PRF name (filtered out the one with missing nameType)
@@ -679,7 +679,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
         const result = mapper.getName();
 
         // Should return empty object since no PRF names are available
@@ -708,7 +708,7 @@ describe('NameMapper', () => {
           }
         };
 
-        const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+        const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
         const result = mapper.getName();
 
         // Should return SAP PRF (priority 1) over CS PRF (priority 2)
@@ -748,7 +748,7 @@ describe('NameMapper', () => {
           ]
         }
       };
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
       const result = mapper.getName();
       // Should select the PRF name with the most recent valid effectiveDate
       expect(result).toEqual({
@@ -781,7 +781,7 @@ describe('NameMapper', () => {
           ]
         }
       };
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
       const result = mapper.getName();
       // Should return empty object when multiple PRF names have only invalid effectiveDate formats
       expect(result).toEqual({});
@@ -809,7 +809,7 @@ describe('NameMapper', () => {
           ]
         }
       };
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
       const result = mapper.getName();
       expect(result).toEqual({});
     });
@@ -837,7 +837,7 @@ describe('NameMapper', () => {
           ]
         }
       };
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
       const result = mapper.getName();
       expect(result).toEqual({});
     });
@@ -857,7 +857,7 @@ describe('NameMapper', () => {
           ]
         }
       };
-      const mapper = NameMapper({ person, convertNullstoUndefined: true, preferredOnly: true });
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: true });
       const result = mapper.getName();
       expect(result).toEqual({
         firstName: 'InvalidDatePreferred',

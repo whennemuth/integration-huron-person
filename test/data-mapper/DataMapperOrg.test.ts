@@ -333,7 +333,7 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ employer: '10003827', organization: '10003827' });
     });
 
-    it('should handle convertNullstoUndefined parameter', () => {
+    it('should handle removeNullValues parameter', () => {
       const person = {
         employeeInfo: {
           positions: [
@@ -347,11 +347,11 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapperWithConversion = OrgMapper({ person, currentTerms: mockCurrentTerms, convertNullstoUndefined: true });
+      const mapperWithConversion = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: true });
       const resultWith = mapperWithConversion.getOrgs();
       expect(resultWith).toEqual({});
 
-      const mapperWithout = OrgMapper({ person, currentTerms: mockCurrentTerms, convertNullstoUndefined: false });
+      const mapperWithout = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: false });
       const resultWithout = mapperWithout.getOrgs();
       expect(resultWithout).toEqual({}); // Since null is empty
     });

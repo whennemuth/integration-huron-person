@@ -1,5 +1,5 @@
 import { CrudOperation } from 'integration-core';
-import { nullsToUndefined } from "../Utils";
+import { removeNullValues as removeNulls } from "../Utils";
 
 export type UserIdType = { priority: number; source?: string; }
 
@@ -8,10 +8,10 @@ const UserIdTypes = [
   { priority: 2, source: 'Campus Solutions' }
 ] as UserIdType[];
 
-export const UserIdMapper = (person: any, convertNullstoUndefined:boolean = true): { getUserId: (crud?: CrudOperation) => any } => {
+export const UserIdMapper = (person: any, removeNullValues:boolean = true): { getUserId: (crud?: CrudOperation) => any } => {
 
-  if(convertNullstoUndefined) {
-    person = nullsToUndefined(person);
+  if(removeNullValues) {
+    person = removeNulls(person);
   }
 
   const { personid, personDetails: { account = [] } = {} } = person;

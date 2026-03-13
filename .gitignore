@@ -50,5 +50,6 @@ config.local.json
 # Cache files
 *-cache.json
 
+fetchedPersonData.json
 questions.txt
 RESUME-NEXT.txt

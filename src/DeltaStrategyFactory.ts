@@ -1,12 +1,12 @@
-import { 
+import {
   DeltaStrategy,
-  DeltaStrategyParams,
-  DeltaStrategyForFileSystem,
   DeltaStrategyForDatabase,
+  DeltaStrategyForFileSystem,
   DeltaStrategyForS3Bucket,
+  DeltaStrategyParams,
   FileConfig,
-  DatabaseConfig,
-  S3Config
+  isDatabaseConfig,
+  isS3Config
 } from 'integration-core';
 import { Config } from './config/Config';
 
@@ -28,15 +28,21 @@ export class DeltaStrategyFactory {
     
     switch (storage.type) {
       case 'file':
-        const fileConfig = storage.config as FileConfig;
+        if( ! (storage.config as FileConfig)?.path) {
+          throw new Error('Invalid file storage configuration');
+        }
         return new DeltaStrategyForFileSystem(strategyParams);
         
       case 'database':
-        const dbConfig = storage.config as DatabaseConfig;
+        if( ! isDatabaseConfig(storage.config)) {
+          throw new Error('Invalid database configuration');
+        }
         return new DeltaStrategyForDatabase(strategyParams);
         
       case 's3':
-        const s3Config = storage.config as S3Config;
+        if( ! isS3Config(storage.config)) {
+          throw new Error('Invalid S3 configuration');
+        }
         return new DeltaStrategyForS3Bucket(strategyParams);
         
       default:

@@ -25,8 +25,8 @@ export interface DataMapperParams {
 }
 
 export const _fieldDefinitions = [
-  { name: 'id', type: 'string' as const, required: true, isPrimaryKey: true },
-  { name: 'sourceIdentifier', type: 'string' as const, required: false },
+  { name: 'id', type: 'string' as const, required: true },
+  { name: 'sourceIdentifier', type: 'string' as const, required: true, isPrimaryKey: true },
   { name: 'employeeId', type: 'string' as const, required: false },
   { name: 'firstName', type: 'string' as const, required: true },
   { name: 'middleName', type: 'string' as const, required: false },

@@ -351,8 +351,8 @@ export const loadOrgMap = async (config: Config): Promise<OrgMappings> => {
     if( ! isEmpty(hrn) && ! isEmpty(sourceIdentifier)) {
       forwardMap.set(sourceIdentifier, hrn!);
       reverseMap.set(hrn!, sourceIdentifier);
-    } else {
-      console.warn(`Organization missing HRN or sourceIdentifier: ${JSON.stringify(org)}`);
+    } else if (isEmpty(sourceIdentifier)) {
+      console.warn(`Organization missing sourceIdentifier: ${JSON.stringify(org)}`);
     }
   }
   console.log(`Found ${forwardMap.size} organizations`);

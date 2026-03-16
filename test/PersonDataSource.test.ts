@@ -382,9 +382,9 @@ describe('BuCdmPersonDataSource', () => {
       expect(result.fieldSets).toHaveLength(3);
       
       // Check field definitions are properly set
-      const idField = result.fieldDefinitions.find((f: any) => f.name === 'id');
-      expect(idField?.isPrimaryKey).toBe(true);
-      expect(idField?.required).toBe(true);
+      const sourceIdentifierField = result.fieldDefinitions.find((f: any) => f.name === 'sourceIdentifier');
+      expect(sourceIdentifierField?.isPrimaryKey).toBe(true);
+      expect(sourceIdentifierField?.required).toBe(true);
       
       // Check first person field set
       expect(result.fieldSets[0]).toBeDefined();

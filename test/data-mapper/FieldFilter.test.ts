@@ -586,8 +586,8 @@ describe('FieldFilter', () => {
         const filter = new FieldFilter(params);
         const result = filter.filter();
 
-        // Empty array becomes undefined after removeEmptyValues
-        expect(result.fieldValues).toBeUndefined();
+        // Empty array remains empty array (not undefined)after fix for hash compatibility
+        expect(result.fieldValues).toEqual([]);
       });
 
       it('should handle fieldSet with no fieldValues property', () => {
@@ -603,8 +603,8 @@ describe('FieldFilter', () => {
         const filter = new FieldFilter(params);
         const result = filter.filter();
 
-        // Empty array becomes undefined after removeEmptyValues
-        expect(result.fieldValues).toBeUndefined();
+        // Empty array becomes empty array (not undefined) after fix for hash compatibility
+        expect(result.fieldValues).toEqual([]);
       });
 
       it('should not mutate the original fieldValues array', () => {

@@ -68,9 +68,11 @@ export class FieldFilter {
 
     normalizeCountry();
 
-    this.filteredFieldValues = removeEmptyValues(this.filteredFieldValues) as Field[];
+    this.filteredFieldValues = (removeEmptyValues(this.filteredFieldValues) as Field[]) || [];
 
-    const retval = { ...fieldSet, fieldValues: this.filteredFieldValues };
+    // Ensure fieldValues is always an array (even if empty) for hash function compatibility
+    // removeEmptyValues returns undefined for empty arrays, but hash needs an array
+    const retval = { ...fieldSet, fieldValues: this.filteredFieldValues || [] };
 
     return retval;
   }

@@ -7,6 +7,7 @@ import { Config } from '../src/config/Config';
 import { Status, CrudOperation } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
+import { DeltaStrategyFactory } from '../src/DeltaStrategyFactory';
 
 // Mock the external dependencies
 jest.mock('../src/config/ConfigManager');
@@ -15,6 +16,7 @@ jest.mock('../src/data-target/PersonDataTarget');
 jest.mock('../src/data-mapper/DataMapper');
 jest.mock('../src/data-source/CurrentTermsDataSource');
 jest.mock('../src/data-target/crud/ReadPerson');
+jest.mock('../src/DeltaStrategyFactory');
 
 describe('SinglePersonSync', () => {
   let singlePersonSync: SinglePersonSync;
@@ -170,8 +172,11 @@ describe('SinglePersonSync', () => {
       currentTerms: mockCurrentTerms,
       stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
       countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
+      stateMappings: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
+      countryMappings: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
       orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
       orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
+      orgMappings: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
       criticalValidationErrorMessage: undefined,
       infoValidationErrorMessage: undefined
     } as any;
@@ -294,7 +299,7 @@ describe('SinglePersonSync', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should handle multiple field sets', async () => {
+    it('should handle multiple field sets by processing only the first one', async () => {
       const multipleFieldSetsInput = {
         ...mockInput,
         fieldSets: [
@@ -311,20 +316,24 @@ describe('SinglePersonSync', () => {
       };
       mockDataMapper.getMappedData.mockReturnValue(multipleFieldSetsInput);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       await singlePersonSync.sync({ crudOperation: CrudOperation.CREATE });
 
-      expect(mockDataTarget.pushOne).toHaveBeenCalledTimes(2);
-      expect(mockDataTarget.pushOne).toHaveBeenNthCalledWith(1, {
+      // Should only push the first field set
+      expect(mockDataTarget.pushOne).toHaveBeenCalledTimes(1);
+      expect(mockDataTarget.pushOne).toHaveBeenCalledWith({
         data: multipleFieldSetsInput.fieldSets[0],
         crud: CrudOperation.CREATE
       });
-      expect(mockDataTarget.pushOne).toHaveBeenNthCalledWith(2, {
-        data: multipleFieldSetsInput.fieldSets[1],
-        crud: CrudOperation.CREATE
-      });
+
+      // Should log warning about multiple field sets
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Expected exactly 1 field set for single person sync, but found 2')
+      );
 
       consoleSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should handle push failure', async () => {
@@ -452,148 +461,355 @@ describe('SinglePersonSync', () => {
     });
   });
 
-  describe('syncAll', () => {
-    it('should sync multiple BUIDs without dataMapper provided', async () => {
-      const buids = ['U11111111', 'U22222222', 'U33333333'];
-      
-      // Create fresh mocks for this test
-      const freshDataSource = {
-        fetchRaw: jest.fn().mockResolvedValue(mockRawData)
+  describe('hash storage update functionality', () => {
+    let mockStorage: any;
+    let mockDeltaStrategy: any;
+
+    beforeEach(() => {
+      // Create mock storage
+      mockStorage = {
+        fetchPreviousData: jest.fn().mockResolvedValue([]),
+        updatePreviousData: jest.fn().mockResolvedValue(undefined)
       };
-      const freshDataMapper = {
-        getMappedData: jest.fn().mockReturnValue(mockInput),
-        map: jest.fn().mockReturnValue(mockInput),
-        currentTerms: mockCurrentTerms,
-        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
-        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
-        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
-        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
-        criticalValidationErrorMessage: undefined,
-        infoValidationErrorMessage: undefined
+
+      // Create mock delta strategy
+      mockDeltaStrategy = {
+        storage: mockStorage
       };
-      const freshDataTarget = {
-        pushOne: jest.fn().mockResolvedValue({
-          status: Status.SUCCESS,
-          message: 'Person pushed successfully',
-          timestamp: new Date(),
-          primaryKey: [{ id: 'U12345678' }],
-          crud: CrudOperation.CREATE
-        })
-      };
-      
-      // Clear and setup mocks
-      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
-      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
-      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
-      
-      await SinglePersonSync.syncAll({
-        config: mockConfig,
-        buids
-      });
-      
-      // Verify person data was fetched for each BUID
-      expect(freshDataSource.fetchRaw).toHaveBeenCalledTimes(buids.length);
+
+      // Mock DeltaStrategyFactory to return our mock strategy
+      (DeltaStrategyFactory.createStrategy as jest.Mock) = jest.fn().mockReturnValue(mockDeltaStrategy);
     });
 
-    it('should reuse dataMapper when provided', async () => {
-      const buids = ['U11111111', 'U22222222'];
-      
-      // Create fresh mocks for this test
-      const freshDataSource = {
-        fetchRaw: jest.fn().mockResolvedValue(mockRawData)
-      };
-      const freshDataMapper = {
-        getMappedData: jest.fn().mockReturnValue(mockInput),
-        map: jest.fn().mockReturnValue(mockInput),
-        currentTerms: mockCurrentTerms,
-        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
-        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
-        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
-        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
-        criticalValidationErrorMessage: undefined,
-        infoValidationErrorMessage: undefined
-      };
-      const freshDataTarget = {
-        pushOne: jest.fn().mockResolvedValue({
-          status: Status.SUCCESS,
-          message: 'Person pushed successfully',
+    describe('single person sync with hash storage update', () => {
+      it('should update hash storage when hashStorage is enabled and push succeeds', async () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const syncWithHashStorage = new SinglePersonSync({ 
+          buid: 'U12345678', 
+          config: mockConfig,
+          dataMapper: mockDataMapper,
+          hashStorage: {
+            enabled: true,
+            deltaStrategy: mockDeltaStrategy
+          }
+        });
+
+        await syncWithHashStorage.sync({ 
+          crudOperation: CrudOperation.CREATE
+        });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith({ 
+          clientId: 'test-client' 
+        });
+        expect(mockStorage.updatePreviousData).toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Hash storage updated successfully')
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      it('should not update hash storage when hashStorage is not enabled', async () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        await singlePersonSync.sync({ 
+          crudOperation: CrudOperation.CREATE
+        });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
+      });
+
+      it('should not update hash storage when hashStorage is undefined (default)', async () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        await singlePersonSync.sync({ 
+          crudOperation: CrudOperation.CREATE 
+        });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
+      });
+
+      it('should not update hash storage when push fails', async () => {
+        mockDataTarget.pushOne.mockResolvedValue({
+          status: Status.FAILURE,
+          message: 'Push failed',
           timestamp: new Date(),
           primaryKey: [{ id: 'U12345678' }],
           crud: CrudOperation.CREATE
-        })
-      };
-      
-      // Clear and setup mocks
-      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
-      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
-      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
-      
-      // Provide dataMapper upfront
-      await SinglePersonSync.syncAll({
-        config: mockConfig,
-        buids,
-        dataMapper: freshDataMapper as any
+        });
+
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const syncWithHashStorage = new SinglePersonSync({ 
+          buid: 'U12345678', 
+          config: mockConfig,
+          dataMapper: mockDataMapper,
+          hashStorage: {
+            enabled: true,
+            deltaStrategy: mockDeltaStrategy
+          }
+        });
+
+        await syncWithHashStorage.sync({ 
+          crudOperation: CrudOperation.CREATE
+        });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
       });
-      
-      // Verify syncs still happened for each BUID
-      expect(freshDataSource.fetchRaw).toHaveBeenCalledTimes(buids.length);
-      
-      // Verify the same dataMapper was used (getMappedData called for each BUID)
-      expect(freshDataMapper.getMappedData).toHaveBeenCalledTimes(buids.length);
+
+      it('should log warning and continue when hash storage update fails', async () => {
+        mockStorage.fetchPreviousData.mockRejectedValue(new Error('Storage fetch failed'));
+        
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        const syncWithHashStorage = new SinglePersonSync({ 
+          buid: 'U12345678', 
+          config: mockConfig,
+          dataMapper: mockDataMapper,
+          hashStorage: {
+            enabled: true,
+            deltaStrategy: mockDeltaStrategy
+          }
+        });
+
+        await syncWithHashStorage.sync({ 
+          crudOperation: CrudOperation.CREATE
+        });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Single Person Sync completed successfully')
+        );
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to update hash storage')
+        );
+
+        consoleSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('should add new record to empty hash storage', async () => {
+        mockStorage.fetchPreviousData.mockResolvedValue([]);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const syncWithHashStorage = new SinglePersonSync({ 
+          buid: 'U12345678', 
+          config: mockConfig,
+          dataMapper: mockDataMapper,
+          hashStorage: {
+            enabled: true,
+            deltaStrategy: mockDeltaStrategy
+          }
+        });
+
+        await syncWithHashStorage.sync({ 
+          crudOperation: CrudOperation.CREATE
+        });
+
+        expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(
+          expect.objectContaining({
+            clientId: 'test-client',
+            newPreviousData: expect.arrayContaining([
+              expect.objectContaining({
+                fieldValues: expect.any(Array)
+              })
+            ])
+          })
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      it('should update existing record in hash storage', async () => {
+        // Existing hash storage has the same person already
+        const existingCachedData = [
+          {
+            fieldValues: [
+              { id: 'U12345678' },
+              { firstName: 'Jane' }, // Different name
+              { lastName: 'Smith' }
+            ]
+          }
+        ];
+        mockStorage.fetchPreviousData.mockResolvedValue(existingCachedData);
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        const syncWithHashStorage = new SinglePersonSync({ 
+          buid: 'U12345678', 
+          config: mockConfig,
+          dataMapper: mockDataMapper,
+          hashStorage: {
+            enabled: true,
+            deltaStrategy: mockDeltaStrategy
+          }
+        });
+
+        await syncWithHashStorage.sync({ 
+          crudOperation: CrudOperation.UPDATE
+        });
+
+        // Verify the hash storage was updated with new data (John Doe, not Jane Smith)
+        expect(mockStorage.updatePreviousData).toHaveBeenCalled();
+        const updateCall = mockStorage.updatePreviousData.mock.calls[0][0];
+        expect(updateCall.newPreviousData).toHaveLength(1); // Still one record
+        expect(updateCall.newPreviousData[0].fieldValues).toContainEqual({ id: 'U12345678' });
+
+        consoleSpy.mockRestore();
+      });
+    });
+  });
+
+  describe('getMappedPerson caching behavior', () => {
+    let mockStorage: any;
+    let mockDeltaStrategy: any;
+
+    beforeEach(() => {
+      // Create mock storage for hash storage tests
+      mockStorage = {
+        fetchPreviousData: jest.fn().mockResolvedValue([]),
+        updatePreviousData: jest.fn().mockResolvedValue(undefined)
+      };
+
+      // Create mock delta strategy
+      mockDeltaStrategy = {
+        storage: mockStorage
+      };
+
+      // Mock DeltaStrategyFactory to return our mock strategy
+      (DeltaStrategyFactory.createStrategy as jest.Mock) = jest.fn().mockReturnValue(mockDeltaStrategy);
     });
 
-    it('should continue to next BUID on sync failure', async () => {
-      const buids = ['U11111111', 'U22222222', 'U33333333'];
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
-      // Create fresh mocks for this test
-      const freshDataSource = {
-        fetchRaw: jest.fn()
-          .mockResolvedValueOnce(mockRawData) // First BUID succeeds
-          .mockRejectedValueOnce(new Error('Network error')) // Second BUID fails
-          .mockResolvedValueOnce(mockRawData) // Third BUID succeeds
-      };
-      const freshDataMapper = {
-        getMappedData: jest.fn().mockReturnValue(mockInput),
-        map: jest.fn().mockReturnValue(mockInput),
-        currentTerms: mockCurrentTerms,
-        stateMap: new Map([['MA', { Code: 'MA', ID: '25', Name: 'Massachusetts' }]]),
-        countryMap: new Map([['US', { Alpha2: 'US', ID: '840', Name: 'United States' }]]),
-        orgHrn: jest.fn((sourceOrgId: string) => `hrn:hrs:lists:organizations/${sourceOrgId}`),
-        orgMap: new Map([['ORG001', 'hrn:hrs:lists:organizations/ORG001']]),
-        criticalValidationErrorMessage: undefined,
-        infoValidationErrorMessage: undefined
-      };
-      const freshDataTarget = {
-        pushOne: jest.fn().mockResolvedValue({
-          status: Status.SUCCESS,
-          message: 'Person pushed successfully',
-          timestamp: new Date(),
-          primaryKey: [{ id: 'U12345678' }],
-          crud: CrudOperation.CREATE
-        })
-      };
-      
-      // Clear and setup mocks
-      (BuCdmPersonDataSource as jest.Mock).mockClear().mockImplementation(() => freshDataSource);
-      (DataMapper as jest.Mock).mockClear().mockImplementation(() => freshDataMapper);
-      (HuronPersonDataTarget as unknown as jest.Mock).mockClear().mockImplementation(() => freshDataTarget);
-      
-      await SinglePersonSync.syncAll({
-        config: mockConfig,
-        buids,
-        dataMapper: freshDataMapper as any
+    it('should cache mapped person and not fetch from source multiple times', async () => {
+      mockDataSource.fetchRaw.mockResolvedValue(mockRawData);
+      mockDataMapper.getMappedData.mockReturnValue(mockInput);
+      mockDataTarget.pushOne.mockResolvedValue({
+        status: Status.SUCCESS,
+        message: 'Person pushed successfully',
+        timestamp: new Date(),
+        primaryKey: [{ id: 'U12345678' }],
+        crud: CrudOperation.UPDATE
       });
 
-      // Verify it tried to sync all three
-      expect(BuCdmPersonDataSource).toHaveBeenCalledTimes(buids.length);
+      const singlePersonSync = new SinglePersonSync({ 
+        buid: 'U12345678', 
+        config: mockConfig,
+        dataMapper: mockDataMapper,
+        hashStorage: {
+          enabled: true,
+          deltaStrategy: mockDeltaStrategy
+        }
+      });
+
+      // First call to getMappedPerson - should fetch from source
+      const result1 = await singlePersonSync.getMappedPerson({ 
+        crudOperation: CrudOperation.UPDATE 
+      });
       
-      // Verify the continuation message was logged
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Moving on to next BUID: U33333333 after failure with BUID: U22222222')
-      );
+      // Verify first call fetched from source
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+      expect(result1).toEqual(mockInput);
+
+      // Second call to getMappedPerson - should return cached result
+      const result2 = await singlePersonSync.getMappedPerson({ 
+        crudOperation: CrudOperation.UPDATE 
+      });
       
-      consoleSpy.mockRestore();
+      // Verify source was NOT called again (still only 1 call)
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+      expect(result2).toEqual(mockInput);
+      expect(result2).toBe(result1); // Should be the same object reference
+    });
+
+    it('should clear cache on error and allow retry', async () => {
+      // First call fails
+      mockDataSource.fetchRaw.mockRejectedValueOnce(new Error('Network error'));
+      // Second call succeeds
+      mockDataSource.fetchRaw.mockResolvedValueOnce(mockRawData);
+      mockDataMapper.getMappedData.mockReturnValue(mockInput);
+
+      const singlePersonSync = new SinglePersonSync({ 
+        buid: 'U12345678', 
+        config: mockConfig,
+        dataMapper: mockDataMapper
+      });
+
+      // First call should fail and clear cache
+      await expect(singlePersonSync.getMappedPerson({ 
+        crudOperation: CrudOperation.UPDATE 
+      })).rejects.toThrow('Network error');
+      
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+
+      // Second call should retry (cache was cleared on error)
+      const result = await singlePersonSync.getMappedPerson({ 
+        crudOperation: CrudOperation.UPDATE 
+      });
+      
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(mockInput);
+    });
+
+    it('should cache result during batch operations to prevent double-fetching', async () => {
+      mockDataSource.fetchRaw.mockResolvedValue(mockRawData);
+      mockDataMapper.getMappedData.mockReturnValue(mockInput);
+      mockDataTarget.pushOne.mockResolvedValue({
+        status: Status.SUCCESS,
+        message: 'Person pushed successfully',
+        timestamp: new Date(),
+        primaryKey: [{ id: 'U12345678' }],
+        crud: CrudOperation.UPDATE
+      });
+
+      const singlePersonSync = new SinglePersonSync({ 
+        buid: 'U12345678', 
+        config: mockConfig,
+        dataMapper: mockDataMapper,
+        hashStorage: {
+          enabled: true,
+          deltaStrategy: mockDeltaStrategy
+        }
+      });
+
+      // Simulate batch operation: sync() followed by getMappedPerson()
+      // Note: sync() will call SyncEvaluator which makes its own fetch, 
+      // plus getMappedPerson which makes another. That's expected.
+      // We'll call it without hash storage enabled to skip SyncEvaluator
+      const singlePersonSyncNoEval = new SinglePersonSync({ 
+        buid: 'U12345678', 
+        config: mockConfig,
+        dataMapper: mockDataMapper
+      });
+
+      await singlePersonSyncNoEval.sync({ 
+        suppressHashUpdate: true,
+        crudOperation: CrudOperation.CREATE // CREATE skips SyncEvaluator
+      });
+      
+      // Verify sync called fetchRaw once
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+
+      // Batch operation then calls getMappedPerson to get hashed data
+      const hashedResult = await singlePersonSyncNoEval.getMappedPerson({ 
+        crudOperation: CrudOperation.CREATE 
+      });
+      
+      // Verify source was NOT called again (cache reused)
+      expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+      expect(hashedResult).toEqual(mockInput);
     });
   });
 });

@@ -129,7 +129,8 @@ export class SourcePerson {
       fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
     }).parse();
 
-    console.log(`Source data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
+    console.log('Hashing source data...');
+    // console.log(`Source data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
 
     return input;
   }
@@ -161,7 +162,8 @@ export class SourcePerson {
       fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
     }).parse();
 
-    console.log(`Target data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
+    console.log('Hashing target data...');
+    // console.log(`Target data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
 
     return input;
   }

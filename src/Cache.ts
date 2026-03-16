@@ -8,6 +8,7 @@ export type Cache<K, V> = {
 
 export abstract class BasicCache implements Cache<string, string> {
   private cache: Map<string, string>;
+  private static instance: BasicCache | null = null;
 
   constructor() {
     this.cache = new Map<string, string>();
@@ -16,10 +17,22 @@ export abstract class BasicCache implements Cache<string, string> {
   /**
    * Get the singleton instance of the appropriate cache implementation.
    * @param cachePath Optional path for file system cache directory
-   * @returns In-memory cache for AWS Lambda, file system cache otherwise.
+   * @returns Singleton cache instance (in-memory for AWS Lambda, file system otherwise)
    */
   public static getInstance(cachePath?: string): BasicCache {
-    return process.env.AWS_LAMBDA_FUNCTION_NAME ? new InMemoryCache() : new FileSystemCache(cachePath);
+    if (!BasicCache.instance) {
+      BasicCache.instance = process.env.AWS_LAMBDA_FUNCTION_NAME 
+        ? new InMemoryCache() 
+        : new FileSystemCache(cachePath);
+    }
+    return BasicCache.instance;
+  }
+
+  /** 
+   * Reset the singleton instance (mainly for testing purposes)
+   */
+  public static resetInstance(): void {
+    BasicCache.instance = null;
   }
 
   public get(key: string): string | undefined {
@@ -109,7 +122,8 @@ export class FileSystemCache extends BasicCache {
       const fileContent = fs.readFileSync(this.path, 'utf8');
       const data = JSON.parse(fileContent);
       for (const key in data) {
-        this.set(key, data[key]);
+        // Use super.set to bypass file persistence during load
+        super.set(key, data[key]);
       }
     }
   }

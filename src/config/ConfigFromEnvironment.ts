@@ -23,6 +23,8 @@ export class ConfigFromEnvironment {
     DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH: 'DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH',
     DATATARGET_ENDPOINTCONFIG_LOGIN_USERID: 'DATATARGET_ENDPOINTCONFIG_LOGIN_USERID',
     DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN: 'DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN',
+    S3_BUCKET: 'S3_BUCKET',
+    S3_KEY: 'S3_KEY',
     CLIENT_ID: 'CLIENT_ID',
     BATCH_SIZE: 'BATCH_SIZE',
     TIMEOUT: 'TIMEOUT',
@@ -104,6 +106,23 @@ export class ConfigFromEnvironment {
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
         fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
+      };
+    }
+
+    // S3 data source overrides (for chunked processing)
+    if (process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        bucketName: process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET]
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        key: process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY]
       };
     }
 

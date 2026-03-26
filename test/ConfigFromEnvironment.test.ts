@@ -60,6 +60,8 @@ describe('ConfigFromEnvironment', () => {
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_LOGIN_USERID];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY];
     delete process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID];
     delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED];
     delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH];
@@ -101,8 +103,11 @@ describe('ConfigFromEnvironment', () => {
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.people?.endpointConfig?.baseUrl).toBe('https://prod-datasource.example.com');
-      expect(result.dataSource?.people?.endpointConfig?.apiKey).toBe('prod-api-key-123');
+      // Type guard for API-based config
+      if (result.dataSource?.people && 'endpointConfig' in result.dataSource.people) {
+        expect(result.dataSource.people.endpointConfig.baseUrl).toBe('https://prod-datasource.example.com');
+        expect(result.dataSource.people.endpointConfig.apiKey).toBe('prod-api-key-123');
+      }
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
 
@@ -112,7 +117,10 @@ describe('ConfigFromEnvironment', () => {
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
       
-      expect(result.dataSource?.people?.fetchPath).toBe('/api/v2/prod/people');
+      // Type guard for API-based config  
+      if (result.dataSource?.people && 'fetchPath' in result.dataSource.people) {
+        expect(result.dataSource.people.fetchPath).toBe('/api/v2/prod/people');
+      }
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
 
@@ -268,6 +276,53 @@ describe('ConfigFromEnvironment', () => {
       const result = configFromEnv.getConfig();
       
       expect(result.cache?.enabled).toBe(false);
+    });
+
+    it('should override S3 bucket name for people data source', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET] = 'my-integration-bucket';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      // Type guard for S3-based config
+      if (result.dataSource?.people && 'bucketName' in result.dataSource.people) {
+        expect(result.dataSource.people.bucketName).toBe('my-integration-bucket');
+      } else {
+        fail('Expected S3DataSourceConfig');
+      }
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+    });
+
+    it('should override S3 key for people data source', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY] = 'data/people/chunk-0042.ndjson';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      // Type guard for S3-based config
+      if (result.dataSource?.people && 'key' in result.dataSource.people) {
+        expect(result.dataSource.people.key).toBe('data/people/chunk-0042.ndjson');
+      } else {
+        fail('Expected S3DataSourceConfig');
+      }
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+    });
+
+    it('should override both S3 bucket and key for people data source', () => {
+      process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET] = 'my-integration-bucket';
+      process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY] = 'boston-university/chunks/chunk-0001.ndjson';
+
+      const configFromEnv = new ConfigFromEnvironment(validConfig);
+      const result = configFromEnv.getConfig();
+      
+      // Type guard for S3-based config
+      if (result.dataSource?.people && 'bucketName' in result.dataSource.people && 'key' in result.dataSource.people) {
+        expect(result.dataSource.people.bucketName).toBe('my-integration-bucket');
+        expect(result.dataSource.people.key).toBe('boston-university/chunks/chunk-0001.ndjson');
+      } else {
+        fail('Expected S3DataSourceConfig');
+      }
+      expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
     });
   });
 });

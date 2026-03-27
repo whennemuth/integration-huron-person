@@ -181,4 +181,79 @@ describe('DataMapper', () => {
       expect(mapper.currentTerms).toHaveLength(2);
     });
   });
+
+  describe('StaticMapUsage and dynamic lookup functionality', () => {
+    it('should use dynamic lookup syntax for organization when orgMap is false', () => {
+      const orgHrn = (sourceOrgId: string) => `lookup:sourceIdentifier:${sourceOrgId}`;
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms, 
+        stateMappings: mockStateMappings, 
+        countryMappings: mockCountryMappings,
+        orgHrn 
+      });
+      
+      const result = mapper.orgHrn('12345');
+      expect(result).toBe('lookup:sourceIdentifier:12345');
+    });
+
+    it('should use static map for organization when orgHrn function provided', () => {
+      const orgMappings = {
+        forwardMap: new Map<string, string>([
+          ['12345', 'hrn:hrs:organizations/test-org']
+        ]),
+        reverseMap: new Map<string, string>([
+          ['hrn:hrs:organizations/test-org', '12345']
+        ])
+      };
+      const orgHrn = (sourceOrgId: string) => orgMappings.forwardMap.get(sourceOrgId);
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms, 
+        stateMappings: mockStateMappings, 
+        countryMappings: mockCountryMappings,
+        orgMappings,
+        orgHrn 
+      });
+      
+      const result = mapper.orgHrn('12345');
+      expect(result).toBe('hrn:hrs:organizations/test-org');
+    });
+
+    it('should default to dynamic lookup syntax when no orgHrn function provided', () => {
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms, 
+        stateMappings: mockStateMappings, 
+        countryMappings: mockCountryMappings
+      });
+      
+      const result = mapper.orgHrn('67890');
+      expect(result).toBe('lookup:sourceIdentifier:67890');
+    });
+
+    it('should support state mappings being undefined', () => {
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms, 
+        countryMappings: mockCountryMappings
+      });
+      
+      expect(mapper.stateMappings).toBeUndefined();
+    });
+
+    it('should support country mappings being undefined', () => {
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms, 
+        stateMappings: mockStateMappings
+      });
+      
+      expect(mapper.countryMappings).toBeUndefined();
+    });
+
+    it('should support both state and country mappings being undefined', () => {
+      const mapper = new DataMapper({ 
+        currentTerms: mockCurrentTerms
+      });
+      
+      expect(mapper.stateMappings).toBeUndefined();
+      expect(mapper.countryMappings).toBeUndefined();
+    });
+  });
 });

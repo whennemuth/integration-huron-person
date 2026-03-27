@@ -148,7 +148,7 @@ if(require.main === module) {
 
     const unparsedInput:Input = targetDataMapper.map([huronPerson]);
 
-    const filterParms = await getDataMapperMaps(config);
+    const filterParms = await getDataMapperMaps(config, { orgMap: false, stateMap: true, countryMap: true });
 
     const fieldFilterParms = {
       ...filterParms,

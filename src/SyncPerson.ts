@@ -352,7 +352,7 @@ async function main() {
     const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    const dataMapper = await getDataMapper(config);
+    const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
     let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;

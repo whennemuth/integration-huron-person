@@ -179,7 +179,7 @@ if(require.main === module) {
   (async () => {
     const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none');
 
-    const sourceDataMapper = await getDataMapper(config);
+    const sourceDataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
 
     const targetDataMapper = new ReverseDataMapper();
 

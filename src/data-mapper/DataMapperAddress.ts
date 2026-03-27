@@ -7,8 +7,8 @@ export { AddressType };
 
 export type AddressMapperParms = {
   person: any;
-  stateMappings: StateMappings;
-  countryMappings: CountryMappings;
+  stateMappings?: StateMappings;
+  countryMappings?: CountryMappings;
   removeNullValues?:boolean;
   addressTypes?: Set<AddressType>;
 }
@@ -142,6 +142,15 @@ export const AddressMapper = (params: AddressMapperParms): MappedAddress => {
       if(stateKey === '') {
         return undefined;
       }
+      
+      // If no state mappings provided, use dynamic lookup syntax
+      if (!stateMappings) {
+        return { 
+          hrn: `lookup:name:${stateKey}`, 
+          name: stateKey 
+        };
+      }
+      
       const stateObj = stateMappings.forwardMap.get(stateKey);
       if(!stateObj) {
         console.log(`State code ${stateKey} not found in state map`);
@@ -176,6 +185,15 @@ export const AddressMapper = (params: AddressMapperParms): MappedAddress => {
       if(countryKey === '') {
         return undefined;
       }
+      
+      // If no country mappings provided, use dynamic lookup syntax
+      if (!countryMappings) {
+        return { 
+          hrn: `lookup:name:${countryKey}`, 
+          name: countryKey 
+        };
+      }
+      
       const countryObj = countryMappings.forwardMap.get(countryKey);
       if(!countryObj) {
         console.log(`Country code ${countryKey} not found in country map`);

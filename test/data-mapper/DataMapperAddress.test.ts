@@ -780,4 +780,226 @@ describe('AddressMapper', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('Dynamic lookup syntax (when mappings not provided)', () => {
+    describe('getStateProvince with no stateMappings', () => {
+      it('should return lookup syntax when state is present and no stateMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    state: 'MA',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getStateProvince();
+
+        expect(result).toEqual({
+          hrn: 'lookup:name:MA',
+          name: 'MA'
+        });
+      });
+
+      it('should return undefined when state is empty and no stateMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    state: '',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getStateProvince();
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should return undefined when state is missing and no stateMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getStateProvince();
+
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('getCountry with no countryMappings', () => {
+      it('should return lookup syntax when country is present and no countryMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    country: 'US',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getCountry();
+
+        expect(result).toEqual({
+          hrn: 'lookup:name:US',
+          name: 'US'
+        });
+      });
+
+      it('should return undefined when country is empty and no countryMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    country: '',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getCountry();
+
+        expect(result).toBeUndefined();
+      });
+
+      it('should return undefined when country is missing and no countryMappings provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person });
+        const result = mapper.getCountry();
+
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('Mixed scenarios', () => {
+      it('should use static map for state when provided, and lookup for country when not provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    state: 'MA',
+                    country: 'US',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person, stateMappings: mockStateMappings });
+        const stateResult = mapper.getStateProvince();
+        const countryResult = mapper.getCountry();
+
+        expect(stateResult).toEqual({
+          hrn: 'hrn:hrs:lists:states/massachusetts',
+          name: 'Massachusetts'
+        });
+        expect(countryResult).toEqual({
+          hrn: 'lookup:name:US',
+          name: 'US'
+        });
+      });
+
+      it('should use lookup for state when not provided, and static map for country when provided', () => {
+        const person = {
+          employeeInfo: {
+            positions: [{
+              positionInfo: {
+                Office: [{
+                  workAddress: { 
+                    street: '123 Main St',
+                    city: 'Boston',
+                    state: 'MA',
+                    country: 'US',
+                    postalCode: '02115'
+                  }
+                }]
+              }
+            }]
+          }
+        };
+
+        const mapper = AddressMapper({ person, countryMappings: mockCountryMappings });
+        const stateResult = mapper.getStateProvince();
+        const countryResult = mapper.getCountry();
+
+        expect(stateResult).toEqual({
+          hrn: 'lookup:name:MA',
+          name: 'MA'
+        });
+        expect(countryResult).toEqual({
+          hrn: 'hrn:hrs:lists:countries/usa',
+          name: 'United States'
+        });
+      });
+    });
+  });
 });

@@ -18,8 +18,8 @@ import { ConfigManager } from '../config/ConfigManager';
 export interface DataMapperParams {
   currentTerms: Term[];
   orgMappings?: OrgMappings;
-  stateMappings: StateMappings;
-  countryMappings: CountryMappings;
+  stateMappings?: StateMappings;
+  countryMappings?: CountryMappings;
   orgHrn?: (sourceOrgId: string) => string | undefined;
   addressTypes?: Set<AddressType>;
 }
@@ -261,6 +261,7 @@ export class ReverseDataMapper implements CoreDataMapper {
   }
 }
 
+export type StaticMapUsage = { orgMap?: boolean, stateMap?: boolean, countryMap?: boolean };
 
 /**
  * Fetch all static mapping needed for the DataMapper, including current terms, state 
@@ -269,25 +270,41 @@ export class ReverseDataMapper implements CoreDataMapper {
  * @param config 
  * @returns 
  */
-export const getDataMapper = async (config: Config): Promise<DataMapper> => {
-  const maps = await getDataMapperMaps(config);
+export const getDataMapper = async (config: Config, staticMapUsage?: StaticMapUsage): Promise<DataMapper> => {
+  const maps = await getDataMapperMaps(config, staticMapUsage);
   const { stateMappings, countryMappings, orgMappings } = maps;
-  const orgHrn = (sourceOrgId: string) => orgMappings.forwardMap.get(sourceOrgId);
+  const { orgMap=false } = staticMapUsage ?? {}
+  let orgHrn = undefined;
+  if(orgMap) {
+    orgHrn = (sourceOrgId: string) => orgMappings?.forwardMap.get(sourceOrgId);
+  }
   const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
   const currentTerms = await termsDataSource.fetchRaw();
   console.log(`Fetched ${currentTerms.length} current term(s)`);
   return new DataMapper({ currentTerms, stateMappings, countryMappings, orgHrn, orgMappings });
 }
 
-export const getDataMapperMaps = async (config: Config): Promise<{ 
-  stateMappings: StateMappings, 
-  countryMappings: CountryMappings, 
-  orgMappings: OrgMappings
+/**
+ * Fetch all static mapping needed for the DataMapper as indicated by staticMapUsage.
+ * If staticMapUsage is not provided, or one of its properties is false, or missing,
+ * the Huron API dynamic lookup syntax is assumed for the corresponding mappable field 
+ * (e.g. organization HRN will be "lookup:sourceIdentifier:{sourceOrgId}"), and the mapping 
+ * data will not be fetched.
+ * @param config 
+ * @param staticMapUsage 
+ * @returns 
+ */
+export const getDataMapperMaps = async (config: Config, staticMapUsage?: StaticMapUsage): Promise<{ 
+  stateMappings?: StateMappings, 
+  countryMappings?: CountryMappings, 
+  orgMappings?: OrgMappings
 }> => {
-  const orgMappings: OrgMappings = await loadOrgMap(config);
-  const stateMappings = await StateLookup.loadStates(config);
-  const countryMappings = await CountryLookup.loadCountries(config);
-  return { stateMappings, countryMappings, orgMappings };
+  const { orgMap=false, stateMap=false, countryMap=false } = staticMapUsage ?? {};
+  return {
+    stateMappings: stateMap ? await StateLookup.loadStates(config) : undefined,
+    countryMappings: countryMap ? await CountryLookup.loadCountries(config) : undefined,
+    orgMappings: orgMap ? await loadOrgMap(config) : undefined
+  }
 } 
 
 
@@ -295,7 +312,7 @@ export const getDataMapperMaps = async (config: Config): Promise<{
 if(require.main === module) {
   (async () => {
     const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
-    const dataMapper = await getDataMapper(config);
+    const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
     const { currentTerms=[], stateMappings, countryMappings, orgMappings } = dataMapper;
     console.log(`DataMapper: ${JSON.stringify({
       stateMapSize: stateMappings?.forwardMap?.size,

@@ -44,7 +44,7 @@ class HuronPersonIntegration {
       console.log(`Storage Type: ${type}`);
 
       // Create integration components with currentTerms
-      const dataMapper = await getDataMapper(config);
+      const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
 
       let responseFilter: ResponseProcessor | undefined;
       if (fieldsOfInterest) {

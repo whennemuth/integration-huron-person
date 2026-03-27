@@ -638,5 +638,583 @@ describe('FieldFilter', () => {
         expect(result.fieldValues[1]).toEqual({ employer: '10003827' });
       });
     });
+
+    describe('Lookup expression handling', () => {
+      describe('Organization lookup expressions', () => {
+        it('should extract ID from organization lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                organization: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:99999',
+                  name: 'Unknown Org'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(1);
+          expect(result.fieldValues[0]).toEqual({ organization: '99999' });
+        });
+
+        it('should extract ID from employer lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                employer: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:12345',
+                  name: 'Employer Org'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(1);
+          expect(result.fieldValues[0]).toEqual({ employer: '12345' });
+        });
+
+        it('should extract ID from secondaryUnit lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                secondaryUnit: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:54321',
+                  name: 'Secondary Unit'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(1);
+          expect(result.fieldValues[0]).toEqual({ secondaryUnit: '54321' });
+        });
+
+        it('should extract ID from additionalUnit lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                additionalUnit: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:11111',
+                  name: 'Additional Unit'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(1);
+          expect(result.fieldValues[0]).toEqual({ additionalUnit: '11111' });
+        });
+
+        it('should handle mixed HRN types (lookup and regular)', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                employer: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:12345',
+                  name: 'Employer'
+                }
+              },
+              {
+                organization: {
+                  id: undefined,
+                  hrn: 'urn:dco:organization:10003827',
+                  name: 'Regular HRN Org'
+                }
+              },
+              {
+                secondaryUnit: {
+                  id: '99999',
+                  hrn: 'lookup:sourceIdentifier:88888',
+                  name: 'Secondary'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(3);
+          expect(result.fieldValues[0]).toEqual({ employer: '12345' });
+          expect(result.fieldValues[1]).toEqual({ organization: '10003827' });
+          expect(result.fieldValues[2]).toEqual({ secondaryUnit: '99999' }); // Prefers id field
+        });
+
+        it('should prefer id field over lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                employer: {
+                  id: '12345',
+                  hrn: 'lookup:sourceIdentifier:99999',
+                  name: 'Employer'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0]).toEqual({ employer: '12345' });
+        });
+
+        it('should handle lookup expression with colons in the ID', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                organization: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:org:with:colons:123',
+                  name: 'Complex Org'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Should extract everything after the second colon
+          expect(result.fieldValues[0]).toEqual({ organization: 'org:with:colons:123' });
+        });
+      });
+
+      describe('State lookup expressions', () => {
+        it('should extract state code from state lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'lookup:name:MA',
+                    name: 'MA'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            stateProvince: 'MA'
+          });
+        });
+
+        it('should handle state with regular HRN', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'hrn:hrs:lists:states/NY',
+                    name: 'New York'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            stateProvince: 'NY'
+          });
+        });
+
+        it('should handle state lookup expression for unmapped state', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'lookup:name:TX',
+                    name: 'TX'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Should still extract the code even if not in mapping
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            stateProvince: 'TX'
+          });
+        });
+      });
+
+      describe('Country lookup expressions', () => {
+        it('should extract country code from country lookup expression', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  country: {
+                    hrn: 'lookup:name:US',
+                    name: 'US'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            country: 'US'
+          });
+        });
+
+        it('should handle country with regular HRN', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  country: {
+                    hrn: 'hrn:hrs:lists:countries/CA',
+                    name: 'Canada'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            country: 'CA'
+          });
+        });
+
+        it('should handle country lookup expression for unmapped country', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  country: {
+                    hrn: 'lookup:name:MX',
+                    name: 'MX'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Should still extract the code even if not in mapping
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            country: 'MX'
+          });
+        });
+      });
+
+      describe('Combined lookup expressions', () => {
+        it('should handle both state and country lookup expressions together', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'lookup:name:NY',
+                    name: 'NY'
+                  },
+                  country: {
+                    hrn: 'lookup:name:US',
+                    name: 'US'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues[0].contactInformation).toEqual({
+            stateProvince: 'NY',
+            country: 'US'
+          });
+        });
+
+        it('should handle mixed lookup and regular HRNs for address fields', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              { id: 'U12345678' },
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'lookup:name:NY',
+                    name: 'NY'
+                  },
+                  country: {
+                    hrn: 'hrn:hrs:lists:countries/CA',
+                    name: 'Canada'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(2);
+          expect(result.fieldValues[0]).toEqual({ id: 'U12345678' });
+          expect(result.fieldValues[1].contactInformation).toEqual({
+            stateProvince: 'NY',
+            country: 'CA'
+          });
+        });
+
+        it('should handle all field types with lookup expressions together', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              { id: 'U12345678' },
+              {
+                employer: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:12345',
+                  name: 'Employer'
+                }
+              },
+              {
+                organization: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:67890',
+                  name: 'Org'
+                }
+              },
+              {
+                secondaryUnit: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:99999',
+                  name: 'Secondary'
+                }
+              },
+              {
+                contactInformation: {
+                  stateProvince: {
+                    hrn: 'lookup:name:MA',
+                    name: 'MA'
+                  },
+                  country: {
+                    hrn: 'lookup:name:US',
+                    name: 'US'
+                  }
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          expect(result.fieldValues).toHaveLength(5);
+          expect(result.fieldValues[0]).toEqual({ id: 'U12345678' });
+          expect(result.fieldValues[1]).toEqual({ employer: '12345' });
+          expect(result.fieldValues[2]).toEqual({ organization: '67890' });
+          expect(result.fieldValues[3]).toEqual({ secondaryUnit: '99999' });
+          expect(result.fieldValues[4].contactInformation).toEqual({
+            stateProvince: 'MA',
+            country: 'US'
+          });
+        });
+      });
+
+      describe('Edge cases', () => {
+        it('should handle malformed lookup expression (too few parts)', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                employer: {
+                  id: undefined,
+                  hrn: 'lookup:invalid',
+                  name: 'Bad Lookup'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Should be removed as undefined (empty values removed)
+          expect(result.fieldValues).toEqual([]);
+        });
+
+        it('should not treat regular strings as lookup expressions', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                employer: {
+                  id: undefined,
+                  hrn: 'not-a-lookup-expression',
+                  name: 'Some Org'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Should not find in mapping, result in undefined, removed
+          expect(result.fieldValues).toEqual([]);
+        });
+
+        it('should handle empty lookup expression value', () => {
+          const fieldSet: FieldSet = {
+            fieldValues: [
+              {
+                organization: {
+                  id: undefined,
+                  hrn: 'lookup:sourceIdentifier:',
+                  name: 'Empty ID'
+                }
+              }
+            ]
+          };
+
+          const params: FieldFilterParams = {
+            fieldSet,
+            stateMappings: mockStateMappings,
+            countryMappings: mockCountryMappings,
+            orgMappings: mockOrgMappings
+          };
+
+          const result = new FieldFilter(params).filter();
+
+          // Empty string is removed as empty value
+          expect(result.fieldValues).toEqual([]);
+        });
+      });
+    });
   });
 });

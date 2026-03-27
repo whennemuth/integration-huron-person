@@ -77,10 +77,36 @@ export class FieldFilter {
     return retval;
   }
 
+  /**
+   * Checks if a string is a lookup expression (e.g., "lookup:sourceIdentifier:12345" or "lookup:name:MA")
+   */
+  private isLookupExpression = (value: string): boolean => {
+    return typeof value === 'string' && value.startsWith('lookup:');
+  }
+
+  /**
+   * Extracts the value from a lookup expression.
+   * For "lookup:sourceIdentifier:12345" returns "12345"
+   * For "lookup:name:MA" returns "MA"
+   * For "lookup:sourceIdentifier:org:with:colons" returns "org:with:colons"
+   */
+  private extractFromLookupExpression = (lookupExpr: string): string | undefined => {
+    if (!this.isLookupExpression(lookupExpr)) {
+      return undefined;
+    }
+    const parts = lookupExpr.split(':');
+    if (parts.length >= 3) {
+      // Return everything after the second colon (parts[2] onwards, joined by colons)
+      return parts.slice(2).join(':');
+    }
+    return undefined;
+  }
+
   /** 
    * Reduce and "normalize" an organization field to just the BUID. The BUID will correspond 
    * to the id field, but if this is not present, attempt a lookup via the org mapping if 
-   * supplied.
+   * supplied. If the HRN is a lookup expression (e.g., "lookup:sourceIdentifier:12345"),
+   * extract the ID directly from the expression.
    */
   private normalizeOrg = (orgType: string): void => {
     const { params: { orgMappings: { reverseMap } = {} }, filteredFieldValues } = this;
@@ -91,8 +117,14 @@ export class FieldFilter {
         if(orgValue && typeof orgValue === 'object') {
           let buid = orgValue.id;
           const hrn = orgValue.hrn;
-          if( ! buid && reverseMap && hrn) {
-            buid = reverseMap.get(hrn);
+          if( ! buid && hrn) {
+            // Check if HRN is a lookup expression first
+            if (this.isLookupExpression(hrn)) {
+              buid = this.extractFromLookupExpression(hrn);
+            } else if (reverseMap) {
+              // Try to resolve via org mapping
+              buid = reverseMap.get(hrn);
+            }
           }
           (fv as any)[orgType] = buid || undefined;
         }
@@ -120,8 +152,17 @@ export class FieldFilter {
       if(fldname === fn) {
         if(fv && typeof fv === 'object') {
           const hrn = fv.hrn;
-          const hrnCode = hrn.split('/').pop();
-          const buid = mappings?.reverseMap?.get(hrnCode);
+          let buid: string | undefined = undefined;
+          
+          // Check if HRN is a lookup expression first
+          if (this.isLookupExpression(hrn)) {
+            buid = this.extractFromLookupExpression(hrn);
+          } else {
+            // Try to resolve via state/country mapping
+            const hrnCode = hrn.split('/').pop();
+            buid = mappings?.reverseMap?.get(hrnCode);
+          }
+          
           (contactInfo as any)[fn] = buid ? buid : undefined;
         }
       }

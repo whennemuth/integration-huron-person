@@ -19,7 +19,7 @@ const NameTypes = [
  * @returns The selected name object mapped over to the target Huron structure.
  */
 export const NameMapper = (params: { person: any, removeNullValues:boolean, preferredOnly?: boolean }): { getName: () => any } => {
-  let { person, removeNullValues = true, preferredOnly = true } = params;
+  let { person, removeNullValues = true, preferredOnly = false } = params;
 
   if(removeNullValues) {
     person = removeNulls(person);

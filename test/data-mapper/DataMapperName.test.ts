@@ -493,7 +493,7 @@ describe('NameMapper', () => {
     });
 
     describe('preferredOnly parameter', () => {
-      it('should default to true when preferredOnly is omitted and filter out non-PRF names', () => {
+      it('should default to false when preferredOnly is omitted and use priority-based sorting', () => {
         const person = {
           personBasic: {
             names: [
@@ -519,9 +519,12 @@ describe('NameMapper', () => {
         const mapper = NameMapper({ person, removeNullValues: true });
         const result = mapper.getName();
 
-        // Should return PRF name (filtered out PRI)
-        // Should return empty object when no PRF names have valid effectiveDate
-        expect(result).toEqual({});
+        // Should return PRF name from Campus Solutions (priority 2) over PRI from SAP (priority 3)
+        expect(result).toEqual({
+          firstName: 'Preferred',
+          middleName: 'P',
+          lastName: 'Name'
+        });
       });
 
       it('should filter out all non-PRF names when preferredOnly is true', () => {

@@ -73,12 +73,21 @@ describe('ConfigManager', () => {
         expect(configManager.getConfig('person')).toEqual(validConfig);
       });
 
-      it('should throw error for invalid file system config', () => {
+      it('should gracefully handle file system errors and continue chain', () => {
         mockedFs.existsSync.mockReturnValue(false);
 
-        expect(() => configManager.fromFileSystem(mockConfigPath)).toThrow(
-          'Failed to load configuration from file system'
+        // Spy on console.warn to verify warning is logged
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        // Should NOT throw error, should return ConfigManager for chaining
+        const result = configManager.fromFileSystem(mockConfigPath);
+        
+        expect(result).toBe(configManager); // Chain continues
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('No valid configuration to load from file system')
         );
+
+        consoleWarnSpy.mockRestore();
       });
     });
 
@@ -208,6 +217,98 @@ describe('ConfigManager', () => {
       
       expect(result1).toEqual(validConfig);
       expect(result2).toEqual(validConfig);
+    });
+  });
+
+  describe('Error Handling and Graceful Degradation', () => {
+    it('should continue chain even when multiple sources fail', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // Set up failures for file system and environment
+      mockedFs.existsSync.mockReturnValue(false);
+      delete process.env.CLIENT_ID;
+      delete process.env.HURON_PERSON_CONFIG_JSON;
+      
+      // Chain should continue even with failures
+      const result = configManager
+        .fromFileSystem(mockConfigPath)
+        .fromEnvironment()
+        .fromJsonString();
+      
+      expect(result).toBe(configManager); // Chain continues
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No valid configuration to load from file system')
+      );
+      
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should successfully load from later source when earlier sources fail', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // File system fails
+      mockedFs.existsSync.mockReturnValue(false);
+      
+      // But JSON string succeeds
+      process.env.HURON_PERSON_CONFIG_JSON = JSON.stringify(validConfig);
+      
+      const result = configManager
+        .fromFileSystem(mockConfigPath)
+        .fromJsonString()
+        .getConfig('person');
+      
+      expect(result).toEqual(validConfig);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No valid configuration to load from file system')
+      );
+      
+      // Clean up
+      delete process.env.HURON_PERSON_CONFIG_JSON;
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should handle JSON parse errors gracefully in fromJsonString', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // Set invalid JSON
+      process.env.HURON_PERSON_CONFIG_JSON = '{invalid json}';
+      
+      const result = configManager.fromJsonString();
+      
+      expect(result).toBe(configManager); // Chain continues
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No valid configuration to load from HURON_PERSON_CONFIG_JSON')
+      );
+      
+      // Clean up
+      delete process.env.HURON_PERSON_CONFIG_JSON;
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should use fromJsonString as primary source with fromFileSystem as fallback', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // JSON string has priority (called first)
+      const jsonConfig = { ...validConfig, integration: { ...validConfig.integration, clientId: 'json-client-id' } };
+      process.env.HURON_PERSON_CONFIG_JSON = JSON.stringify(jsonConfig);
+      
+      // File system has different value
+      const fileConfig = { ...validConfig, integration: { ...validConfig.integration, clientId: 'file-client-id' } };
+      mockedFs.existsSync.mockReturnValue(true);
+      mockedFs.readFileSync.mockReturnValue(JSON.stringify(fileConfig));
+      
+      const result = configManager
+        .reset()
+        .fromJsonString()  // Called first = higher precedence
+        .fromFileSystem(mockConfigPath)  // Called later = fallback
+        .getConfig('person');
+      
+      // JSON config should win (earlier in chain)
+      expect(result.integration.clientId).toBe('json-client-id');
+      
+      // Clean up
+      delete process.env.HURON_PERSON_CONFIG_JSON;
+      consoleWarnSpy.mockRestore();
     });
   });
 

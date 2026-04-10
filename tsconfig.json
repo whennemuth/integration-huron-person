@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "module": "CommonJS",
-    "lib": [ "ES5", "ES6", "ES2016", "ES2017", "ES2022" ],
+    "target": "ES2022",
+    "module": "Node16",
+    "lib": [ "ES2022" ],
     "declaration": true,
     "declarationDir": "./dist/types",
     "strict": true,
@@ -19,10 +19,11 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
+    "types": ["jest", "node"],
     "typeRoots": [
       "./node_modules/@types"
     ],
-    "moduleResolution": "Node",
+    "moduleResolution": "Node16",
     "resolveJsonModule": true,
     "esModuleInterop": true
   },

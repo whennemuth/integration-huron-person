@@ -14,6 +14,11 @@
         "personBasic.names[*].middleName"
       ]
     },
+    "_people": {
+      "bucketName": "huron-person-file-drop-dev",
+      "key": "20260303111609986/chunk-0011.ndjson",
+      "region": "us-east-2"
+    },
     "people": {
       "endpointConfig": {
         "baseUrl": "https://prod-budev-fm.snaplogic.io",
@@ -55,9 +60,11 @@
     "timeout": 30000
   },
   "storage": {
-    "type": "file",
+    "type": "s3",
     "config": {
-      "path": "./data/delta-storage"
+      "bucketName": "huron-person-file-drop-dev",
+      "keyPrefix": "delta-storage/",
+      "region": "us-east-2"
     }
   }
 }

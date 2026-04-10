@@ -22,6 +22,10 @@ class BuCdmPeopleDataSource extends BuCdmDataSource implements DataSource {
     if (!people) {
       throw new Error('People data source configuration is required for people execution mode');
     }
+    // Type guard: ensure we have DataSourceConfig (not S3DataSourceConfig)
+    if (!('endpointConfig' in people)) {
+      throw new Error('Invalid configuration: API-based data source requires endpointConfig');
+    }
     return {
       ...people.endpointConfig,
       timeout: people.endpointConfig.timeout || this.config.integration.timeout
@@ -33,10 +37,13 @@ class BuCdmPeopleDataSource extends BuCdmDataSource implements DataSource {
     if (!people) {
       throw new Error('People data source configuration is required for people execution mode');
     }
+    // Type guard: ensure we have DataSourceConfig (not S3DataSourceConfig)
+    if (!('fetchPath' in people)) {
+      throw new Error('Invalid configuration: API-based data source requires fetchPath');
+    }
     return people.fetchPath;
   }
 }
-
 
 /**
  * Main entry point
@@ -70,11 +77,17 @@ async function main() {
     timer.stop();
     timer.logElapsed(`Fetched people data in`);
 
+    const recordsFull = 'fetched_people_cdm_data.json';
+
     // Output the fetched data to console
-    console.log('Fetched People Data:', JSON.stringify(rawData, null, 2));
+    console.log('Fetched People Data:', JSON.stringify({ 
+      recordCount: rawData.length, 
+      recordsFull,
+      buids: rawData.map((record: any) => record.personid) 
+    }, null, 2));
 
     // Output all elements of the rawData array to a file as formatted JSON.
-    fs.writeFileSync('fetched_people_data.json', JSON.stringify(rawData, null, 2));
+    fs.writeFileSync(recordsFull, JSON.stringify(rawData, null, 2));
 
     process.exit(0);
   } catch (error) {
@@ -88,3 +101,4 @@ if (require.main === module) {
 }
 
 export { BuCdmPeopleDataSource };
+

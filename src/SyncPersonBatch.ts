@@ -1,10 +1,10 @@
-import { CrudOperation, DeltaStrategy, FieldSet, Status, InputUtilsDecorator } from 'integration-core';
+import { CrudOperation, FieldSet, InputUtilsDecorator, Status } from 'integration-core';
+import { BasicCache } from './Cache';
+import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper } from './data-mapper/DataMapper';
-import { BasicCache } from './Cache';
-import { DeltaStrategyFactory } from './DeltaStrategyFactory';
 
 type BatchPersonSyncParams = PersonSyncParams & {
   buids: string[];
@@ -146,7 +146,7 @@ async function main() {
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
-      deltaStrategy: DeltaStrategyFactory.createStrategy(config)
+      deltaStrategy: DeltaStrategyFactory.createStrategy({ config })
     } : undefined;
 
     if( buidsString === undefined || buidsString.trim() === '' ) {

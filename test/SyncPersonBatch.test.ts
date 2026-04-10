@@ -1,12 +1,12 @@
-import { BatchPersonSync } from '../src/SyncPersonBatch';
+import { CrudOperation, Status } from 'integration-core';
 import { SinglePersonSync } from '../src/SyncPerson';
+import { BatchPersonSync } from '../src/SyncPersonBatch';
+import { Config } from '../src/config/Config';
+import { DataMapper } from '../src/data-mapper/DataMapper';
+import { Term } from '../src/data-source/CurrentTermsDataSource';
 import { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
 import { HuronPersonDataTarget } from '../src/data-target/PersonDataTarget';
-import { DataMapper } from '../src/data-mapper/DataMapper';
-import { Config } from '../src/config/Config';
-import { Status, CrudOperation } from 'integration-core';
-import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
-import { DeltaStrategyFactory } from '../src/DeltaStrategyFactory';
+import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
 
 // Mock the external dependencies
 jest.mock('../src/SyncPerson');
@@ -14,7 +14,7 @@ jest.mock('../src/data-source/PersonDataSource');
 jest.mock('../src/data-target/PersonDataTarget');
 jest.mock('../src/data-mapper/DataMapper');
 jest.mock('../src/data-source/CurrentTermsDataSource');
-jest.mock('../src/DeltaStrategyFactory');
+jest.mock('../src/delta-strategy/DeltaStrategyFactory');
 
 /**
  * Tests for BatchPersonSync - batch person synchronization using composition pattern.

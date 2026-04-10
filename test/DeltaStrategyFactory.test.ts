@@ -1,4 +1,4 @@
-import { DeltaStrategyFactory } from '../src/DeltaStrategyFactory';
+import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
 import { Config } from '../src/config/Config';
 
 // Mock integration-core
@@ -66,7 +66,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateFileStrategy = jest.fn().mockReturnValue(mockStrategy);
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
-      const result = DeltaStrategyFactory.createStrategy(mockConfig);
+      const result = DeltaStrategyFactory.createStrategy({ config: mockConfig });
 
       expect(mockCreateFileStrategy).toHaveBeenCalledWith({
         clientId: mockConfig.integration.clientId,
@@ -80,7 +80,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateFileStrategy = jest.fn().mockImplementation(() => { throw error; });
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
-      expect(() => DeltaStrategyFactory.createStrategy(mockConfig)).toThrow('Strategy creation failed');
+      expect(() => DeltaStrategyFactory.createStrategy({ config: mockConfig })).toThrow('Strategy creation failed');
     });
 
     it('should create strategy instances each time', () => {
@@ -92,8 +92,8 @@ describe('DeltaStrategyFactory', () => {
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
       // Call twice
-      const result1 = DeltaStrategyFactory.createStrategy(mockConfig);
-      const result2 = DeltaStrategyFactory.createStrategy(mockConfig);
+      const result1 = DeltaStrategyFactory.createStrategy({ config: mockConfig });
+      const result2 = DeltaStrategyFactory.createStrategy({ config: mockConfig });
 
       expect(mockCreateFileStrategy).toHaveBeenCalledTimes(2);
       expect(result1).toBe(mockStrategy1);
@@ -117,7 +117,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateFileStrategy = jest.fn().mockReturnValue(mockStrategy);
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
-      DeltaStrategyFactory.createStrategy(fileConfig);
+      DeltaStrategyFactory.createStrategy({ config: fileConfig });
 
       expect(mockCreateFileStrategy).toHaveBeenCalledWith({
         clientId: fileConfig.integration.clientId,
@@ -145,7 +145,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateDbStrategy = jest.fn().mockReturnValue(mockStrategy);
       require('integration-core').DeltaStrategyForDatabase = mockCreateDbStrategy;
 
-      DeltaStrategyFactory.createStrategy(dbConfig);
+      DeltaStrategyFactory.createStrategy({ config: dbConfig });
 
       expect(mockCreateDbStrategy).toHaveBeenCalledWith({
         clientId: dbConfig.integration.clientId,
@@ -170,7 +170,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateS3Strategy = jest.fn().mockReturnValue(mockStrategy);
       require('integration-core').DeltaStrategyForS3Bucket = mockCreateS3Strategy;
 
-      DeltaStrategyFactory.createStrategy(s3Config);
+      DeltaStrategyFactory.createStrategy({ config: s3Config });
 
       expect(mockCreateS3Strategy).toHaveBeenCalledWith({
         clientId: s3Config.integration.clientId,
@@ -201,7 +201,7 @@ describe('DeltaStrategyFactory', () => {
       const mockCreateFileStrategy = jest.fn().mockImplementation(() => { throw error; });
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
-      expect(() => DeltaStrategyFactory.createStrategy(invalidConfig)).toThrow();
+      expect(() => DeltaStrategyFactory.createStrategy({ config: invalidConfig })).toThrow();
     });
   });
 
@@ -216,7 +216,7 @@ describe('DeltaStrategyFactory', () => {
           }
         };
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidFileConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidFileConfig }))
           .toThrow('Invalid file storage configuration');
       });
 
@@ -231,7 +231,7 @@ describe('DeltaStrategyFactory', () => {
           }
         };
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidFileConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidFileConfig }))
           .toThrow('Invalid file storage configuration');
       });
 
@@ -250,7 +250,7 @@ describe('DeltaStrategyFactory', () => {
         const mockCreateFileStrategy = jest.fn().mockReturnValue(mockStrategy);
         require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
 
-        expect(() => DeltaStrategyFactory.createStrategy(validFileConfig)).not.toThrow();
+        expect(() => DeltaStrategyFactory.createStrategy({ config: validFileConfig })).not.toThrow();
       });
     });
 
@@ -270,7 +270,7 @@ describe('DeltaStrategyFactory', () => {
         // Mock isDatabaseConfig to return false for invalid config
         require('integration-core').isDatabaseConfig = jest.fn().mockReturnValue(false);
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidDbConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidDbConfig }))
           .toThrow('Invalid database configuration');
       });
 
@@ -293,7 +293,7 @@ describe('DeltaStrategyFactory', () => {
         // Mock isDatabaseConfig to return false for invalid config
         require('integration-core').isDatabaseConfig = jest.fn().mockReturnValue(false);
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidDbConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidDbConfig }))
           .toThrow('Invalid database configuration');
       });
 
@@ -318,7 +318,7 @@ describe('DeltaStrategyFactory', () => {
         require('integration-core').DeltaStrategyForDatabase = mockCreateDbStrategy;
         require('integration-core').isDatabaseConfig = jest.fn().mockReturnValue(true);
 
-        expect(() => DeltaStrategyFactory.createStrategy(validDbConfig)).not.toThrow();
+        expect(() => DeltaStrategyFactory.createStrategy({ config: validDbConfig })).not.toThrow();
       });
     });
 
@@ -338,7 +338,7 @@ describe('DeltaStrategyFactory', () => {
         // Mock isS3Config to return false for invalid config
         require('integration-core').isS3Config = jest.fn().mockReturnValue(false);
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidS3Config))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidS3Config }))
           .toThrow('Invalid S3 configuration');
       });
 
@@ -358,7 +358,7 @@ describe('DeltaStrategyFactory', () => {
         // Mock isS3Config to return false for invalid config
         require('integration-core').isS3Config = jest.fn().mockReturnValue(false);
 
-        expect(() => DeltaStrategyFactory.createStrategy(invalidS3Config))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: invalidS3Config }))
           .toThrow('Invalid S3 configuration');
       });
 
@@ -380,7 +380,7 @@ describe('DeltaStrategyFactory', () => {
         require('integration-core').DeltaStrategyForS3Bucket = mockCreateS3Strategy;
         require('integration-core').isS3Config = jest.fn().mockReturnValue(true);
 
-        expect(() => DeltaStrategyFactory.createStrategy(validS3Config)).not.toThrow();
+        expect(() => DeltaStrategyFactory.createStrategy({ config: validS3Config })).not.toThrow();
       });
     });
 
@@ -394,7 +394,7 @@ describe('DeltaStrategyFactory', () => {
           }
         };
 
-        expect(() => DeltaStrategyFactory.createStrategy(unsupportedConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: unsupportedConfig }))
           .toThrow('Unsupported storage type: redis');
       });
     });
@@ -414,7 +414,7 @@ describe('DeltaStrategyFactory', () => {
         // Mock isDatabaseConfig to return false because it's a file config
         require('integration-core').isDatabaseConfig = jest.fn().mockReturnValue(false);
 
-        expect(() => DeltaStrategyFactory.createStrategy(mismatchConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: mismatchConfig }))
           .toThrow('Invalid database configuration');
       });
 
@@ -434,7 +434,7 @@ describe('DeltaStrategyFactory', () => {
           }
         };
 
-        expect(() => DeltaStrategyFactory.createStrategy(mismatchConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: mismatchConfig }))
           .toThrow('Invalid file storage configuration');
       });
 
@@ -450,7 +450,7 @@ describe('DeltaStrategyFactory', () => {
           }
         };
 
-        expect(() => DeltaStrategyFactory.createStrategy(mismatchConfig))
+        expect(() => DeltaStrategyFactory.createStrategy({ config: mismatchConfig }))
           .toThrow('Invalid file storage configuration');
       });
     });

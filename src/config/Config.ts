@@ -1,4 +1,4 @@
-import { FileConfig, DatabaseConfig, S3Config } from 'integration-core';
+import { FileConfig, DatabaseConfig, S3Config as S3FolderConfig } from 'integration-core';
 import { EndpointConfigForJWT } from '../data-target/ApiClientForJWT';
 import { EndpointConfigForApiKey } from '../data-source/ApiClientForApiKey';
 
@@ -15,17 +15,26 @@ export type DataSourceConfig = {
   endpointConfig: EndpointConfigForApiKey;
   /** Endpoint for fetching person data */
   fetchPath: string;
+  /** Optional boolean flag to indicate the fetch is batched */
+  fetchBatched?: boolean;
   /** Optional fields to keep during response filtering */
   fieldsOfInterest?: string[];
 };
 
-export type S3CsvConfig = {
+export type S3FileConfig = {
   /** Base bucket name */
   bucketName: string;
   /** Full S3 object key (path + filename, e.g., 'data/states.csv') */
   key: string;
   /** AWS region */
   region: string;
+}
+
+export type S3CsvConfig = S3FileConfig & {}
+
+export type S3DataSourceConfig = S3FileConfig & {
+  /** Optional fields to keep during response filtering */
+  fieldsOfInterest?: string[];
 }
 
 /**
@@ -37,7 +46,7 @@ export interface Config {
     /** Configuration for single person operations */
     person?: DataSourceConfig;
     /** Configuration for bulk people operations */
-    people?: DataSourceConfig;
+    people?: DataSourceConfig | S3DataSourceConfig;
     /** Configuration for aquiring list of terms */
     terms?: DataSourceConfig;
     /** Configuration for aquiring list of states */
@@ -54,6 +63,8 @@ export interface Config {
     personsPath: string;
     /** Endpoint for fetching organization data */
     organizationsPath: string;
+    /** Optional dryrun flag. Indicates that CRUD operation to target is logged instead of executed */
+    dryRun?: boolean;
   };
   
   /** Integration settings */
@@ -71,7 +82,7 @@ export interface Config {
     /** Storage type: 'file' | 'database' | 's3' */
     type: 'file' | 'database' | 's3';
     /** Storage-specific configuration */
-    config: FileConfig | DatabaseConfig | S3Config;
+    config: FileConfig | DatabaseConfig | S3FolderConfig;
   };
 
   /** Filesystem path for cache storage of JWT tokens */

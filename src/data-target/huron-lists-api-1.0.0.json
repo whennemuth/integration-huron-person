@@ -1,0 +1,2946 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "List",
+    "version": "1.0.0",
+    "description": "# Overview\n List Service manages various list types and list items for those list types across the entire suite of Huron Research Suite (HRS) V12 applications. Departments, Functions, Rights, and Roles are some examples of list types.\n\n The List Service API is implemented to offer the necessary tools to access and manipulate data related to simple Lists in HRS. It offers the following features.\n\n### Features\n* Create, manage, export, and import simple lists from one environment to another.\n* Provide locking to prevent contention between multiple callers.\n* Complete many tasks by learning only one set of data management tools for your implementation.\n* Mutually exclusive security rights for jobs.\n\n### Rights & Roles\n* Any authorized login user has read access to the list data.\n* The security rights are mutually exclusive which means the user has one right to one job only.\n  For example, If the user has Manage list type, the user has permissions only to create and edit list types.\n\n### List Permissions\nYou will encounter lists that are configured with a few different <a href=\"https://digital-hrsapi.huronsoftware.com/Content/APIs/compass.html?p=/hrs/HRSCore_Help_Articles/Content/HRSCore/CoreContent/ListLocate.html\" target=\"_blank\"> permission models</a>.\n"
+  },
+  "paths": {
+    "/api/v1/lists": {
+      "options": {
+        "operationId": "preflightlist",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "List the list types",
+        "operationId": "getLists",
+        "description": "Returns all the list types accessible through the supplied credentials.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Pagination"
+          },
+          {
+            "$ref": "#/components/parameters/Filter"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeFields"
+          }
+        ],
+        "x-hrs-filter-fields": [
+          "active",
+          "name",
+          "hrsowned",
+          "id",
+          "defaultItemPermissions.fullAccess"
+        ],
+        "x-hrs-sort-fields": [
+          "name",
+          "id"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListsGetHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      },
+      "post": {
+        "summary": "Create a new list type",
+        "description": "Creates a new list type as specified by the request body and returns a new system generated identifier HRN.\n\nThis operation is not idempotent (i.e., executing this operation multiple times with the same data will result in the creation of multiple List objects, each with their own distinct HRN).\n",
+        "operationId": "createList",
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for required and optional fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/List"
+              },
+              "example": {
+                "name": "DAST-List-Name-20003",
+                "moduleId": "Suite",
+                "id": "hrsv12dast~DAST-List-Id-20003",
+                "description": "sample data for DAST",
+                "defaultItemPermissions": {
+                  "fullAccess": true,
+                  "editLockedItemAttributes": [],
+                  "createUnlockedItem": false,
+                  "deleteUnlockedItem": false
+                },
+                "secureWithRights": true,
+                "customPropertiesSchema": {},
+                "displayOrder": 0,
+                "active": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "List created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListsPostHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      }
+    },
+    "/api/v1/lists/export": {
+      "options": {
+        "operationId": "preflightexportListAndListItems",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Export list types and list items",
+        "operationId": "exportListAndListItems",
+        "description": "Returns a link to a file containing exported lists and list items.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Filter"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          }
+        ],
+        "x-hrs-filter-fields": [
+          "listModuleIdsForExport",
+          "listItemModuleIdsForExport",
+          "active",
+          "name",
+          "hrsowned",
+          "id",
+          "defaultItemPermissions.fullAccess"
+        ],
+        "x-hrs-sort-fields": [
+          "name",
+          "id"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExportListHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      }
+    },
+    "/api/v1/lists/{hrn}": {
+      "options": {
+        "operationId": "preflightGetListForHRN",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id,hrs_tenant_id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve a list type by HRN",
+        "description": "Retrieves a single list specified by `hrn`, together with its fields.\n",
+        "operationId": "getListForHRN",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "type": "string"
+            },
+            "example": "name,id",
+            "description": "Comma-separated list of fields to return.\n\n**Note:** If this parameter is omitted, all fields are returned.\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single List with fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListsGetByHrnHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      },
+      "put": {
+        "summary": "Replace list type",
+        "description": "Replaces the entire definition for the list type specified by `hrn`, **excluding** associated list items.  All fields are updated with the values supplied.\n\nThis operation is idempotent (i.e, it can be executed multiple times with the same result).\n",
+        "operationId": "replaceList",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object all fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/List"
+              },
+              "example": {
+                "name": "DAST-List-Name-1234-updated",
+                "moduleId": "Suite",
+                "id": "hrsv12dast~DAST-List-Id-20003",
+                "active": false,
+                "description": "sample list for DAST",
+                "hrn": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003",
+                "defaultItemPermissions": {
+                  "fullAccess": true,
+                  "editLockedItemAttributes": [],
+                  "createUnlockedItem": false,
+                  "deleteUnlockedItem": false
+                },
+                "secureWithRights": true,
+                "customPropertiesSchema": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "List created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HRN"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "List replaced"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListsPutHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      },
+      "patch": {
+        "summary": "Update list type",
+        "description": "Updates the definition of the list type specified by `hrn` using only those values which are supplied in the payload; all others are left unchanged.\n\nThis operation is idempotent (i.e., it can be executed multiple times with the same payload without additional effect).\n",
+        "operationId": "updateList",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object all fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListPatch"
+              },
+              "example": {
+                "name": "DAST-List-Name-1234-updated",
+                "id": "hrsv12dast~DAST-List-Id-20003",
+                "moduleId": "Suite",
+                "description": "sample data for DAST",
+                "hrn": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003",
+                "defaultItemPermissions": {
+                  "fullAccess": true,
+                  "editLockedItemAttributes": [],
+                  "createUnlockedItem": false,
+                  "deleteUnlockedItem": false
+                },
+                "secureWithRights": true,
+                "dateModified": "2024-09-19T04:36:09.340792Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "List fields are updated"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListsPatchHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "Lists"
+        ]
+      }
+    },
+    "/api/v1/lists/{hrn}/items": {
+      "options": {
+        "operationId": "preflightListForHRN",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "post": {
+        "summary": "Create a list item",
+        "description": "Creates a new list item on the list type specified by `hrn`.",
+        "operationId": "createListItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "hrn%3Ahrs%3Alists%3Ahrsv12dast~DAST-List-Id-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for required fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListItem"
+              },
+              "example": {
+                "name": "DAST-List-Item-1234",
+                "moduleId": [
+                  "Suite"
+                ],
+                "description": "sample data for DAST",
+                "id": "hrsv12dast~DAST-List-Item-20003",
+                "active": false,
+                "customProperties": {},
+                "displayOrder": 0,
+                "hrsOwned": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "List Item created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hrn": {
+                      "type": "string",
+                      "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsPostHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      },
+      "get": {
+        "summary": "List the list items",
+        "description": "Returns the list items for the list type specified by `hrn`, as controlled by the `pagination`, `filter`, `sort` and `include` parameters.\n",
+        "operationId": "getListItems",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Pagination"
+          },
+          {
+            "$ref": "#/components/parameters/Filter"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeFields"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn%3Ahrs%3Alists%3Ahrsv12dast~DAST-List-Id-20003"
+          }
+        ],
+        "x-hrs-filter-fields": [
+          "active",
+          "name",
+          "id",
+          "hrsowned",
+          "moduleid"
+        ],
+        "x-hrs-sort-fields": [
+          "id",
+          "name",
+          "displayOrder",
+          "description",
+          "active",
+          "dateCreated",
+          "dateModified",
+          "hrsOwned"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListItemGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsGetHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      }
+    },
+    "/api/v1/lists/{hrn}/items/{itemHrn}": {
+      "options": {
+        "operationId": "preflightListItemForHRN",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-2000/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve a list item",
+        "description": "Returns a list item specified by `itemHrn` from the list specified by `hrn`.",
+        "operationId": "getListItemByHrn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List item was found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsGetByHrnHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      },
+      "put": {
+        "summary": "Update a list item",
+        "description": "Updates an existing list item specified by `itemHrn` on list type specified by `hrn`, using data supplied in the request body.  \n\nIf no existing list item matches these parameters, a new one will be created with the specified HRNs and the data supplied in the request body.\n",
+        "operationId": "updateListItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for required fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListItem"
+              },
+              "example": {
+                "name": "DAST-List-Item-Name-1234-put",
+                "moduleId": [
+                  "Suite"
+                ],
+                "id": "hrsv12dast~DAST-List-Item-20003",
+                "description": "sample data for DAST",
+                "active": false,
+                "customProperties": {},
+                "displayOrder": 0,
+                "hrsOwned": false,
+                "hrn": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "List item updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HRN"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "List item updated successfully"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsPutHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      },
+      "patch": {
+        "summary": "Patch a list item",
+        "description": "Updates the definition of the list item specified by `itemHrn` on the list specified by `hrn` using only those values which are supplied in the payload; all others are left unchanged.\n\nThis operation is idempotent (i.e., it can be executed multiple times with the same payload without additional effect).\n",
+        "operationId": "patchListItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn%3Ahrs%3Alists%3Ahrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains values for required fields",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListItemPatch"
+              },
+              "example": {
+                "id": "hrsv12dast~DAST-List-Item-20003",
+                "name": "DAST-List-Item-Name-1234-updated",
+                "moduleId": [
+                  "Suite"
+                ],
+                "description": "sample data for DAST",
+                "hrn": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003",
+                "dateModified": "2024-09-19T04:36:09.340792Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "List item updated successfully"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsPatchHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      }
+    },
+    "/api/v1/lists/items/{itemHrn}": {
+      "description": "Only the GET request is supported, while POST, PUT and PATCH requests are not supported for this endpoint.",
+      "options": {
+        "operationId": "preflightListItems",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "get": {
+        "summary": "Retrieve a list item",
+        "description": "Retrieves a single list item specified by `itemHrn`.",
+        "operationId": "getListItemByItemHrn",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List item was found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsGetByHrnHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      }
+    },
+    "/api/v1/lists/{hrn}/items/{itemHrn}/sets/{name}": {
+      "options": {
+        "operationId": "preflightListItemNameSet",
+        "summary": "CORS support",
+        "description": "Enable [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) to support data transfers between browsers and servers, even if requests originate from different domains.",
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the list item. The value must be a string and can begin with digits or special characters or letters, digits and spaces are allowed, may contain - or _ ;@%&*{}`<>!~#$/[]{}(). Used as display name.\n",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "DAST-List-Item-Name-20003"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URI that may access the resource."
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Method(s) allowed when accessing the resource."
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string",
+                  "default": "*"
+                },
+                "description": "Used in response to a preflight request to indicate which HTTP headers can be used when making the request."
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\n  \"statusCode\" : 200\n}\n"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-hrs-clear-tenant-id'",
+                "method.response.header.Access-Control-Allow-Methods": "'*'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "responseTemplates": {
+                "application/json": "{}\n"
+              }
+            }
+          }
+        },
+        "tags": [
+          "CORS"
+        ]
+      },
+      "post": {
+        "summary": "Add set member",
+        "description": "Adds new member to set/collection property specified by `name` on the list item specified by `itemHrn` in list specified by `hrn`.\n",
+        "operationId": "addMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the list item set/collection property.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "partnerOrganizations"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "A JSON object that contains the HRN for the set member that is to be added.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HRNREF"
+              },
+              "example": {
+                "hrn": "hrn:hrs:lists:rights/read-all-agreements",
+                "name": "Read all agreements"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Member added successfully"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsSetsAddHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      },
+      "delete": {
+        "summary": "Delete set member",
+        "description": "Deletes member from set/collection property `name` on list item `itemHrn` in list `hrn`.\n",
+        "operationId": "deleteMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "description": "Name of the list item set/collection property.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "partnerOrganizations"
+          },
+          {
+            "in": "path",
+            "name": "hrn",
+            "description": "Huron Resource Name (HRN), a system generated unique value with the following structure `hrn:hrs:resource_type:resource_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-20003"
+          },
+          {
+            "in": "path",
+            "name": "itemHrn",
+            "description": "Item HRN, a system generated unique value with the following structure `hrn:hrs:lists:list_id/list_item_id`.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/HRN"
+            },
+            "example": "hrn:hrs:lists:hrsv12dast~DAST-List-Id-2000/hrsv12dast~DAST-List-Item-20003"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Set member removed successfully"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TokenAuthorizer": []
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsSetsDeleteHandler.Arn}:live/invocations"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "AWS_PROXY"
+        },
+        "tags": [
+          "List Items"
+        ]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Pagination": {
+        "name": "pagination",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "offset": {
+              "type": "integer",
+              "description": "The start index to return results.",
+              "default": 0
+            },
+            "pageSize": {
+              "type": "integer",
+              "description": "The total number of entries to include in a page.",
+              "default": 25
+            }
+          }
+        },
+        "example": "",
+        "explode": true
+      },
+      "Sort": {
+        "name": "sort",
+        "description": "The field name to sort the items. The default sort order is descending.\n\nTo specify ascending sort order, prefix the field name with a dash (_e.g._ \\\"-dateModified\\\").  \n\nYou can sort by multiple fields by including multiple instances of this query parameter, in the sequence in which you want the sorting applied.\n",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "dateModified",
+          "example": "name"
+        }
+      },
+      "Filter": {
+        "name": "filter",
+        "in": "query",
+        "description": "Filter, in the format:\n\nfilter[`fieldname`]=`comparisonOperator`:`value`      \n\n* `fieldName`—filterable field name for one of the following `active`, `name`, `hrsowned`, `id` ,`defaultItemPermissions.fullAccess`, `moduleid`\n* `comparisonOperator`—one of the following (as applicable to the data type of `fieldName`):\n  * **eq**—Equal to\n  * **neq**—Not equal\n  * **lt**—Less than \n  * **lte**—Less than or equal to\n  * **gte**—Greater than or equal to\n  * **null**—Is null\n  * **in**—In matches any value in the specified list\n* `value`—The value to compare\n\nTo add multiple filters, include multiple instances of this query parameter, optionally preceded by a filterType=`logicalOperator` parameter:\n\n* `logicalOperator`—one of the following:\n  * **or**—Or\n  * **and**—And\n",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "filter[firstName]=eq:Peter"
+      },
+      "IncludeFields": {
+        "name": "include",
+        "description": "The list of fields on the resource record that are included in the response, if specified in the request.",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "example": "name"
+        }
+      }
+    },
+    "securitySchemes": {
+      "TokenAuthorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "custom",
+        "x-amazon-apigateway-authorizer": {
+          "type": "request",
+          "authorizerUri": "${Authorizer.Uri}",
+          "authorizerResultTtlInSeconds": 0,
+          "identitySource": "method.request.header.Authorization"
+        }
+      }
+    },
+    "schemas": {
+      "HRN": {
+        "type": "string",
+        "readOnly": true,
+        "description": "Huron Resource Name (HRN), a system generated unique value with the following structure: \n\n`hrn:hrs:resource_type:resource_id`.\n",
+        "pattern": "^(hrn:hrs:lists:[0-9a-zA-z-_~/]+|lookup:id:[0-9a-zA-z-_~/]+)$"
+      },
+      "HRNREF": {
+        "type": "object",
+        "description": "HRN with name.",
+        "properties": {
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          },
+          "name": {
+            "type": "string",
+            "description": "Generated by HRN resource owner using mostly immutable fields of the resource."
+          }
+        }
+      },
+      "ExportListResponse": {
+        "type": "object",
+        "description": "Response sent for lists export request.",
+        "properties": {
+          "exportFileUrl": {
+            "type": "string",
+            "description": "The presigned URL to the file with exported list and list items in tenant S3 bucket."
+          }
+        }
+      },
+      "DefaultItemPermissions": {
+        "type": "object",
+        "description": "An object containing the permissions that are assigned to List Items on the List.",
+        "properties": {
+          "fullAccess": {
+            "type": "boolean",
+            "description": "Indicates whether the user has full access to create, edit, and delete any item. The values are true or false. When true, users with capability List-Full-Access are allowed to create, edit, and delete any item.",
+            "default": true
+          },
+          "editLockedItemAttributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "User with capability List-Edit-Locked-Item is allowed to edit specified fields."
+          },
+          "deleteUnlockedItem": {
+            "type": "boolean",
+            "description": "Indicates whether the user is allowed to delete an Unlocked item. The values are true or false. When true, users with capability List-Delete-Unlocked-Item are allowed to delete an item.",
+            "default": false
+          },
+          "createUnlockedItem": {
+            "type": "boolean",
+            "description": "Indicates whether the user is allowed to create an Unlocked item. The values are true or false. When true, users with capability List-Create-Item are allowed to create new items."
+          }
+        }
+      },
+      "List": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "defaultItemPermissions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_~-]*$",
+            "maxLength": 75,
+            "description": "A unique ID for the list. The value must be a string and can begin with a letter, and should consist only of letters, numbers, and the \"-\" or \"_\" or ~ or tenantcode and maximum length is limited to 75 characters, limit incorporates the tenant code for tenant defined lists.\n\n**Note:** This may only be specified when creating a new List; otherwise, it is read-only.\n"
+          },
+          "moduleId": {
+            "type": "string",
+            "description": "The name of the module from the service catalog.\nIf a list type is associated with all the modules, pick **Suite**. Allowed values are the assignable services from the application catalog and it should be a valid string.\n"
+          },
+          "secureWithRights": {
+            "type": "boolean",
+            "default": false,
+            "description": "Indicates whether the list data management is controlled through rights, The values are true or false. Rights are evaluated only if the list type is configured to allow add/edit of list Items.\n"
+          },
+          "defaultItemPermissions": {
+            "x-hrs-private": true,
+            "$ref": "#/components/schemas/DefaultItemPermissions"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[ a-zA-Z][a-zA-Z0-9 ,.:';@%&*{}`<>!~#$_\\-/\\(\\)\\+\\?\\[\\]]*$",
+            "maxLength": 255,
+            "description": "The name of the list. The value must be a string and must begin with a letter and should consist only of letters, digits, and spaces. May contain the \"-\" or \"_\"\n;@%&*{}`<>!~#$/[]{}() characters and maximum length is limited to 255 characters. Used as display name.\n"
+          },
+          "description": {
+            "type": "string",
+            "description": "Describes the details about the list."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indicates whether the list is active. The values are true or false.",
+            "default": true
+          },
+          "customPropertiesSchema": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON Schema for custom properties. Accepts JSON describing schema of the custom properties."
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "The order in which list is displayed."
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list was created (e.g.,2023-08-08T17:32:27.6282650Z)."
+          },
+          "dateModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list was last changed/modified (e.g.,2023-08-10T01:20:57.6233660Z)."
+          },
+          "hrsOwned": {
+            "type": "boolean",
+            "description": "Indicates whether the item is owned and managed by the Huron deployment process. If the value is True, the item is owned and managed by the Huron deployment process."
+          },
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          }
+        }
+      },
+      "ListPatch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_~-]*$",
+            "maxLength": 75,
+            "description": "A unique ID for the list. The value must be a string and can begin with a letter, and should consist only of letters, numbers, and the \"-\" or \"_\" or ~ or tenantcode and maximum length is limited to 75 characters, limit incorporates the tenant code for tenant defined lists.\n\n**Note:** This may only be specified when creating a new List; otherwise, it is read-only.\n"
+          },
+          "moduleId": {
+            "type": "string",
+            "description": "The name of the module from the service catalog.\nIf a list type is associated with all the modules, pick **Suite**. Allowed values are the assignable services from the application catalog and it should be a valid string.\n"
+          },
+          "secureWithRights": {
+            "type": "boolean",
+            "default": false,
+            "description": "Indicates whether the list data management is controlled through rights, The values are true or false. Rights are evaluated only if the list type is configured to allow add/edit of list Items.\n"
+          },
+          "defaultItemPermissions": {
+            "x-hrs-private": true,
+            "$ref": "#/components/schemas/DefaultItemPermissions"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[ a-zA-Z][a-zA-Z0-9 ,.:';@%&*{}`<>!~#$_\\-/\\(\\)\\+\\?\\[\\]]*$",
+            "maxLength": 255,
+            "description": "The name of the list. The value must be a string and must begin with a letter and should consist only of letters, digits, and spaces. May contain the \"-\" or \"_\"\n;@%&*{}`<>!~#$/[]{}() characters and maximum length is limited to 255 characters. Used as display name.\n"
+          },
+          "description": {
+            "type": "string",
+            "description": "Describes the details about the list."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indicates whether the list is active. The values are true or false.",
+            "default": true
+          },
+          "customPropertiesSchema": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON Schema for custom properties. Accepts JSON describing schema of the custom properties."
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "The order in which list is displayed."
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list was created (e.g.,2023-08-08T17:32:27.6282650Z)."
+          },
+          "dateModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list was last changed/modified (e.g.,2023-08-10T01:20:57.6233660Z)."
+          },
+          "hrsOwned": {
+            "type": "boolean",
+            "description": "Indicates whether the item is owned and managed by Huron deployment process. If the value is True then, the item is owned and managed by Huron deployment process."
+          },
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          }
+        }
+      },
+      "ListItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "moduleId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_~-]*$",
+            "maxLength": 75,
+            "description": "A unique ID for the list item. The value must be a string and begin with a letter.  It can contain letters, numbers and the characters `-`, `_`, or `~`.  Maximum length is limited to 75 characters.  For tenant-defined list items, the ID is prefixed with the tenant ID and `~`, which are included in the length limit.",
+            "example": "gfinst~medium-priority"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[ a-zA-Z0-9,.:';@%&*{}<>!~#$_=\\-\\/()\\+\\?\\[\\]§]+$",
+            "maxLength": 255,
+            "description": "Name of the list item. The value must be a string and can begin with numbers, letters, or special characters. It may include letters, numbers, spaces, and the following special characters `- or _ .:';,@%&*{}<>!~#$/[]{}()`. Used as the display name.\n"
+          },
+          "moduleId": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The module the list items are associated with. The list of allowed values are the assignable services from the application catalog, and it should be a valid string."
+          },
+          "description": {
+            "type": "string",
+            "description": "Describes the details about the list item. The value must be a valid string."
+          },
+          "listId": {
+            "type": "string",
+            "maxLength": 75,
+            "description": "ID of the updated list item. The value must be a valid string. **Note:** `listId` is required by the `/api/v1/lists/importlistitems` endpoint only and ignored by all other APIs of the list service.",
+            "readOnly": true
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indicates whether the list is active. The values are true or false.",
+            "default": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "The order in which list item is displayed."
+          },
+          "customProperties": {
+            "type": "object",
+            "description": "Custom properties data as a JSON object, this conforms to schema defined by List customPropertiesSchema."
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list item was created (e.g.,2023-08-08T17:32:27.6282650Z)."
+          },
+          "dateModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list item was last changed/modified (e.g.,2023-08-10T01:20:57.6233660Z)."
+          },
+          "hrsOwned": {
+            "type": "boolean",
+            "description": "Indicates whether the item is owned and managed by Huron deployment process. The values are true or false. If the value is set to True then, the item is owned and managed by Huron deployment process."
+          },
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          }
+        },
+        "x-hrs-causes-changes-events": [
+          "name",
+          "active",
+          "description"
+        ]
+      },
+      "ListItemPatch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_~-]*$",
+            "maxLength": 75,
+            "description": "A unique ID for the list item. The value must be a string and begin with a letter.  It can contain letters, numbers and the characters `-`, `_`, or `~`.  Maximum length is limited to 75 characters.  For tenant-defined list items, the ID is prefixed with the tenant ID and `~`, which are included in the length limit.",
+            "example": "gfinst~medium-priority"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[ a-zA-Z0-9,.:';@%&*{}<>!~#$_=\\-\\/()\\+\\?\\[\\]§]+$",
+            "maxLength": 255,
+            "description": "Name of the list item. The value must be a string and can begin with digits or special characters or letters, digits and spaces are allowed, may contain - or _\n.:';,@%&*{}<>!~#$/[]{}() and maximum length is limited to 255 characters. Used as display name.\n"
+          },
+          "moduleId": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The module the list items are associated with. The list of allowed values are the assignable services from the application catalog, and it should be a valid string."
+          },
+          "description": {
+            "type": "string",
+            "description": "Describes the details about the list item. The value must be a valid string."
+          },
+          "listId": {
+            "type": "string",
+            "description": "ID of the updated list item. The value must be a valid string.\n**Note:** `listId` is required by the `/api/v1/lists/importlistitems` endpoint only and ignored by all other APIs of the list service.\n",
+            "readOnly": true
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indicates whether the list is active. The values are true or false.",
+            "default": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "The order in which list item is displayed."
+          },
+          "customProperties": {
+            "type": "object",
+            "description": "Custom properties data as a JSON object, this conforms to schema defined by List customPropertiesSchema."
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list item was created (e.g.,2023-08-08T17:32:27.6282650Z)."
+          },
+          "dateModified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time the list item was last changed/modified (e.g.,2023-08-10T01:20:57.6233660Z)."
+          },
+          "hrsOwned": {
+            "type": "boolean",
+            "description": "Indicates whether the item is owned and managed by Huron deployment process. The values are true or false. If the value is set to True then, the item is owned and managed by Huron deployment process."
+          },
+          "hrn": {
+            "$ref": "#/components/schemas/HRN"
+          }
+        },
+        "x-hrs-causes-changes-events": [
+          "name",
+          "active",
+          "description"
+        ]
+      },
+      "ListGetResponse": {
+        "description": "GET /list response schema",
+        "type": "object",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/List"
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "next": {
+                "type": "string",
+                "description": "Reserved for future use."
+              },
+              "prev": {
+                "type": "string",
+                "description": "Reserved for future use."
+              },
+              "nextWithContinuationToken": {
+                "type": "string",
+                "description": "Reserved for future use."
+              }
+            }
+          }
+        }
+      },
+      "ListItemGetResponse": {
+        "description": "GET /list response schema",
+        "type": "object",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Properties of any filter(s) applied to the result list.",
+            "properties": {
+              "fieldName": {
+                "type": "string",
+                "description": "Name of the field."
+              },
+              "value": {
+                "type": "string",
+                "description": "Value of the field."
+              },
+              "operation": {
+                "type": "string",
+                "description": "Operation to be performed on the field."
+              }
+            }
+          },
+          "sorts": {
+            "type": "object",
+            "description": "Properties of any sorts(s) applied to the result list.",
+            "properties": {
+              "fieldName": {
+                "type": "string",
+                "description": "Name of the field."
+              },
+              "order": {
+                "type": "string",
+                "description": "Sorting order on the field (ascending or descending)."
+              }
+            }
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListItem"
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "next": {
+                "type": "string",
+                "description": "Reserved for future use."
+              },
+              "prev": {
+                "type": "string",
+                "description": "Reserved for future use."
+              },
+              "nextWithContinuationToken": {
+                "type": "string",
+                "description": "Reserved for future use."
+              }
+            }
+          }
+        }
+      },
+      "ListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/List"
+          }
+        }
+      },
+      "ListItemResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ListItem"
+          }
+        }
+      },
+      "Pagination": {
+        "description": "Describes pagination support.",
+        "type": "object",
+        "properties": {
+          "offset": {
+            "description": "Start index to return results.",
+            "type": "integer",
+            "default": 1
+          },
+          "pageSize": {
+            "description": "Number of entries to include.",
+            "type": "integer",
+            "default": 25
+          },
+          "total": {
+            "description": "Total number of pages.",
+            "type": "integer",
+            "default": 25
+          },
+          "continuationToken": {
+            "description": "Continuation token is used instead of offset, this technique is expected to provide reliable and stable pagination.",
+            "type": "string"
+          }
+        }
+      },
+      "IdFieldName": {
+        "description": "Name of the field in the request body used for finding the resource. Cannot be anything other than `id` or `sourceIdentifier`.",
+        "type": "string",
+        "pattern": "^(id|sourceIdentifier)$"
+      },
+      "ImportList": {
+        "description": "Import one or more list types.",
+        "type": "object",
+        "properties": {
+          "idFieldName": {
+            "description": "For list it is defaulted to 'id'",
+            "$ref": "#/components/schemas/IdFieldName"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "correlationId"
+              ],
+              "properties": {
+                "correlationId": {
+                  "description": "The value used to locate the list item within the specified `idFieldName`.",
+                  "type": "string"
+                },
+                "item": {
+                  "$ref": "#/components/schemas/List"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportListItem": {
+        "description": "Import one or more list items",
+        "type": "object",
+        "properties": {
+          "idFieldName": {
+            "description": "For list items it is defaulted to 'id'.",
+            "$ref": "#/components/schemas/IdFieldName"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "correlationId"
+              ],
+              "properties": {
+                "correlationId": {
+                  "description": "The value used to locate the list item within the specified `idFieldName`.",
+                  "type": "string"
+                },
+                "item": {
+                  "$ref": "#/components/schemas/ListItem"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportResponse": {
+        "type": "object",
+        "properties": {
+          "hrn": {
+            "description": "Provided only if new Person or Organization is created.",
+            "$ref": "#/components/schemas/HRN"
+          },
+          "correlationId": {
+            "type": "string",
+            "description": "Unique key for every record."
+          },
+          "httpStatus": {
+            "type": "integer",
+            "description": "The three digit HTTP status code."
+          },
+          "errors": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code (e.g., 500)."
+          },
+          "detail": {
+            "type": "array",
+            "description": "Information about the error (e.g., Internal Server Error).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "code": {
+            "type": "integer",
+            "description": "Application/service specific error code."
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the error, should be the name of the area of the code path/system where the error occurred (e.g., Action service POST)."
+          },
+          "internalErrorMessage": {
+            "type": "string",
+            "description": "To be used when HttpStatus code 500 (InternalServerError). Not to be displayed to user in UI."
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "about": {
+                "type": "string",
+                "description": "Reserved for future use."
+              },
+              "help": {
+                "type": "string",
+                "description": "Reserved for future use."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "models",
+      "x-displayName": "All Models",
+      "description": "\n## DefaultItemPermissions\n<SchemaDefinition schemaRef=\"#/components/schemas/DefaultItemPermissions\" />\n\n## ExportListResponse\n<SchemaDefinition schemaRef=\"#/components/schemas/ExportListResponse\" />\n\n## HRN\n<SchemaDefinition schemaRef=\"#/components/schemas/HRN\" />\n\n## HRNREF\n<SchemaDefinition schemaRef=\"#/components/schemas/HRNREF\" />\n\n## ImportList\n<SchemaDefinition schemaRef=\"#/components/schemas/ImportList\" />\n\n## ImportListItem\n<SchemaDefinition schemaRef=\"#/components/schemas/ImportListItem\" />\n\n## List\n<SchemaDefinition schemaRef=\"#/components/schemas/List\" />\n\n## ListItem\n<SchemaDefinition schemaRef=\"#/components/schemas/ListItem\" />\n"
+    },
+    {
+      "name": "CoreModels",
+      "x-displayName": "Core Models",
+      "description": "\n## DefaultItemPermissions\n<SchemaDefinition schemaRef=\"#/components/schemas/DefaultItemPermissions\" />\n\n## ExportListResponse\n<SchemaDefinition schemaRef=\"#/components/schemas/ExportListResponse\" />\n\n## ImportList\n<SchemaDefinition schemaRef=\"#/components/schemas/ImportList\" />\n\n## ImportListItem\n<SchemaDefinition schemaRef=\"#/components/schemas/ImportListItem\" />\n\n## List\n<SchemaDefinition schemaRef=\"#/components/schemas/List\" />\n\n## ListItem\n<SchemaDefinition schemaRef=\"#/components/schemas/ListItem\" />\n"
+    },
+    {
+      "name": "Lists",
+      "description": "Lists are used throughout HRS to define the data that the system will present to users when they need to make a choice."
+    },
+    {
+      "name": "List Items",
+      "description": "List Items are the individual instances of a given list."
+    },
+    {
+      "name": "CORS",
+      "description": "This API features Cross-Origin Resource Sharing (CORS) implemented in compliance with [W3C spec](https://fetch.spec.whatwg.org/). Implementation of this standard in the List service allows cross-domain communication from the browser. All responses have a wildcard same-origin which makes them completely public and accessible to everyone, including any code on any site."
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "API",
+      "tags": [
+        "Lists",
+        "List Items",
+        "CORS"
+      ]
+    },
+    {
+      "name": "Models",
+      "tags": [
+        "models",
+        "CoreModels"
+      ]
+    }
+  ]
+}

@@ -28,20 +28,40 @@ export class ConfigValidator {
    * Throws an error with descriptive message if validation fails
    */
   validateConfig(executionMode: ExecutionMode): void {
-    // Required fields for API Key authentication (DataSource) - mode-specific
-    const dataSourceRequiredFields = executionMode === 'person' ? [
-      'dataSource.person.endpointConfig.baseUrl',
-      'dataSource.person.endpointConfig.apiKey',
-      'dataSource.person.fetchPath'
-    ] : executionMode === 'people' ? [
-      'dataSource.people.endpointConfig.baseUrl',
-      'dataSource.people.endpointConfig.apiKey',
-      'dataSource.people.fetchPath'
-    ] : executionMode === 'terms' ? [
-      'dataSource.terms.endpointConfig.baseUrl',
-      'dataSource.terms.endpointConfig.apiKey',
-      'dataSource.terms.fetchPath'
-    ] : []; // 'none' mode requires no dataSource fields
+    // For 'people' mode, handle both API-based and S3-based data sources
+    let dataSourceRequiredFields: string[] = [];
+    
+    if (executionMode === 'person') {
+      dataSourceRequiredFields = [
+        'dataSource.person.endpointConfig.baseUrl',
+        'dataSource.person.endpointConfig.apiKey',
+        'dataSource.person.fetchPath'
+      ];
+    } else if (executionMode === 'people') {
+      // Check if it's S3-based or API-based
+      const peopleConfig = this.config.dataSource.people;
+      if (peopleConfig && 'bucketName' in peopleConfig) {
+        // S3-based data source
+        dataSourceRequiredFields = [
+          'dataSource.people.bucketName',
+          'dataSource.people.key',
+          'dataSource.people.region'
+        ];
+      } else {
+        // API-based data source
+        dataSourceRequiredFields = [
+          'dataSource.people.endpointConfig.baseUrl',
+          'dataSource.people.endpointConfig.apiKey',
+          'dataSource.people.fetchPath'
+        ];
+      }
+    } else if (executionMode === 'terms') {
+      dataSourceRequiredFields = [
+        'dataSource.terms.endpointConfig.baseUrl',
+        'dataSource.terms.endpointConfig.apiKey',
+        'dataSource.terms.fetchPath'
+      ];
+    } // 'none' mode requires no dataSource fields
 
     // Required fields for JWT authentication (DataTarget) - now discriminated union
     const dataTargetBaseFields = [
@@ -99,15 +119,22 @@ export class ConfigValidator {
     // Validate optional S3 CSV configs if present
     this.validateS3CsvConfigs();
 
-    // Validate URLs
+    // Validate URLs (only for API-based data sources)
     try {
-      const dataSourceUrl = executionMode === 'person' 
-        ? this.config.dataSource.person?.endpointConfig.baseUrl
-        : executionMode === 'people'
-        ? this.config.dataSource.people?.endpointConfig.baseUrl
-        : executionMode === 'terms'
-        ? this.config.dataSource.terms?.endpointConfig.baseUrl
-        : undefined;
+      let dataSourceUrl: string | undefined;
+      
+      if (executionMode === 'person') {
+        dataSourceUrl = this.config.dataSource.person?.endpointConfig.baseUrl;
+      } else if (executionMode === 'people') {
+        const peopleConfig = this.config.dataSource.people;
+        // Only validate URL for API-based config (not S3-based)
+        if (peopleConfig && 'endpointConfig' in peopleConfig) {
+          dataSourceUrl = peopleConfig.endpointConfig.baseUrl;
+        }
+      } else if (executionMode === 'terms') {
+        dataSourceUrl = this.config.dataSource.terms?.endpointConfig.baseUrl;
+      }
+      
       if (dataSourceUrl) {
         new URL(dataSourceUrl);
       }

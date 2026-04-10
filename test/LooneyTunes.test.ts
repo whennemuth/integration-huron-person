@@ -1,4 +1,4 @@
-import { LooneyTunes, Character } from './LooneyTunes';
+import { LooneyTunes, Character } from '../src/miscellaneous/LooneyTunes';
 
 describe('LooneyTunes', () => {
   let looneyTunes: LooneyTunes;

@@ -11,6 +11,9 @@ export { AxiosResponseStreamFilter, ResponseProcessor } from '../src/stream/Axio
 
 // Data source exports
 export { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
+export { BuCdmPeopleDataSource } from '../src/data-source/PeopleCdmDataSource';
+export { BuCdmPeopleDataSourceBatch } from '../src/data-source/PeopleDataSourceBatch';
+export { getDataSource, BuCdmDataSource } from '../src/data-source/DataSource';
 export { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
 export { ApiClientForApiKey as BuApiClientForApiKey, EndpointConfigForApiKey } from '../src/data-source/ApiClientForApiKey';
 
@@ -24,8 +27,14 @@ export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '..
 
 // Data mapper exports
 export { DataMapper, getDataMapper } from '../src/data-mapper/DataMapper';
-export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/DeltaStrategyFactory';
+export { FieldFilter, FieldFilterParams } from '../src/data-mapper/FieldFilter';
+
+// Delta strategy exports
+export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
+export { UpsertDeltaStrategy } from '../src/delta-strategy/UpsertDeltaStrategy';
+export { ChunkedDeltaStrategy } from '../src/delta-strategy/ChunkedDeltaStrategy';
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';
 export { HuronPersonIntegration } from '../src/SyncPeople';
+export type { HuronPersonIntegrationParams } from '../src/SyncPeople';

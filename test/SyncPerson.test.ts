@@ -7,7 +7,7 @@ import { Config } from '../src/config/Config';
 import { Status, CrudOperation } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
-import { DeltaStrategyFactory } from '../src/DeltaStrategyFactory';
+import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
 
 // Mock the external dependencies
 jest.mock('../src/config/ConfigManager');
@@ -16,7 +16,7 @@ jest.mock('../src/data-target/PersonDataTarget');
 jest.mock('../src/data-mapper/DataMapper');
 jest.mock('../src/data-source/CurrentTermsDataSource');
 jest.mock('../src/data-target/crud/ReadPerson');
-jest.mock('../src/DeltaStrategyFactory');
+jest.mock('../src/delta-strategy/DeltaStrategyFactory');
 
 describe('SinglePersonSync', () => {
   let singlePersonSync: SinglePersonSync;

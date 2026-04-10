@@ -15,6 +15,10 @@ class BuCdmPersonDataSource extends BuCdmDataSource implements DataSource {
 
   constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
     super(params);
+    if(!params.buid) {
+      throw new Error('BUID is required for person data source');
+    }
+    this.setQueryParam('buid', params.buid);
   }
 
   protected getEndpointConfig(): EndpointConfigForApiKey {

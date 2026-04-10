@@ -90,9 +90,13 @@ export class FileSystemCache extends BasicCache {
   }
 
   public set(key: string, value: string): FileSystemCache {
-    super.set(key, value);
-    this.persistToFile();
-    console.log(`FileSystemCache: Set key ${key}`);
+    // Only persist and log if the value is actually changing
+    const existingValue = this.get(key);
+    if (existingValue !== value) {
+      super.set(key, value);
+      this.persistToFile();
+      console.log(`FileSystemCache: Set key ${key}`);
+    }
     return this;
   }
 

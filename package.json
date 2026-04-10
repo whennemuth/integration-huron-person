@@ -3,21 +3,24 @@
   "version": "1.0.0",
   "description": "BU person integration via CDM api for Huron",
   "module": "dist/esm/bin/index.js",
-  "main": "dist/cjs/bin/index.js",
+  "main": "dist/esm/bin/index.js",
   "types": "dist/types/bin/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist/ && npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --module CommonJS --outdir dist/cjs",
+    "build": "rm -rf dist/ && tsc",
     "pack": "npm run build && npm pack --pack-destination .",
-    "start": "node dist/cjs/index.js",
+    "prepack": "node bin/remove-tests.js",
+    "start": "node dist/esm/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
     "testsilent": "jest --silent",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "uninstall-tgz": "npm uninstall integration-core",
+    "install-tgz": "npm install integration-core https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
+    "reinstall-tgz": "npm run uninstall-tgz && npm run install-tgz",
+    "publish-s3": "npm run pack && aws s3 cp integration-huron-person-1.0.0.tgz s3://simple-npm-package-bucket/"
   },
   "keywords": [
     "huron",
@@ -27,9 +30,11 @@
   "author": "Warren Hennemuth",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1014.0",
+    "@aws-sdk/client-secrets-manager": "^3.1014.0",
     "axios": "^1.6.2",
     "humanize-duration": "^3.33.1",
-    "integration-core": "file:../integration-core/integration-core-1.0.0.tgz",
+    "integration-core": "https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
     "jsonwebtoken": "^9.0.2",
     "stream-json": "^1.9.1"
   },

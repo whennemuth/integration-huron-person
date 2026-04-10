@@ -172,7 +172,7 @@ export const deepClone = <T>(obj: T): T => {
 
 export const debugLog = (o:any, msg?:string) => {
   if(process.env.DEBUG == 'true') {
-    log(o, msg);
+    log({ o, msg });
   }
 }
 
@@ -187,7 +187,8 @@ export const serializeObject = (o:any, seen = new Set()):any => {
   return o;
 }
 
-const toConsole = (o:any, out:Function, msg?:string) => {
+const toConsole = (parms: { o:any, out:Function, msg?:string, flat?:boolean }) => {
+  let { o, out, msg, flat=false } = parms;
   const output = (suffix:string) => {
     if(msg) msg = msg.endsWith(': ') ? msg : `${msg}: `;
     out(msg ? `${msg}${suffix}` : suffix);
@@ -198,22 +199,29 @@ const toConsole = (o:any, out:Function, msg?:string) => {
     return;
   }
   if(o instanceof Object) {
-    output(JSON.stringify(serializeObject(o), null, 2));
+    if(flat) {
+      output(JSON.stringify(serializeObject(o)));
+    } else {
+      output(JSON.stringify(serializeObject(o), null, 2));
+    }
     return;
   }
   output(`${o}`);
 }
 
-export const log = (o:any, msg?:string) => {
-  toConsole(o, (s:string) => console.log(s), msg);
+export const log = (params: { o:any, msg?:string, flat?:boolean }) => {
+  let { o, msg, flat} = params;
+  toConsole({ o, out: (s:string) => console.log(s), msg, flat });
 }
 
-export const warn = (o:any, msg?:string) => {
-  toConsole(o, (s:string) => console.warn(s), msg);
+export const warn = (params: { o:any, msg?:string, flat?:boolean }) => {
+  let { o, msg, flat } = params;
+  toConsole({ o, out: (s:string) => console.warn(s), msg, flat });
 }
 
-export const error = (o:any, msg?:string) => {
-  toConsole(o, (s:string) => console.error(s), msg);
+export const error = (params: { o:any, msg?:string, flat?:boolean }) => {
+  let { o, msg, flat } = params;
+  toConsole({ o, out: (s:string) => console.error(s), msg, flat });
 }
 
 export const isABuid = (id:string) => /^U[0-9]{8,9}$/.test(id);

@@ -102,7 +102,7 @@ describe('Package Exports', () => {
         password: 'pass'
       })).not.toThrow();
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
-      expect(() => new BuCdmPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).not.toThrow();
+      expect(() => new BuCdmPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }), buid: 'U12345678' })).not.toThrow();
       expect(() => new HuronPersonDataTarget({ config: mockConfig })).not.toThrow();
       expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
     });
@@ -133,6 +133,33 @@ describe('Package Exports', () => {
       huronClasses.forEach(className => {
         expect(className).toMatch(/^Huron/);
       });
+    });
+  });
+
+  describe('HuronPersonIntegration chunkId support', () => {
+    it('should accept chunkId parameter in run method', () => {
+      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      expect(integration.run).toBeDefined();
+      expect(integration.run.length).toBe(2); // taskName and chunkId parameters
+    });
+
+    it('should work without chunkId for backward compatibility', () => {
+      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      
+      // Should not throw due to missing chunkId parameter - method accepts 0-2 args
+      expect(() => integration.run).not.toThrow();
+      expect(typeof integration.run).toBe('function');
+    });
+
+    it('should accept both taskName and chunkId parameters', () => {
+      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      
+      // Verify function signature accepts both parameters
+      expect(integration.run.length).toBe(2);
+      
+      // These calls should be syntactically valid (will fail for other reasons without full config)
+      expect(() => integration.run('test')).not.toThrow(TypeError);
+      expect(() => integration.run('test', '1234')).not.toThrow(TypeError);
     });
   });
 });

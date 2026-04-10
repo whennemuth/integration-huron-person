@@ -310,7 +310,7 @@ describe('ConfigFromEnvironment', () => {
 
     it('should override both S3 bucket and key for people data source', () => {
       process.env[ConfigFromEnvironment.ENV_VARS.S3_BUCKET] = 'my-integration-bucket';
-      process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY] = 'boston-university/chunks/chunk-0001.ndjson';
+      process.env[ConfigFromEnvironment.ENV_VARS.S3_KEY] = 'chunks/boston-university/2026-03-03T19:58:41.277Z/chunk-0001.ndjson';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -318,7 +318,7 @@ describe('ConfigFromEnvironment', () => {
       // Type guard for S3-based config
       if (result.dataSource?.people && 'bucketName' in result.dataSource.people && 'key' in result.dataSource.people) {
         expect(result.dataSource.people.bucketName).toBe('my-integration-bucket');
-        expect(result.dataSource.people.key).toBe('boston-university/chunks/chunk-0001.ndjson');
+        expect(result.dataSource.people.key).toBe('chunks/boston-university/2026-03-03T19:58:41.277Z/chunk-0001.ndjson');
       } else {
         fail('Expected S3DataSourceConfig');
       }

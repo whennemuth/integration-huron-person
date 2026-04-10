@@ -1,20 +1,19 @@
 import { CrudOperation, DataSource, DataTarget, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status } from 'integration-core';
-import { Character, LooneyTunes } from '../test/LooneyTunes';
+import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
+import { DataMapper, getDataMapper, ReverseDataMapper } from './data-mapper/DataMapper';
+import { FieldFilter } from './data-mapper/FieldFilter';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPerson } from './data-target/crud/Person';
 import { ReadPerson } from './data-target/crud/ReadPerson';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
-import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { isEmpty } from './Utils';
-import { FieldFilter } from './data-mapper/FieldFilter';
-import { DeltaStrategyFactory } from './DeltaStrategyFactory';
+import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './HashStorageUpdater';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
-import { ReverseDataMapper } from './data-mapper/DataMapper';
+import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
+import { isEmpty } from './Utils';
 
 /**
  * Base parameters shared by both single and batch person sync operations.
@@ -48,10 +47,12 @@ class SinglePersonSync {
   private targetPerson: HuronPerson | undefined;
   private pushResult: SinglePushResult;
   private mappedPerson: Input | undefined;
+  private logPrefix: string;
 
   constructor(private instanceParams: SinglePersonSyncParams) {
     const { config, cache, buid, hrn } = instanceParams;
-
+    const dryRun = `${process.env.DRY_RUN}`.trim().toLowerCase() === 'true';
+    this.logPrefix = dryRun ? '[DRY RUN]: ' : '';
     let responseFilter: ResponseProcessor | undefined;
     if (config.dataSource.person?.fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: config.dataSource.person.fieldsOfInterest });
@@ -183,10 +184,10 @@ class SinglePersonSync {
    * eliminating code duplication with batch update logic.
    */
   private updateHashStorage = async (input: Input): Promise<void> => {
-    const { instanceParams: { config, buid } } = this;
+    const { instanceParams: { config, buid }, logPrefix } = this;
     
     try {
-      const deltaStrategy = DeltaStrategyFactory.createStrategy(config);
+      const deltaStrategy = DeltaStrategyFactory.createStrategy({ config });
       const { storage } = deltaStrategy;
       const clientId = config.integration.clientId;
 
@@ -211,9 +212,10 @@ class SinglePersonSync {
 
       // Log success with primary key value
       const primaryKeyValue = HashStorageUpdater.getPrimaryKeyValue(newFieldSet, primaryKeyFields);
-      console.log(`Hash storage updated successfully for person ${primaryKeyValue}`);
+
+      console.log(`${this.logPrefix}Hash storage updated successfully for person ${primaryKeyValue}`);
     } catch (error) {
-      console.warn(`Failed to update hash storage: ${error}. Sync to target was successful, but hash storage was not updated.`);
+      console.warn(`${this.logPrefix}Failed to update hash storage: ${error}. Sync to target was successful, but hash storage was not updated.`);
     }
   }
 
@@ -225,7 +227,7 @@ class SinglePersonSync {
    * @param params.suppressHashUpdate - If true, skip individual hash storage update (used in batch operations)
    */
   public sync = async (params?: { crudOperation?: CrudOperation, rawData?: any[], suppressHashUpdate?: boolean }): Promise<void> => {
-    const { instanceParams: { config, buid, hashStorage }, getHrn } = this;
+    const { instanceParams: { config, buid, hashStorage }, getHrn, instanceParams, logPrefix } = this;
     try {
 
       const line = '----------------------------------------------------------------------------------';
@@ -233,7 +235,7 @@ class SinglePersonSync {
 
       console.log(`Client ID: ${config.integration.clientId}`);
 
-      const { preview } = this.instanceParams;
+      const { preview } = instanceParams;
       let { crudOperation, rawData, suppressHashUpdate } = params || {};
 
       if( ! crudOperation ) {
@@ -280,18 +282,18 @@ class SinglePersonSync {
           const sourcePerson = new SourcePerson(sourcePersonParams);
           const inSync = await sourcePerson.isInSyncWith(targetPersonParams);
           
-          if (inSync) {
-            skipPush = true;
-            console.log(`Source and target are already in sync for BUID: ${buid}. Skipping push to target.`);
-            console.log(`Hash storage will still be updated to ensure consistency.`);
-            // NOTE: Currently, hash storage updates will occur even when source/target are in sync.
-            // This handles cases where the hash storage record may be missing or out of date.
-            // In the future, once the system is fully mature, we expect that ANY person found in
-            // the target system will ALWAYS have a corresponding record in hash storage. At that point,
-            // this update could be optimized to only occur when the hash storage is actually missing.
-          } else {
-            console.log(`Source and target are out of sync for BUID: ${buid}. Proceeding with update.`);
-          }
+          // if (inSync) {
+          //   skipPush = true;
+          //   console.log(`Source and target are already in sync for BUID: ${buid}. Skipping push to target.`);
+          //   console.log(`Hash storage will still be updated to ensure consistency.`);
+          //   // NOTE: Currently, hash storage updates will occur even when source/target are in sync.
+          //   // This handles cases where the hash storage record may be missing or out of date.
+          //   // In the future, once the system is fully mature, we expect that ANY person found in
+          //   // the target system will ALWAYS have a corresponding record in hash storage. At that point,
+          //   // this update could be optimized to only occur when the hash storage is actually missing.
+          // } else {
+          //   console.log(`Source and target are out of sync for BUID: ${buid}. Proceeding with update.`);
+          // }
         } catch (error) {
           console.warn(`Error checking sync status for BUID: ${buid}:`, error);
           console.log(`Proceeding with update to be safe.`);
@@ -313,14 +315,14 @@ class SinglePersonSync {
           }),
           crud: crudOperation!
         };
-        console.log(`Push result for ${buid}:`, this.pushResult.status, this.pushResult.message);
+        console.log(`${this.logPrefix}Push result for ${buid}:`, this.pushResult.status, this.pushResult.message);
       } else {
         const result = await this.dataTarget.pushOne({
           data: input.fieldSets[0],
           crud: crudOperation
         });
         this.pushResult = result;
-        console.log(`Push result for ${buid}:`, result.status, result.message);
+        console.log(`${logPrefix}Push result for ${buid}:`, result.status, result.message);
       }
 
       // Update hash storage if enabled and sync was successful (including when push was skipped)
@@ -329,9 +331,9 @@ class SinglePersonSync {
         await this.updateHashStorage(input);
       }
       
-      console.log(`Single Person Sync completed successfully for BUID: ${buid}`);
+      console.log(`${logPrefix}Single Person Sync completed successfully for BUID: ${buid}`);
     } catch (error) {
-      console.error(`Single Person Sync failed for BUID: ${buid}:`, error);
+      console.error(`${logPrefix}Single Person Sync failed for BUID: ${buid}:`, error);
       throw error;
     }
   }
@@ -364,7 +366,7 @@ async function main() {
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
-      deltaStrategy: DeltaStrategyFactory.createStrategy(config)
+      deltaStrategy: DeltaStrategyFactory.createStrategy({ config })
     } : undefined;
 
     // Disable source person lookup field filtering for this single sync
@@ -400,7 +402,8 @@ async function main() {
     await sync.sync({ crudOperation: crudOperation as CrudOperation, rawData });
   } 
   catch (error) {
-    console.error('Single Person Sync failed:', error);
+    const dryRun = `${process.env.DRY_RUN}`.trim().toLowerCase() === 'true';
+    console.error(`${dryRun ? '[DRY RUN]: ' : ''}Single Person Sync failed:`, error);
     process.exit(1);
   }
 }
@@ -410,5 +413,5 @@ if (require.main === module) {
   main();
 }
 
-export { SinglePersonSync, SinglePersonSyncParams, PersonSyncParams };
+export { PersonSyncParams, SinglePersonSync, SinglePersonSyncParams };
 

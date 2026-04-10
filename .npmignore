@@ -1,0 +1,5 @@
+*.ts
+!*.d.ts
+test
+dist/esm/test
+dist/types/test

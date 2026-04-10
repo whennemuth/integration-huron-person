@@ -1,8 +1,8 @@
 import { Config, ExecutionMode } from './Config';
-import { ConfigValidator } from './ConfigValidator';
 import { ConfigFromEnvironment } from './ConfigFromEnvironment';
 import { ConfigFromFileSystem } from './ConfigFromFileSystem';
-import { from } from 'stream-json/Parser';
+import { ConfigFromSecretsManager } from './ConfigFromSecretsManager';
+import { ConfigValidator } from './ConfigValidator';
 
 /**
  * Configuration manager with fluent interface for chaining configuration sources
@@ -11,6 +11,7 @@ export class ConfigManager {
   private static instance: ConfigManager;
   private config: Partial<Config> = {};
   private isValidated: boolean = false;
+  private pendingLoads: Promise<void>[] = [];
 
   private constructor() {}
 
@@ -30,6 +31,7 @@ export class ConfigManager {
   reset(): ConfigManager {
     this.config = {};
     this.isValidated = false;
+    this.pendingLoads = [];
     return this;
   }
 
@@ -37,10 +39,10 @@ export class ConfigManager {
     try {
       this.config = this.deepMerge(partial, this.config);
       this.isValidated = false;
-      return this;
     } catch (error) {
-      throw new Error(`Failed to load configuration from partial config: ${error}`);
+      console.warn(`Failed to load configuration from partial config: ${error}`);
     }
+    return this;
   }
 
   /**
@@ -55,11 +57,10 @@ export class ConfigManager {
       // Merge with precedence: existing config wins over new config
       this.config = this.deepMerge(fileConfig, this.config);
       this.isValidated = false;
-      
-      return this;
     } catch (error) {
-      throw new Error(`Failed to load configuration from file system: ${error}`);
+      console.warn(`No valid configuration to load from file system (${configPath}): ${error}`);
     }
+    return this;
   }
 
   /**
@@ -69,16 +70,54 @@ export class ConfigManager {
   fromEnvironment(): ConfigManager {
     try {
       const envLoader = new ConfigFromEnvironment(this.config as Config);
-      const envConfig = envLoader.getConfig();
-      
-      // Merge with precedence: existing config wins over new config
-      this.config = this.deepMerge(envConfig, this.config);
+      const envConfig = envLoader.getConfig() ?? {};
+      if(typeof envConfig === 'object' && Object.keys(envConfig).length === 0) {
+        console.warn('No valid configuration to load from individual environment variables.');
+      }
+      else {
+        // Merge with precedence: existing config wins over new config
+        this.config = this.deepMerge(envConfig, this.config);
+      }
+        
       this.isValidated = false;
-      
-      return this;
     } catch (error) {
-      throw new Error(`Failed to load configuration from environment: ${error}`);
+      console.warn(`No valid configuration to load from individual environment variables: ${error}`);
     }
+    return this;
+  }
+
+  fromJsonString(envVarName: string = 'HURON_PERSON_CONFIG_JSON'): ConfigManager {
+    const jsonString = process.env[envVarName];
+    if (jsonString) {
+      try {
+        const config = JSON.parse(jsonString);
+        this.config = this.deepMerge(config, this.config);
+        this.isValidated = false;
+      } catch (error) {
+        console.warn(`No valid configuration to load from ${envVarName}: ${error}`);
+      }
+    }
+    return this;
+  }
+
+  fromSecretManager(secretName?: string, region?: string): ConfigManager {
+    if (secretName) {
+      const loadPromise = (async () => {
+        try {
+          const secretsLoader = new ConfigFromSecretsManager(region);
+          const secretConfig = await secretsLoader.loadConfig(secretName);
+          
+          // Merge with precedence: existing config wins over new config
+          this.config = this.deepMerge(secretConfig, this.config);
+          this.isValidated = false;
+        } catch (error) {
+          console.warn(`No valid configuration to load from Secrets Manager (${secretName}): ${error}`);
+        }
+      })();
+
+      this.pendingLoads.push(loadPromise);
+    }
+    return this;
   }
 
   fromS3(): ConfigManager {
@@ -93,16 +132,38 @@ export class ConfigManager {
     return this;
   }
 
-  fromSecretManager(): ConfigManager {
-    // Placeholder for future secret manager configuration loading
-    // Implement similar to fromFileSystem and fromEnvironment
-    return this;
-  }
 
   /**
    * Get current configuration with validation
+   * This is the synchronous version - does not wait for async config sources like Secrets Manager
+   * Use getConfigAsync() if you need to load from Secrets Manager
    */
   getConfig(executionMode: ExecutionMode): Config {
+    if (Object.keys(this.config).length === 0) {
+      throw new Error('No configuration loaded. Use fromFileSystem() or fromEnvironment() first.');
+    }
+
+    if (!this.isValidated) {
+      const validator = new ConfigValidator(this.config as Config);
+      validator.validateConfig(executionMode);
+      this.isValidated = true;
+    }
+
+    return this.config as Config;
+  }
+
+  /**
+   * Get current configuration with validation (async version)
+   * Awaits any pending asynchronous configuration loads (e.g., from Secrets Manager)
+   * Use this when you've called fromSecretManager() in the chain
+   */
+  async getConfigAsync(executionMode: ExecutionMode): Promise<Config> {
+    // Wait for all pending async loads to complete
+    if (this.pendingLoads.length > 0) {
+      await Promise.all(this.pendingLoads);
+      this.pendingLoads = []; // Clear after loading
+    }
+
     if (Object.keys(this.config).length === 0) {
       throw new Error('No configuration loaded. Use fromFileSystem() or fromEnvironment() first.');
     }
@@ -139,6 +200,48 @@ export class ConfigManager {
     
     return result;
   }
+}
 
 
+async function main() {
+  const { SECRET_ARN } = process.env;
+  
+  const configManager = ConfigManager.getInstance();
+
+  // unset all of the environment variables that begin with DATASOURCE_ or DATATARGET_
+  // and leave DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY with the dummy value "dummy_val_from_env"
+  Object.keys(process.env).forEach(key => {
+    if (key.startsWith('DATASOURCE_') || key.startsWith('DATATARGET_')) {
+      delete process.env[key];
+    }
+    if(key === 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY') {
+      process.env[key] = 'https://dummy_val_from_env';
+    }
+  });
+
+  // Set the HURON_PERSON_CONFIG_JSON environment variable with a JSON string that contains a very 
+  // small partial of config. { "dataTarget": { "endpointConfig": { "baseUrl": "dummy_val_from_json"} } } 
+  process.env.HURON_PERSON_CONFIG_JSON = JSON.stringify({
+    dataTarget: {
+      endpointConfig: {
+        baseUrl: 'https://dummy_val_from_json'
+      }
+    }
+  } as Partial<Config>);
+
+  // This config should have everything that came out of secrets manager, except for the 2 API 
+  // endpoint values: baseUrl and apiKey, which should be coming from the environment variables 
+  // (with the apiKey taking the dummy value since we set that above)
+  const config = await configManager
+    .reset()
+    .fromEnvironment()                            // ← Then individual overrides
+    .fromJsonString('HURON_PERSON_CONFIG_JSON')   // ← Check JSON first
+    .fromSecretManager(SECRET_ARN)                // ← Then check Secrets Manager if SECRET_ARN is provided
+    .getConfigAsync('people');                    
+
+  console.log('Final merged configuration:', JSON.stringify(config, null, 2));
+}
+
+if(require.main === module) {
+  main();
 }

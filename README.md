@@ -42,6 +42,7 @@ graph TD
 - **Delta Processing**: Uses integration-core's EndToEnd class for efficient delta-based data synchronization
 - **Flexible Storage**: Supports file, database, and S3 storage backends for delta data
 - **Batch Processing**: Configurable batch sizes for API operations
+- **Dry Run Mode**: Test synchronization logic without modifying target system or delta storage
 - **Error Handling**: Comprehensive error handling and logging
 
 ## Project Architecture
@@ -198,6 +199,60 @@ The system automatically validates all required fields based on the execution mo
 - Storage configuration based on type
 - Endpoint paths and timeout values
 - Batch size and processing parameters
+
+### Dry Run Mode
+
+Dry run mode allows you to test the synchronization logic without making any changes to the target system or delta storage. This is useful for:
+- **Testing**: Validate configuration and data mapping without affecting production data
+- **Debugging**: See what operations would be performed without executing them
+- **Auditing**: Review synchronization plans before actual execution
+
+#### Enabling Dry Run
+
+**Option 1: Configuration File**
+```json
+{
+  "dataTarget": {
+    "endpointConfig": { ... },
+    "personsPath": "/api/v2/persons",
+    "organizationsPath": "/api/v2/organizations",
+    "dryRun": true
+  }
+}
+```
+
+**Option 2: Environment Variable**
+```bash
+export DRY_RUN=true
+node dist/index.js
+```
+
+#### Dry Run Behavior
+
+When dry run mode is enabled:
+
+✅ **Still Performed (Read-Only Operations)**:
+- Data fetching from source systems (API/S3)
+- Data mapping and transformation
+- Delta computation
+- Reading from target system (e.g., HRN lookups)
+- Reading previous delta data from storage
+
+❌ **Skipped (Write Operations)**:
+- POST/PATCH/DELETE operations to target API
+- Updates to delta storage (`updatePreviousData`)
+- Any modifications to target system
+
+**Console Output**:
+```
+[DRY RUN] Would perform CREATE operation on endpoint /api/v2/persons with data: {...}
+[DRY RUN] - updatePreviousData: {"clientId":"...","newPreviousData":[...]}
+```
+
+**Results**:
+- All operations return `Status.SUCCESS` with mock data (`hrn: 'dryrun'`)
+- Logs show what would have been executed
+- No actual changes are made to any system
 
 ### Execution Modes
 

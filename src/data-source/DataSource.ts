@@ -1,5 +1,5 @@
 import { DataSource, Timer } from 'integration-core';
-import { Config } from '../config/Config';
+import { Config, DataSourceConfig } from '../config/Config';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
 
@@ -14,6 +14,7 @@ export abstract class BuCdmDataSource implements DataSource {
   protected config: Config;
   protected responseFilter: ResponseProcessor | undefined;
   protected params: { config: Config, responseFilter?: ResponseProcessor, buid?: string };
+  protected queryParams: Record<string, any> = {};
 
   constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
     this.params = params;
@@ -35,6 +36,31 @@ export abstract class BuCdmDataSource implements DataSource {
    */
   protected abstract getFetchPath(): string;
 
+  public setQueryParam = (key: string, value: any): void => {
+    this.queryParams[key] = value;
+  };
+  
+  public setQueryParams = (params: Record<string, any>): void => {
+    this.queryParams = params;
+  }
+
+  getFetchUrl(): string {
+    const { dataSource: { people = {}} = {}} = this.config;
+    const { endpointConfig: { baseUrl } = {}} = people as DataSourceConfig;
+    const url = new URL(this.getFetchPath(), baseUrl);
+    
+    const queryParams = this.queryParams;
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined) {
+          url.searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    return url.toString();
+  }
+
   /**
    * Fetch raw data from the CDM API
    */
@@ -45,14 +71,14 @@ export abstract class BuCdmDataSource implements DataSource {
 
       timer.start();
       const response = await this.apiClient.get<{ response: any[] }>({
-        url: this.getFetchPath() + (this.params.buid ? `?buid=${this.params.buid}` : ''),
+        url: this.getFetchUrl(),
         responseFilter: this.responseFilter
       });
       timer.stop();
 
       const rawData = response.data.response;
       timer.logElapsed(`Successfully fetched ${rawData.length} records`);
-
+  
       return rawData;
     } catch (error) {
       console.error(`Failed to fetch data from ${this.name}:`, error);
@@ -60,3 +86,25 @@ export abstract class BuCdmDataSource implements DataSource {
     }
   }
 }
+
+// Import child classes AFTER the base class is defined to avoid circular dependency issues
+import { BuCdmPeopleDataSource } from './PeopleCdmDataSource';
+import { BuS3PeopleDataSource } from './PeopleS3DataSource';
+
+/**
+ * Factory function to get the appropriate data source based on configuration
+ * @param config Configuration object
+ * @param responseFilter Optional response filter for streaming
+ * @returns DataSource instance (either CDM API or S3 based)
+ */
+export const getDataSource = (config: Config, responseFilter?: ResponseProcessor): DataSource => {
+  const { people: { bucketName, fetchPath } = {}} = config.dataSource as any;
+  if(fetchPath) {
+    return new BuCdmPeopleDataSource({ config, responseFilter });
+  }
+  if( ! bucketName) {
+    throw new Error('Invalid configuration: For people data source, either fetchPath or bucketName must be provided');
+  }
+  return new BuS3PeopleDataSource({ config });
+}
+

@@ -131,7 +131,10 @@ describe('ConfigValidator', () => {
 
       it('should throw error for invalid dataSource people baseUrl', () => {
         const config = getValidConfig();
-        config.dataSource.people!.endpointConfig.baseUrl = 'invalid-url';
+        // Type guard: ensure we're working with API-based config
+        if (config.dataSource.people && 'endpointConfig' in config.dataSource.people) {
+          config.dataSource.people.endpointConfig.baseUrl = 'invalid-url';
+        }
         
         const validator = new ConfigValidator(config);
         expect(() => validator.validateConfig('people')).toThrow('Invalid baseUrl in dataSource or dataTarget endpointConfig');

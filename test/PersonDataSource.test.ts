@@ -228,7 +228,7 @@ describe('BuCdmPersonDataSource', () => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
     dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
-    dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter });
+    dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter, buid: 'U12345678' });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;
   });
@@ -283,7 +283,7 @@ describe('BuCdmPersonDataSource', () => {
       };
 
       // Create instance and test that endpoint timeout is prioritized
-      const dataSource = new BuCdmPersonDataSource({ config: configWithBothTimeouts, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) });
+      const dataSource = new BuCdmPersonDataSource({ config: configWithBothTimeouts, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }), buid: 'U12345678' });
       
       // Access the private apiClient to verify the timeout configuration
       const apiClient = (dataSource as any).apiClient;
@@ -335,7 +335,7 @@ describe('BuCdmPersonDataSource', () => {
       };
 
       // Create instance and test that integration timeout is used as fallback
-      const dataSource = new BuCdmPersonDataSource({ config: configWithOnlyIntegrationTimeout, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) });
+      const dataSource = new BuCdmPersonDataSource({ config: configWithOnlyIntegrationTimeout, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }), buid: 'U12345678' });
       
       // Access the private apiClient to verify the timeout configuration
       const apiClient = (dataSource as any).apiClient;

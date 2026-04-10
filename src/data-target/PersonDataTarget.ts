@@ -11,11 +11,11 @@ import {
 } from 'integration-core';
 import { Cache } from '../Cache';
 import { Config } from '../config/Config';
-import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
-import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 import { error as logError } from '../Utils';
-import { ReadPerson } from './crud/ReadPerson';
+import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
 import { HuronPerson } from './crud/Person';
+import { ReadPerson } from './crud/ReadPerson';
+import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 
 /**
  * Request format for pushing person data to Huron API
@@ -72,74 +72,81 @@ export class HuronPersonDataTarget implements DataTarget {
    */
   async pushOne(params: PushOneParms): Promise<SinglePushResult> {
     const { data, crud } = params;
+    const { DRY_RUN='false' } = process.env;
+    const dryRun = DRY_RUN.toLowerCase().trim() === 'true';
     
     try {
       // Convert FieldSet to API request format
       const personRequest = HuronPersonDataTarget.convertFieldSetToRequest(data, crud);
       
-      console.log(`Pushing single person record with ${crud} operation:`, personRequest.data?.id || 'unknown');
-      
       let response;
       let endpoint = this.config.dataTarget.personsPath;
-      
-      if (crud === CrudOperation.CREATE) {
-        // CREATE: Use POST to /api/v2/persons
-        response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
-      } else if (crud === CrudOperation.UPDATE) {
-        // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
-        if (personRequest.data?.hrn) {
-          endpoint = `${endpoint}/${personRequest.data.hrn}`;
-          // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
-          response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
-        } else {
-          // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
-          const reader = new ReadPerson(this.config);
-          const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
-          const hrn = result?.[0]?.hrn;
-          if( ! hrn) {
+
+      if( dryRun ) {
+        console.log(`[DRY RUN] Would perform ${crud} operation on endpoint ${endpoint} with data:`, personRequest.data);
+      }
+      else {
+        console.log(`Pushing single person record with ${crud || 'unknown'} operation:`, personRequest.data?.id || 'unknown');
+
+        if (crud === CrudOperation.CREATE) {
+          // CREATE: Use POST to /api/v2/persons
+          response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
+        } else if (crud === CrudOperation.UPDATE) {
+          // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
+          if (personRequest.data?.hrn) {
+            endpoint = `${endpoint}/${personRequest.data.hrn}`;
+            // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
+            response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
+          } else {
+            // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
+            const reader = new ReadPerson(this.config);
+            const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
+            const hrn = result?.[0]?.hrn;
+            if( ! hrn) {
+              return {
+                status: Status.FAILURE,
+                message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
+                timestamp: new Date(),
+                primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv || 'id' in fv),
+                crud
+              };
+            }
+
+            // Perform the patch now that the hrn is known
+            personRequest.data.hrn = hrn;
+            endpoint = `${endpoint}/${hrn}`;
+            response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
+          }
+        } else if (crud === CrudOperation.DELETE) {
+          // DELETE: Implement as soft delete by setting active: false
+          // Extract HRN from the original fieldSet data
+          const hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn;
+          if (hrn) {
+            endpoint = `${endpoint}/${hrn}`;
+            // For soft delete, we only need to set active: false
+            const softDeleteData = { active: false };
+            response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
+          } else {
             return {
               status: Status.FAILURE,
-              message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
+              message: 'Cannot perform soft delete: no HRN available for person',
               timestamp: new Date(),
-              primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv || 'id' in fv),
+              primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'sourceIdentifier' in fv),
               crud
             };
           }
-
-          // Perform the patch now that the hrn is known
-          personRequest.data.hrn = hrn;
-          endpoint = `${endpoint}/${hrn}`;
-          response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
-        }
-      } else if (crud === CrudOperation.DELETE) {
-        // DELETE: Implement as soft delete by setting active: false
-        // Extract HRN from the original fieldSet data
-        const hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn;
-        if (hrn) {
-          endpoint = `${endpoint}/${hrn}`;
-          // For soft delete, we only need to set active: false
-          const softDeleteData = { active: false };
-          response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
         } else {
           return {
             status: Status.FAILURE,
-            message: 'Cannot perform soft delete: no HRN available for person',
+            message: `Unsupported CRUD operation: ${crud}`,
             timestamp: new Date(),
-            primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'sourceIdentifier' in fv),
+            primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
             crud
           };
         }
-      } else {
-        return {
-          status: Status.FAILURE,
-          message: `Unsupported CRUD operation: ${crud}`,
-          timestamp: new Date(),
-          primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
-          crud
-        };
       }
       
-      const result = response.data;
+      const result = response?.data || { hrn: 'dryrun' };
       
       // API returns {hrn: string} on success
       return {
@@ -153,10 +160,10 @@ export class HuronPersonDataTarget implements DataTarget {
       console.error(`Failed to push person record:`);
       const { response } = error as any || {};
       if( response ) {
-        logError(response, 'API response');
+        logError({ o:response, msg: 'API response', flat:true });
       }
       else {
-        logError(error, 'Error details');
+        logError({ o:error, msg: 'Error details', flat:true });
       }
       return {
         status: Status.FAILURE,

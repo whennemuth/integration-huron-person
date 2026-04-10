@@ -756,4 +756,152 @@ describe('HuronPersonDataTarget', () => {
       // Should have made multiple API calls due to batching
     });
   });
+
+  describe('Dry Run Mode', () => {
+    const originalEnv = process.env.DRY_RUN;
+
+    beforeEach(() => {
+      // Enable dry run mode for these tests
+      process.env.DRY_RUN = 'true';
+      // Create a new instance to pick up the env variable
+      dataTarget = new HuronPersonDataTarget({ config: mockConfig });
+      (dataTarget as any).apiClient = mockApiClient;
+    });
+
+    afterEach(() => {
+      // Restore original environment
+      if (originalEnv === undefined) {
+        delete process.env.DRY_RUN;
+      } else {
+        process.env.DRY_RUN = originalEnv;
+      }
+    });
+
+    it('should return success without calling API for CREATE operation', async () => {
+      const postSpy = jest.spyOn(mockApiClient, 'post');
+
+      const fieldSet = createFieldSet({
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.CREATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.SUCCESS);
+      expect(result.primaryKey).toBeDefined();
+      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.crud).toBe(CrudOperation.CREATE);
+      expect(postSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return success without calling API for UPDATE operation', async () => {
+      const patchSpy = jest.spyOn(mockApiClient, 'patch');
+
+      // Mock ReadPerson to return an existing person
+      const mockReadPerson = ReadPerson as jest.MockedClass<typeof ReadPerson>;
+      const mockReadPersonInstance = {
+        read: jest.fn().mockResolvedValue('hrn:hrs:persons:12345')
+      };
+      mockReadPerson.mockImplementation(() => mockReadPersonInstance as any);
+
+      const fieldSet = createFieldSet({
+        id: 'person-1',
+        firstName: 'Jane',
+        lastName: 'Smith'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.UPDATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.SUCCESS);
+      expect(result.primaryKey).toBeDefined();
+      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.crud).toBe(CrudOperation.UPDATE);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return success without calling API for DELETE operation', async () => {
+      const patchSpy = jest.spyOn(mockApiClient, 'patch');
+
+      // Mock ReadPerson to return an existing person
+      const mockReadPerson = ReadPerson as jest.MockedClass<typeof ReadPerson>;
+      const mockReadPersonInstance = {
+        read: jest.fn().mockResolvedValue('hrn:hrs:persons:12345')
+      };
+      mockReadPerson.mockImplementation(() => mockReadPersonInstance as any);
+
+      const fieldSet = createFieldSet({
+        id: 'person-1'
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.DELETE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.SUCCESS);
+      expect(result.primaryKey).toBeDefined();
+      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.crud).toBe(CrudOperation.DELETE);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('should process all batch operations without calling API', async () => {
+      const postSpy = jest.spyOn(mockApiClient, 'post');
+      const patchSpy = jest.spyOn(mockApiClient, 'patch');
+
+      // Mock ReadPerson for updates and deletes
+      const mockReadPerson = ReadPerson as jest.MockedClass<typeof ReadPerson>;
+      const mockReadPersonInstance = {
+        read: jest.fn().mockResolvedValue('hrn:hrs:persons:12345')
+      };
+      mockReadPerson.mockImplementation(() => mockReadPersonInstance as any);
+
+      const addedData = [
+        createFieldSet({ firstName: 'John', lastName: 'Doe' }),
+        createFieldSet({ firstName: 'Jane', lastName: 'Smith' })
+      ];
+
+      const updatedData = [
+        createFieldSet({ id: 'person-1', firstName: 'Updated' })
+      ];
+
+      const removedData = [
+        createFieldSet({ id: 'person-2' })
+      ];
+
+      const params: PushAllParms = {
+        added: addedData,
+        updated: updatedData,
+        removed: removedData
+      };
+
+      const result = await dataTarget.pushAll(params);
+
+      expect(result.status).toBe(BatchStatus.SUCCESS);
+      expect(result.failures).toHaveLength(0);
+      expect(result.successes).toHaveLength(4);
+      
+      // Verify all successes have dryrun hrn
+      result.successes?.forEach(success => {
+        expect(success.primaryKey[0].hrn).toBe('dryrun');
+      });
+
+      // Verify no API calls were made
+      expect(postSpy).not.toHaveBeenCalled();
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+  });
 });

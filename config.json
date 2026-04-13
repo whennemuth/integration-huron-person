@@ -27,8 +27,8 @@
       },
       "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
       "fetchSchedule": {
-        "enabled": true,
-        "cronExpression": "0 0 * * *"
+        "enabled": false,
+        "cronExpression": "cron(0 2 * * ? *)"
       },
       "fieldsOfInterest": [
         "personid",

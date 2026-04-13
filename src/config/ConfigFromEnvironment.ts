@@ -112,15 +112,6 @@ export class ConfigFromEnvironment {
       };
     }
 
-    // People fetchBatched override
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_BATCHED]) {
-      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
-      (envOverrides.dataSource as any).people = {
-        ...(envOverrides.dataSource as any).people,
-        fetchBatched: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_BATCHED] === 'true'
-      };
-    }
-
     // People fetchSchedule overrides
     if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED]) {
       envOverrides.dataSource = (envOverrides.dataSource || {}) as any;

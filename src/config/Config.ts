@@ -15,8 +15,6 @@ export type DataSourceConfig = {
   endpointConfig: EndpointConfigForApiKey;
   /** Endpoint for fetching person data */
   fetchPath: string;
-  /** Optional boolean flag to indicate the fetch is batched */
-  fetchBatched?: boolean;
   /** Optional fields to keep during response filtering */
   fetchSchedule?: {
     /** Enable or disable scheduled fetch */

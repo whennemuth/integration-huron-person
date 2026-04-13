@@ -35,12 +35,16 @@ export class ConfigManager {
     return this;
   }
 
-  fromPartial(partial: Partial<Config>): ConfigManager {
+  fromPartial(partial?: Partial<Config>): ConfigManager {
+    if( ! partial) {
+      console.log('No valid configuration to load from partial config');
+      return this;
+    }
     try {
       this.config = this.deepMerge(partial, this.config);
       this.isValidated = false;
     } catch (error) {
-      console.warn(`Failed to load configuration from partial config: ${error}`);
+      console.warn(`No valid configuration to load from partial config: ${error}`);
     }
     return this;
   }
@@ -49,7 +53,11 @@ export class ConfigManager {
    * Load configuration from file system and merge with existing config
    * Earlier sources take precedence over later sources
    */
-  fromFileSystem(configPath: string = './config.json'): ConfigManager {
+  fromFileSystem(configPath?: string): ConfigManager {
+    if( ! configPath) {
+      console.log('No valid configuration to load from file system');
+      return this;
+    }
     try {
       const fileSystemLoader = new ConfigFromFileSystem();
       const fileConfig = fileSystemLoader.loadConfig(configPath);
@@ -58,7 +66,7 @@ export class ConfigManager {
       this.config = this.deepMerge(fileConfig, this.config);
       this.isValidated = false;
     } catch (error) {
-      console.warn(`No valid configuration to load from file system (${configPath}): ${error}`);
+      console.log(`No valid configuration to load from file system (${configPath}): ${error}`);
     }
     return this;
   }
@@ -97,6 +105,9 @@ export class ConfigManager {
         console.warn(`No valid configuration to load from ${envVarName}: ${error}`);
       }
     }
+    else {
+      console.log(`No valid configuration to load from ${envVarName}`);
+    }
     return this;
   }
 
@@ -117,18 +128,23 @@ export class ConfigManager {
 
       this.pendingLoads.push(loadPromise);
     }
+    else {
+      console.log('No valid configuration to load from Secrets Manager');
+    }
     return this;
   }
 
   fromS3(): ConfigManager {
     // Placeholder for future S3 configuration loading
     // Implement similar to fromFileSystem and fromEnvironment
+    console.log('No valid configuration to load from S3');
     return this;
   }
 
   fromDatabase(): ConfigManager {
     // Placeholder for future database configuration loading
     // Implement similar to fromFileSystem and fromEnvironment
+    console.log('No valid configuration to load from database');
     return this;
   }
 

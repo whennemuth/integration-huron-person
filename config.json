@@ -26,6 +26,10 @@
         "timeout": 7200000
       },
       "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fetchSchedule": {
+        "enabled": true,
+        "cronExpression": "0 0 * * *"
+      },
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",

@@ -181,10 +181,7 @@ async function main() {
     return input;
   }
 
-  try {
-    // Make sure we are doing a bulk reset is set in the environment.
-    process.env.BULK_RESET = 'true';
-    
+  try {    
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const config = configManager

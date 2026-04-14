@@ -5,6 +5,7 @@ import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { BuCdmDataSource } from './DataSource';
+import { getLocalConfig } from '../Utils';
 
 /**
  * DataSource implementation for fetching single person data from Boston University CDMAPI
@@ -49,8 +50,12 @@ async function main() {
   try {
     // Load configuration
     const configManager = ConfigManager.getInstance();
-
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const localConfigPath = process.env.HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = configManager
+      .reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
 
     // Output the loaded config to console.
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

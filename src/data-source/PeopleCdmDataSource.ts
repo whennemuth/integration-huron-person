@@ -5,6 +5,7 @@ import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { BuCdmDataSource } from './DataSource';
+import { getLocalConfig } from '../Utils';
 
 /**
  * DataSource implementation for fetching bulk people data from Boston University CDM API
@@ -52,8 +53,13 @@ async function main() {
   try {
     // Load configuration
     const configManager = ConfigManager.getInstance();
-
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('people');
+    const localConfigPath = process.env.HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = configManager
+      .reset()
+      .fromSecretManager(process.env.SECRET_ARN) // Load from Secrets Manager first if SECRET_ARN is provided
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('people');
 
     // Output the loaded config to console.
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

@@ -23,7 +23,7 @@ export const UserIdMapper = (person: any, removeNullValues:boolean = true): { ge
     getUserId: (crud?: CrudOperation) => {
       const crudOperation = crud || CrudOperation.CREATE;
       if(crudOperation === CrudOperation.UPDATE) {
-        // For put operations, we don't want to include the UserID as this value should never be changed.
+        // For put/patch operations, we don't want to include the UserID as this value should never be changed.
         return undefined;
       }
       if(account.length === 0) {

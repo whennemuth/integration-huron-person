@@ -15,6 +15,10 @@ type HuronPersonIntegrationParams = {
   cache?: Cache<string, string>, 
   config?: Config;
   staticMapUsage?: StaticMapUsage;
+  /** 
+   * bulkReset: If true, means upserting will be used where deltas are determined by realtime 
+   * lookups against the target API instead of the stored (key + hash) cache. 
+   */
   bulkReset?: boolean;
 };
 

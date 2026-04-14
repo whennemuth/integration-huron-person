@@ -26,6 +26,9 @@ export class ConfigFromEnvironment {
     DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH: 'DATATARGET_ENDPOINTCONFIG_LOGIN_SVC_PATH',
     DATATARGET_ENDPOINTCONFIG_LOGIN_USERID: 'DATATARGET_ENDPOINTCONFIG_LOGIN_USERID',
     DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN: 'DATATARGET_ENDPOINTCONFIG_EXTERNAL_TOKEN',
+    DATATARGET_ENDPOINTCONFIG_AUTH_METHOD: 'DATATARGET_ENDPOINTCONFIG_AUTH_METHOD',
+    DATATARGET_PERSONS_PATH: 'DATATARGET_PERSONS_PATH',
+    DATATARGET_ORGANIZATIONS_PATH: 'DATATARGET_ORGANIZATIONS_PATH',
     S3_BUCKET: 'S3_BUCKET',
     S3_KEY: 'S3_KEY',
     CLIENT_ID: 'CLIENT_ID',
@@ -109,6 +112,14 @@ export class ConfigFromEnvironment {
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
         fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_PATH]
+      };
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_BATCHED]) {
+      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
+      (envOverrides.dataSource as any).people = {
+        ...(envOverrides.dataSource as any).people,
+        fetchBatched: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_BATCHED]
       };
     }
 
@@ -243,6 +254,33 @@ export class ConfigFromEnvironment {
         }
       } as any;
     }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_AUTH_METHOD]) {
+      envOverrides.dataTarget = {
+        ...envOverrides.dataTarget || this.baseConfig?.dataTarget,
+        endpointConfig: {
+          ...envOverrides.dataTarget?.endpointConfig || this.baseConfig?.dataTarget?.endpointConfig,
+          authMethod: process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ENDPOINTCONFIG_AUTH_METHOD]
+        }
+      } as any;
+    }
+
+    // INSERT HERE
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_PERSONS_PATH]) {
+      envOverrides.dataTarget = {
+        ...envOverrides.dataTarget || this.baseConfig?.dataTarget,
+        personsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_PERSONS_PATH]
+      } as any;
+    }
+
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ORGANIZATIONS_PATH]) {
+      envOverrides.dataTarget = {
+        ...envOverrides.dataTarget || this.baseConfig?.dataTarget,
+        organizationsPath: process.env[ConfigFromEnvironment.ENV_VARS.DATATARGET_ORGANIZATIONS_PATH]
+      } as any;
+    }
+
 
     // Integration overrides
     if (process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID] || process.env[ConfigFromEnvironment.ENV_VARS.BATCH_SIZE] || process.env[ConfigFromEnvironment.ENV_VARS.TIMEOUT]) {

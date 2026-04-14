@@ -167,7 +167,6 @@ export class DataMapper implements CoreDataMapper {
       const fieldValues = [
         { id: personid },
         { employeeId: personid },
-        { userId },
         { sourceIdentifier: personid },
         { firstName },
         { middleName },
@@ -178,6 +177,11 @@ export class DataMapper implements CoreDataMapper {
         // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
         { __arrayFieldOperations: { append: [ 'roles' ] } }
       ] as Field[];
+      
+      // Add userId only if it has a value (undefined for UPDATE operations)
+      if (userId !== undefined) {
+        fieldValues.push({ userId });
+      }
       
       // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
       if(orgAssignments.organization) {

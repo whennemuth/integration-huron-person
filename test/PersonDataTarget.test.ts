@@ -904,4 +904,81 @@ describe('HuronPersonDataTarget', () => {
       expect(patchSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('convertFieldSetToRequest - userId handling', () => {
+    it('should preserve userId field for CREATE operations', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-123',
+        sourceIdentifier: 'person-123',
+        userId: 'john.doe',
+        firstName: 'John',
+        lastName: 'Doe',
+        employeeId: 'emp-456'
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.CREATE);
+
+      expect(result.operation).toBe('create');
+      expect(result.data).toBeDefined();
+      expect(result.data.userId).toBe('john.doe');
+      expect(result.data.firstName).toBe('John');
+      expect(result.data.lastName).toBe('Doe');
+    });
+
+    it('should remove userId field for UPDATE operations', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-123',
+        sourceIdentifier: 'person-123',
+        userId: 'john.doe',
+        firstName: 'John',
+        lastName: 'Doe',
+        employeeId: 'emp-456',
+        hrn: 'hrn:hrs:persons:person-123'
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.UPDATE);
+
+      expect(result.operation).toBe('update');
+      expect(result.data).toBeDefined();
+      expect(result.data.userId).toBeUndefined();
+      expect('userId' in result.data).toBe(false);
+      expect(result.data.firstName).toBe('John');
+      expect(result.data.lastName).toBe('Doe');
+      expect(result.data.hrn).toBe('hrn:hrs:persons:person-123');
+    });
+
+    it('should handle UPDATE operations when userId is not present', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-123',
+        sourceIdentifier: 'person-123',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        hrn: 'hrn:hrs:persons:person-123'
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.UPDATE);
+
+      expect(result.operation).toBe('update');
+      expect(result.data).toBeDefined();
+      expect(result.data.userId).toBeUndefined();
+      expect('userId' in result.data).toBe(false);
+      expect(result.data.firstName).toBe('Jane');
+      expect(result.data.lastName).toBe('Smith');
+    });
+
+    it('should not include userId for DELETE operations', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-123',
+        userId: 'john.doe'
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.DELETE);
+
+      expect(result.operation).toBe('delete');
+      expect(result.data).toBeDefined();
+      expect(result.data.active).toBe(false);
+      expect(result.data.userId).toBeUndefined();
+      expect('userId' in result.data).toBe(false);
+    });
+  });
 });

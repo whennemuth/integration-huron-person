@@ -264,6 +264,10 @@ export class HuronPersonDataTarget implements DataTarget {
         // method = Method.PUT;
         method = Method.PATCH;
         data = new HuronSchemaBroker({ path, method }).getConvertedFieldSet(fieldSet);
+        // Remove userId for UPDATE operations - userId should never be changed
+        if (data && 'userId' in data) {
+          delete data.userId;
+        }
         break;
       case CrudOperation.DELETE:
         // DELETE: Implement as soft delete by setting active: false

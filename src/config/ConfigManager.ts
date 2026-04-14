@@ -55,7 +55,7 @@ export class ConfigManager {
    */
   fromFileSystem(configPath?: string): ConfigManager {
     if( ! configPath) {
-      console.log('No valid configuration to load from file system');
+      console.warn('No valid configuration to load from file system');
       return this;
     }
     try {
@@ -66,7 +66,7 @@ export class ConfigManager {
       this.config = this.deepMerge(fileConfig, this.config);
       this.isValidated = false;
     } catch (error) {
-      console.log(`No valid configuration to load from file system (${configPath}): ${error}`);
+      console.warn(`No valid configuration to load from file system (${configPath}): ${error}`);
     }
     return this;
   }

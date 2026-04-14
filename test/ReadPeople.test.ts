@@ -1,5 +1,6 @@
 import { ReadPeople, ReadPeopleOptions } from '../src/data-target/crud/ReadPeople';
 import { ConfigManager } from '../src/config/ConfigManager';
+import { createMockConfig } from './helpers/mockConfig';
 import { ApiClientForJWT } from '../src/data-target/ApiClientForJWT';
 import { QueryBuilder } from '../src/data-target/QueryBuilder';
 
@@ -14,8 +15,8 @@ describe('ReadPeople', () => {
   beforeAll(() => {
     const config = ConfigManager
       .getInstance()
-      .fromEnvironment()
-      .fromFileSystem()
+      .reset()
+      .fromPartial(createMockConfig())
       .getConfig('none');
 
     // Create mocks

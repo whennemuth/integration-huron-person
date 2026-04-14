@@ -1,5 +1,6 @@
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
 import { ConfigManager } from '../src/config/ConfigManager';
+import { createMockConfig } from './helpers/mockConfig';
 import { ApiClientForJWT } from '../src/data-target/ApiClientForJWT';
 import { ReadPeople } from '../src/data-target/crud/ReadPeople';
 import { HuronPerson } from '../src/data-target/crud/Person';
@@ -17,8 +18,8 @@ describe('ReadPerson', () => {
   beforeAll(() => {
     const config = ConfigManager
       .getInstance()
-      .fromEnvironment()
-      .fromFileSystem()
+      .reset()
+      .fromPartial(createMockConfig())
       .getConfig('none');
 
     readPerson = new ReadPerson(config);

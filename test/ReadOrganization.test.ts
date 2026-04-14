@@ -3,6 +3,7 @@ import { ConfigManager } from '../src/config/ConfigManager';
 import { ApiClientForJWT } from '../src/data-target/ApiClientForJWT';
 import { ReadOrganizations } from '../src/data-target/crud/ReadOrganizations';
 import { HuronOrganization } from '../src/data-target/crud/Organization';
+import { createMockConfig } from './helpers/mockConfig';
 
 // Mock the dependencies
 jest.mock('../src/data-target/ApiClientForJWT');
@@ -15,8 +16,8 @@ describe('ReadOrganization', () => {
   beforeAll(() => {
     const config = ConfigManager
       .getInstance()
-      .fromEnvironment()
-      .fromFileSystem()
+      .reset()
+      .fromPartial(createMockConfig())
       .getConfig('none');
 
     readOrganization = new ReadOrganization(config);

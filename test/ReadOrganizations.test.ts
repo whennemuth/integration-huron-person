@@ -2,6 +2,7 @@ import { ReadOrganizations, ReadOrganizationsOptions } from '../src/data-target/
 import { ConfigManager } from '../src/config/ConfigManager';
 import { ApiClientForJWT } from '../src/data-target/ApiClientForJWT';
 import { QueryBuilder } from '../src/data-target/QueryBuilder';
+import { createMockConfig } from './helpers/mockConfig';
 
 // Mock the ApiClientForJWT
 jest.mock('../src/data-target/ApiClientForJWT');
@@ -14,8 +15,8 @@ describe('ReadOrganizations', () => {
   beforeAll(() => {
     const config = ConfigManager
       .getInstance()
-      .fromEnvironment()
-      .fromFileSystem()
+      .reset()
+      .fromPartial(createMockConfig())
       .getConfig('none');
 
     // Create mocks

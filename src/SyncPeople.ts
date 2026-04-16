@@ -22,6 +22,11 @@ type HuronPersonIntegrationParams = {
    */
   bulkReset?: boolean;
   errorEventProcessor?: TargetApiErrorEventProcessor;
+  /**
+   * retryStrategy: Optional retry strategy for handling transient API failures (429, 5xx, network errors).
+   * Should implement executeWithRetry(fn, context) method. Type is 'any' to avoid circular dependency with fargate project.
+   */
+  retryStrategy?: any;
 };
 
 /**
@@ -34,12 +39,14 @@ class HuronPersonIntegration {
   private staticMapUsage?: StaticMapUsage;
   private bulkReset: boolean;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
+  private retryStrategy?: any;
 
   constructor(params: HuronPersonIntegrationParams) {
-    const { configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor } = params;
+    const { configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, retryStrategy } = params;
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
     this.errorEventProcessor = errorEventProcessor;
+    this.retryStrategy = retryStrategy;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -52,6 +59,10 @@ class HuronPersonIntegration {
 
     if(errorEventProcessor) {
       this.config.dataTarget.endpointConfig.errorEventProcessor = errorEventProcessor;
+    }
+
+    if(retryStrategy) {
+      this.config.dataTarget.endpointConfig.retryStrategy = retryStrategy;
     }
 
     // Note: DataMapper initialization is deferred to run() method where we can fetch current terms

@@ -22,6 +22,12 @@ export type EndpointConfigForJWT = {
   timeout?: number;
   errorEventProcessor?: TargetApiErrorEventProcessor;
   errorEventDetails?: ErrorEventDetails;
+  /**
+   * Optional retry strategy for handling transient API failures.
+   * Should implement executeWithRetry(fn, context) method.
+   * Type is 'any' to avoid circular dependency with fargate project.
+   */
+  retryStrategy?: any;
 } & (BasicAuthConfig | TokenAuthConfig);
 
 
@@ -34,6 +40,7 @@ export class ApiClientForJWT implements IApiClient {
   private tokenExpiry: number = 0;
   private errorEventProcessor: TargetApiErrorEventProcessor;
   private errorEventDetails?: ErrorEventDetails;
+  private retryStrategy?: any;
 
   public static JWT_BASIC_TOKEN_CACHE_KEY = 'jwt-basic-token-cache';
   public static JWT_EXTERNAL_TOKEN_CACHE_KEY = 'jwt-external-token-cache';
@@ -53,6 +60,9 @@ export class ApiClientForJWT implements IApiClient {
 
     // Custom error message and info.
     this.errorEventDetails = endpointConfig.errorEventDetails;
+
+    // Store retry strategy if provided
+    this.retryStrategy = endpointConfig.retryStrategy;
 
     // If an error event processor is provided in the config, use it. Otherwise, use a no-op function.
     this.errorEventProcessor = endpointConfig.errorEventProcessor || { process: async (error: any, details?: ErrorEventDetails) => {
@@ -91,6 +101,17 @@ export class ApiClientForJWT implements IApiClient {
 
   public setErrorEventDetails = (details: ErrorEventDetails) => {
     this.errorEventDetails = details;
+  }
+
+  /**
+   * Execute a function with retry logic if retry strategy is configured
+   */
+  private async executeWithRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
+    if (this.retryStrategy && typeof this.retryStrategy.executeWithRetry === 'function') {
+      return await this.retryStrategy.executeWithRetry(fn, context);
+    }
+    // No retry strategy configured, execute directly
+    return await fn();
   }
 
   /**
@@ -188,10 +209,13 @@ export class ApiClientForJWT implements IApiClient {
   async get<T = any>(params: { url: string, params?: any, responseFilter?: ResponseProcessor }): Promise<AxiosResponse<T>> {
     let response:AxiosResponse<T> = {} as AxiosResponse<T>;
     try {
-      response = await this.axiosInstance.get(params.url, { 
-        params: params.params,
-        responseType: params.responseFilter ? 'stream' : 'json'
-      });
+      response = await this.executeWithRetry(
+        async () => await this.axiosInstance.get(params.url, { 
+          params: params.params,
+          responseType: params.responseFilter ? 'stream' : 'json'
+        }),
+        `GET ${params.url}`
+      );
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);
@@ -212,7 +236,10 @@ export class ApiClientForJWT implements IApiClient {
    */
   async post<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
     try {
-      return await this.axiosInstance.post(url, data);
+      return await this.executeWithRetry(
+        async () => await this.axiosInstance.post(url, data),
+        `POST ${url}`
+      );
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);
@@ -225,7 +252,10 @@ export class ApiClientForJWT implements IApiClient {
    */
   async put<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
     try {
-      return await this.axiosInstance.put(url, data);
+      return await this.executeWithRetry(
+        async () => await this.axiosInstance.put(url, data),
+        `PUT ${url}`
+      );
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);
@@ -238,7 +268,10 @@ export class ApiClientForJWT implements IApiClient {
    */
   async patch<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
     try {
-      return await this.axiosInstance.patch(url, data);
+      return await this.executeWithRetry(
+        async () => await this.axiosInstance.patch(url, data),
+        `PATCH ${url}`
+      );
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);
@@ -251,7 +284,10 @@ export class ApiClientForJWT implements IApiClient {
    */
   async delete<T = any>(url: string): Promise<AxiosResponse<T>> {
     try {
-      return await this.axiosInstance.delete(url);
+      return await this.executeWithRetry(
+        async () => await this.axiosInstance.delete(url),
+        `DELETE ${url}`
+      );
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);

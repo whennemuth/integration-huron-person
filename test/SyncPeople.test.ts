@@ -69,7 +69,8 @@ describe('Package Exports', () => {
               apiKey: 'test-api-key'
             },
             fetchPath: '/persons'
-          }
+          },
+          idpName: 'test-idp'
         },
         dataTarget: {
           endpointConfig: {

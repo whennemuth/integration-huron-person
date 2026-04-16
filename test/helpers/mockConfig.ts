@@ -20,7 +20,9 @@ export function createMockConfig(overrides?: Partial<Config>): Config {
           apiKey: 'mock-api-key'
         },
         fetchPath: '/api/v1/people'
-      }
+      },
+      idpName: 'MockIDP',
+      idpDomain: 'mockidp.com'
     },
     dataTarget: {
       endpointConfig: {

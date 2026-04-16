@@ -17,7 +17,8 @@ describe('ConfigFromEnvironment', () => {
           apiKey: 'test-api-key'
         },
         fetchPath: '/api/v1/persons'
-      }
+      },
+      idpName: 'test-idp'
     },
     dataTarget: {
       endpointConfig: {

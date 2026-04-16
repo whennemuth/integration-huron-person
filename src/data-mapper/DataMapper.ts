@@ -22,6 +22,8 @@ export interface DataMapperParams {
   countryMappings?: CountryMappings;
   orgHrn?: (sourceOrgId: string) => string | undefined;
   addressTypes?: Set<AddressType>;
+  idpName: string;
+  idpDomain?: string;
 }
 
 export const _fieldDefinitions = [
@@ -128,15 +130,18 @@ export class DataMapper implements CoreDataMapper {
       person = removeEmptyValues(person);
 
       const { personid } = person;
+      const { idpName, idpDomain, addressTypes, currentTerms, } = this._params;
       const { firstName, middleName, lastName } = NameMapper({ person, removeNullValues: false }).getName() ?? {};
-      const userId = UserIdMapper(person, false).getUserId(crudOperation);
+      const userId = UserIdMapper({ 
+        person, idpName, idpDomain, removeNullValues: false 
+      }).getUserId(crudOperation);
       const title = TitleMapper(person, false).getTitle();
       const email = EmailMapper(person, false).getEmail();
       const addressMapper = AddressMapper({
         person,
         stateMappings: this.stateMappings ?? { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() },
         countryMappings: this.countryMappings ?? { forwardMap: new Map<string, CountryRow>(), reverseMap: new Map<string, string>() },
-        addressTypes: this._params.addressTypes
+        addressTypes
       });
       const addressLine1 = addressMapper.getAddressLine1();
       const city = addressMapper.getCity();
@@ -145,7 +150,7 @@ export class DataMapper implements CoreDataMapper {
       const country = addressMapper.getCountry();
       const orgAssignments: OrgAssignments = OrgMapper({ 
         person, 
-        currentTerms: this._params.currentTerms, 
+        currentTerms, 
         removeNullValues: false 
       }).getOrgs();
 
@@ -285,7 +290,15 @@ export const getDataMapper = async (config: Config, staticMapUsage?: StaticMapUs
   const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
   const currentTerms = await termsDataSource.fetchRaw();
   console.log(`Fetched ${currentTerms.length} current term(s)`);
-  return new DataMapper({ currentTerms, stateMappings, countryMappings, orgHrn, orgMappings });
+  return new DataMapper({ 
+    currentTerms, 
+    stateMappings, 
+    countryMappings, 
+    orgHrn, 
+    orgMappings, 
+    idpName: config.dataSource.idpName,
+    idpDomain: config.dataSource.idpDomain
+  });
 }
 
 /**

@@ -44,7 +44,9 @@
         "timeout": 300000
       },
       "fetchPath": "/api/1/rest/feed/run/task/BUProd/Admin-Integration-Services/GenericGets/getCurrentTermFromCS"
-    }
+    },
+    "idpName": "bu-sso_TEST",
+    "idpDomain": "bu.edu"
   },
   "dataTarget": {
     "endpointConfig": {

@@ -20,7 +20,8 @@ describe('BuCdmCurrentTermsDataSource', () => {
             timeout: 30000
           },
           fetchPath: '/api/terms/current'
-        }
+        },
+        idpName: 'test-idp'
       },
       integration: {
         clientId: 'test-client',

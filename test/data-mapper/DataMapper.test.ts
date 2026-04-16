@@ -52,7 +52,7 @@ describe('DataMapper', () => {
       const source = require('./source/bugs.json');
       const expectedTarget = require('./target/bugs.json');
 
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const result = mapper.map([source]);
 
       // The result should have fieldSets with one item, and fieldValues should match expectedTarget
@@ -75,28 +75,28 @@ describe('DataMapper', () => {
 
     // Add more comprehensive tests here, without repeating mapper-specific tests
     it('should handle empty array', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const result = mapper.map([]);
       expect(result.fieldSets).toEqual([]);
       expect(result.fieldDefinitions).toBeDefined();
     });
 
     it('should set validationFailureMessage for missing personId', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const invalidPerson = { personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] } };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required personid');
     });
 
     it('should set validationFailureMessage for missing names', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const invalidPerson = { personid: '123' };
       mapper.map([invalidPerson]);
       expect(mapper.criticalValidationErrorMessage).toContain('missing required name fields');
     });
 
     it('should set validationFailureMessage for missing organizations', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const invalidPerson = {
         personid: '123',
         personBasic: { names: [{ firstName: 'Test', lastName: 'User', nameType: 'PRF', effectiveDate: '03052026' }] }
@@ -106,7 +106,7 @@ describe('DataMapper', () => {
     });
 
     it('should handle multiple persons', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const person1 = {
         personid: '1',
         personBasic: { names: [{ firstName: 'First', lastName: 'User' }] },
@@ -165,7 +165,7 @@ describe('DataMapper', () => {
         affiliateInfo: { address: [] },
         constituentInfo: { address: [] }
       };
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const result = mapper.map([dualOrgPerson]);
       expect(result.fieldSets).toHaveLength(1);
       const fields = result.fieldSets[0].fieldValues;
@@ -176,7 +176,7 @@ describe('DataMapper', () => {
     });
 
     it('should expose currentTerms via getter', () => {
-      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       expect(mapper.currentTerms).toEqual(mockCurrentTerms);
       expect(mapper.currentTerms).toHaveLength(2);
     });
@@ -189,6 +189,7 @@ describe('DataMapper', () => {
         currentTerms: mockCurrentTerms, 
         stateMappings: mockStateMappings, 
         countryMappings: mockCountryMappings,
+        idpName: 'test-idp',
         orgHrn 
       });
       
@@ -210,6 +211,7 @@ describe('DataMapper', () => {
         currentTerms: mockCurrentTerms, 
         stateMappings: mockStateMappings, 
         countryMappings: mockCountryMappings,
+        idpName: 'test-idp',
         orgMappings,
         orgHrn 
       });
@@ -222,7 +224,8 @@ describe('DataMapper', () => {
       const mapper = new DataMapper({ 
         currentTerms: mockCurrentTerms, 
         stateMappings: mockStateMappings, 
-        countryMappings: mockCountryMappings
+        countryMappings: mockCountryMappings,
+        idpName: 'test-idp'
       });
       
       const result = mapper.orgHrn('67890');
@@ -232,7 +235,8 @@ describe('DataMapper', () => {
     it('should support state mappings being undefined', () => {
       const mapper = new DataMapper({ 
         currentTerms: mockCurrentTerms, 
-        countryMappings: mockCountryMappings
+        countryMappings: mockCountryMappings,
+        idpName: 'test-idp'
       });
       
       expect(mapper.stateMappings).toBeUndefined();
@@ -241,7 +245,8 @@ describe('DataMapper', () => {
     it('should support country mappings being undefined', () => {
       const mapper = new DataMapper({ 
         currentTerms: mockCurrentTerms, 
-        stateMappings: mockStateMappings
+        stateMappings: mockStateMappings,
+        idpName: 'test-idp'
       });
       
       expect(mapper.countryMappings).toBeUndefined();
@@ -249,7 +254,8 @@ describe('DataMapper', () => {
 
     it('should support both state and country mappings being undefined', () => {
       const mapper = new DataMapper({ 
-        currentTerms: mockCurrentTerms
+        currentTerms: mockCurrentTerms,
+        idpName: 'test-idp'
       });
       
       expect(mapper.stateMappings).toBeUndefined();

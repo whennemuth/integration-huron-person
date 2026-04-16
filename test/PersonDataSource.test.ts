@@ -62,7 +62,8 @@ describe('BuCdmPersonDataSource', () => {
           apiKey: 'test-api-key'
         },
         fetchPath: '/api/v1/persons'
-      }
+      },
+      idpName: 'test-idp'
     },
     dataTarget: {
       endpointConfig: {
@@ -227,7 +228,7 @@ describe('BuCdmPersonDataSource', () => {
   beforeEach(() => {
     mockApiClient = new MockApiClient(mockRawPersonData);
     const mockResponseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] });
-    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings });
+    dataMapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
     dataSource = new BuCdmPersonDataSource({ config: mockConfig, responseFilter: mockResponseFilter, buid: 'U12345678' });
     // Replace the real ApiClient with our mock
     (dataSource as any).apiClient = mockApiClient;
@@ -258,7 +259,8 @@ describe('BuCdmPersonDataSource', () => {
               apiKey: 'test-api-key'
             },
             fetchPath: '/api/v1/persons'
-          }
+          },
+          idpName: 'test-idp'
         },
         dataTarget: {
           endpointConfig: {
@@ -310,7 +312,8 @@ describe('BuCdmPersonDataSource', () => {
               apiKey: 'test-api-key'
             },
             fetchPath: '/api/v1/persons'
-          }
+          },
+          idpName: 'test-idp'
         },
         dataTarget: {
           endpointConfig: {

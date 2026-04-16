@@ -151,7 +151,8 @@ describe('StaticMapUsage Integration Tests', () => {
         const mapper = new DataMapper({ 
           currentTerms: mockCurrentTerms,
           stateMappings: mockStateMappings,
-          countryMappings: undefined  // Simulates countryMap: false
+          countryMappings: undefined,  // Simulates countryMap: false
+          idpName: 'test-idp'
         });
 
         expect(mapper.countryMappings).toBeUndefined();
@@ -164,7 +165,8 @@ describe('StaticMapUsage Integration Tests', () => {
         const mapper = new DataMapper({ 
           currentTerms: mockCurrentTerms,
           stateMappings: undefined,  // Simulates stateMap: false
-          countryMappings: mockCountryMappings
+          countryMappings: mockCountryMappings,
+          idpName: 'test-idp'
         });
 
         expect(mapper.stateMappings).toBeUndefined();
@@ -176,6 +178,7 @@ describe('StaticMapUsage Integration Tests', () => {
       it('should return lookup:sourceIdentifier:XX format when orgHrn is undefined', () => {
         const mapper = new DataMapper({ 
           currentTerms: mockCurrentTerms,
+          idpName: 'test-idp'
           // No orgHrn provided - simulates orgMap: false
         });
 
@@ -192,7 +195,8 @@ describe('StaticMapUsage Integration Tests', () => {
         const mapper = new DataMapper({ 
           currentTerms: mockCurrentTerms,
           orgHrn: (id: string) => orgMappings.forwardMap.get(id),
-          orgMappings
+          orgMappings,
+          idpName: 'test-idp'
         });
 
         const orgHrn = mapper.orgHrn('12345');
@@ -208,7 +212,8 @@ describe('StaticMapUsage Integration Tests', () => {
         const mapper = new DataMapper({ 
           currentTerms: mockCurrentTerms,
           orgHrn: (id: string) => orgMappings.forwardMap.get(id),
-          orgMappings
+          orgMappings,
+          idpName: 'test-idp'
         });
 
         // Request an org ID that's not in the map - returns undefined (not lookup syntax)
@@ -220,7 +225,8 @@ describe('StaticMapUsage Integration Tests', () => {
     describe('Mixed scenarios - verification of mapper state', () => {
       it('should have all mappings undefined when none provided', () => {
         const mapper = new DataMapper({ 
-          currentTerms: mockCurrentTerms
+          currentTerms: mockCurrentTerms,
+          idpName: 'test-idp'
           // No static maps provided
         });
 
@@ -237,7 +243,8 @@ describe('StaticMapUsage Integration Tests', () => {
           currentTerms: mockCurrentTerms,
           stateMappings: mockStateMappings,
           countryMappings: mockCountryMappings,
-          orgMappings: mockOrgMappings
+          orgMappings: mockOrgMappings,
+          idpName: 'test-idp'
         });
 
         expect(mapper.stateMappings).toBeDefined();

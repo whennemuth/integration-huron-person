@@ -294,7 +294,8 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
       } as any));
 
       const sourceDataMapper = new DataMapper({
-        currentTerms: mockCurrentTerms
+        currentTerms: mockCurrentTerms,
+        idpName: 'test-idp'
       });
 
       const sourcePersonParms: SourcePersonParms = {
@@ -313,7 +314,8 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
 
     it('should throw error when neither buid nor cdmPerson provided', async () => {
       const sourceDataMapper = new DataMapper({
-        currentTerms: mockCurrentTerms
+        currentTerms: mockCurrentTerms,
+        idpName: 'test-idp'
       });
 
       const sourcePersonParms: SourcePersonParms = {
@@ -344,7 +346,8 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
       };
 
       const sourceDataMapper = new DataMapper({
-        currentTerms: mockCurrentTerms
+        currentTerms: mockCurrentTerms,
+        idpName: 'test-idp'
       });
 
       const sourcePersonParms: SourcePersonParms = {

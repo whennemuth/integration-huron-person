@@ -33,7 +33,8 @@ const mockConfig: Config = {
         apiKey: 'test-api-key'
       },
       fetchPath: '/api/v1/terms'
-    }
+    },
+    idpName: 'test-idp'
   },
   dataTarget: {
     endpointConfig: {

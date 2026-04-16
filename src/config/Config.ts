@@ -57,6 +57,10 @@ export interface Config {
     statesCsvS3Config?: S3CsvConfig;
     /** Configuration for aquiring list of countries */
     countriesCsvS3Config?: S3CsvConfig;
+    /** Identity provider name (for assigning UserID values) */
+    idpName: string;
+    /** Identity provider domain (for assigning UserID values) */
+    idpDomain?: string;
   };
   
   /** DataTarget configuration (where we push data to) - uses JWT authentication */

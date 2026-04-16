@@ -8,7 +8,10 @@ const UserIdTypes = [
   { priority: 2, source: 'Campus Solutions' }
 ] as UserIdType[];
 
-export const UserIdMapper = (person: any, removeNullValues:boolean = true): { getUserId: (crud?: CrudOperation) => any } => {
+export const UserIdMapper = (params: { 
+  person: any, idpName: string, idpDomain?: string, removeNullValues?: boolean 
+}): { getUserId: (crud?: CrudOperation) => any } => {
+  let { person, idpName, idpDomain="bu.edu", removeNullValues = true } = params;
 
   if(removeNullValues) {
     person = removeNulls(person);
@@ -37,7 +40,10 @@ export const UserIdMapper = (person: any, removeNullValues:boolean = true): { ge
           const bPriority = bType ? bType.priority : Number.MAX_VALUE;
           return aPriority - bPriority;
         });
-        return `${sortedAccounts[0]?.name}`.toLowerCase();
+        // Construct composite UserID: {idpName}_{account}@{idpDomain}
+        // Example: bu-sso_wrh@bu.edu or bu-sso_TEST_wrh@bu.edu
+        const accountName = `${sortedAccounts[0]?.name}`.toLowerCase();
+        return `${idpName}_${accountName}@${idpDomain}`;
       }
     }
   }

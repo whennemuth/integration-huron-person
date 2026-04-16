@@ -13,14 +13,14 @@ export class ConfigManager {
   private isValidated: boolean = false;
   private pendingLoads: Promise<void>[] = [];
 
-  private constructor() {}
+  private constructor(private ignoreValidation: boolean=false) {}
 
   /**
    * Get singleton instance of ConfigManager
    */
-  static getInstance(): ConfigManager {
+  static getInstance(ignoreValidation: boolean=false): ConfigManager {
     if (!ConfigManager.instance) {
-      ConfigManager.instance = new ConfigManager();
+      ConfigManager.instance = new ConfigManager(ignoreValidation);
     }
     return ConfigManager.instance;
   }
@@ -161,7 +161,9 @@ export class ConfigManager {
 
     if (!this.isValidated) {
       const validator = new ConfigValidator(this.config as Config);
-      validator.validateConfig(executionMode);
+      if (!this.ignoreValidation) {
+        validator.validateConfig(executionMode);
+      }
       this.isValidated = true;
     }
 
@@ -186,7 +188,9 @@ export class ConfigManager {
 
     if (!this.isValidated) {
       const validator = new ConfigValidator(this.config as Config);
-      validator.validateConfig(executionMode);
+      if (!this.ignoreValidation) {
+        validator.validateConfig(executionMode);
+      }
       this.isValidated = true;
     }
 

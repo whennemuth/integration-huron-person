@@ -1,7 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
 import { FilterFields, SortFields, HuronPerson } from './Person';
@@ -39,10 +39,12 @@ class ReadPeople {
   private apiClient: ApiClientForJWT;
   private queryBuilder: QueryBuilder;
 
-  constructor(config: Config, queryBuilder?: QueryBuilder) {
+  constructor(params: { config: Config, queryBuilder?: QueryBuilder, errorEventProcessor?: TargetApiErrorEventProcessor }) {
+    const { config, queryBuilder, errorEventProcessor } = params;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;    
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
@@ -55,27 +57,27 @@ class ReadPeople {
    * @returns Promise resolving to the PeopleListResponse containing paginated results
    */
   public async readPeople(options: ReadPeopleOptions = {}): Promise<PeopleListResponse> {
-    try {
-      const queryParams = this.queryBuilder.buildQueryParams(options);
+    const queryParams = this.queryBuilder.buildQueryParams(options);
 
-      const response = await this.apiClient.get<PeopleListResponse>({
-        url: SchemaPath.PERSONS,
-        params: queryParams
-      });
+    this.apiClient.setErrorEventDetails({
+      message: 'Failed to read people',
+      object: { options, queryParams }
+    });
+    
+    const response = await this.apiClient.get<PeopleListResponse>({
+      url: SchemaPath.PERSONS,
+      params: queryParams
+    });
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to read people: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to read people:', error);
-      throw new Error(`Failed to read people: ${error}`);
+    if (response.status !== 200) {
+      throw new Error(`Failed to read people: HTTP ${response.status} ${response.statusText}`);
     }
+
+    return response.data;
   }
 
   /**
-   * Read all organizations matching the criteria, handling pagination automatically.
+   * Read all people matching the criteria, handling pagination automatically.
    * @param options Configuration options for the query
    * @returns Promise resolving to array of all matching Organization records
    */
@@ -142,39 +144,29 @@ class ReadPeople {
   }
 
   public async readPeopleByFullName(firstName: string, lastName: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      const filters: FilterSpec[] = [
-        ReadPeople.createFilter({ field: 'firstName', value: firstName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' }),
-        ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 1, logicalOperator: 'and', comparisonOperator: 'eq' })
-      ];
-      const persons: HuronPerson[] = await this.readAllPeople({
-        filters,
-        includeFields
-      });
-      return persons;
-    } catch (error) {
-      console.error(`Failed to read person with name ${firstName} ${lastName}:`, error);
-      throw new Error(`Failed to read person with name ${firstName} ${lastName}: ${error}`);
-    }
+    const filters: FilterSpec[] = [
+      ReadPeople.createFilter({ field: 'firstName', value: firstName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' }),
+      ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 1, logicalOperator: 'and', comparisonOperator: 'eq' })
+    ];
+    const persons: HuronPerson[] = await this.readAllPeople({
+      filters,
+      includeFields
+    });
+    return persons;
   }
 
   public async readPeopleByNamePart(namePart: string, value: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      const persons: HuronPerson[] = await this.readAllPeople({
-        filters: [
-          ReadPeople.createFilter({ field: namePart, value, priority: 0, logicalOperator: 'or', comparisonOperator: 'eq' }),
-        ],
-        sort: ReadPeople.createSort({ 
-          field: namePart.includes('first') ? 'lastName' : 'firstName', 
-          direction: 'desc' 
-        }),
-        includeFields
-      });
-      return persons;
-    } catch (error) {
-      console.error(`Failed to read person with name part ${namePart}:`, error);
-      throw new Error(`Failed to read person with name part ${namePart}: ${error}`);
-    }
+    const persons: HuronPerson[] = await this.readAllPeople({
+      filters: [
+        ReadPeople.createFilter({ field: namePart, value, priority: 0, logicalOperator: 'or', comparisonOperator: 'eq' }),
+      ],
+      sort: ReadPeople.createSort({ 
+        field: namePart.includes('first') ? 'lastName' : 'firstName', 
+        direction: 'desc' 
+      }),
+      includeFields
+    });
+    return persons;
   }
 
   public async readPeopleByFirstName(firstName: string, includeFields?: string[]): Promise<HuronPerson[]> {
@@ -182,18 +174,13 @@ class ReadPeople {
   }
 
   public async readPeopleByLastName(lastName: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      const persons: HuronPerson[] = await this.readAllPeople({
-        filters: [
-          ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' })
-        ],
-        includeFields
-      });
-      return persons;
-    } catch (error) {
-      console.error(`Failed to read person with last name ${lastName}:`, error);
-      throw new Error(`Failed to read person with last name ${lastName}: ${error}`);
-    }
+    const persons: HuronPerson[] = await this.readAllPeople({
+      filters: [
+        ReadPeople.createFilter({ field: 'lastName', value: lastName, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' })
+      ],
+      includeFields
+    });
+    return persons;
   }
 
   public async readPeopleByFilterField(filterField: string, inArray: string[], includeFields?: string[]): Promise<HuronPerson[]> {
@@ -250,7 +237,7 @@ async function main() {
     .fromFileSystem()
     .getConfig('none');
 
-  const reader = new ReadPeople(config);
+  const reader = new ReadPeople({ config });
 
   const { HURON_PEOPLE_FILTER, 
     HURON_PERSON_SOURCE_IDS, 

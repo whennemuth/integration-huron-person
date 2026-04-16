@@ -7,12 +7,21 @@ import { AuthBasic, BasicAuthConfig } from './AuthBasic';
 import type { TokenAuthConfig } from './AuthToken';
 import { AuthToken } from './AuthToken';
 
+export type TargetApiErrorEventProcessor = { process: (error: any, details?: ErrorEventDetails) => Promise<void> };
+
+export type ErrorEventDetails = {
+  message?: string;
+  object: any;
+}
+
 /**
  * Configuration for JWT-authenticated API endpoint
  */
 export type EndpointConfigForJWT = {
   baseUrl: string;
   timeout?: number;
+  errorEventProcessor?: TargetApiErrorEventProcessor;
+  errorEventDetails?: ErrorEventDetails;
 } & (BasicAuthConfig | TokenAuthConfig);
 
 
@@ -21,15 +30,15 @@ export type EndpointConfigForJWT = {
  */
 export class ApiClientForJWT implements IApiClient {
   private axiosInstance: AxiosInstance;
-  private endpointConfig: EndpointConfigForJWT;
   private jwtToken: string | null = null;
   private tokenExpiry: number = 0;
-  private cache?: Cache<string, string>;
+  private errorEventProcessor: TargetApiErrorEventProcessor;
+  private errorEventDetails?: ErrorEventDetails;
 
   public static JWT_BASIC_TOKEN_CACHE_KEY = 'jwt-basic-token-cache';
   public static JWT_EXTERNAL_TOKEN_CACHE_KEY = 'jwt-external-token-cache';
 
-  constructor(endpointConfig: EndpointConfigForJWT, cache?:Cache<string,string>) {
+  constructor(private endpointConfig: EndpointConfigForJWT, private cache?:Cache<string,string>) {
     this.endpointConfig = endpointConfig;
     this.axiosInstance = axios.create({
       baseURL: endpointConfig.baseUrl,
@@ -41,6 +50,20 @@ export class ApiClientForJWT implements IApiClient {
 
     // Store cache instance - if provided, caching is enabled
     this.cache = cache;
+
+    // Custom error message and info.
+    this.errorEventDetails = endpointConfig.errorEventDetails;
+
+    // If an error event processor is provided in the config, use it. Otherwise, use a no-op function.
+    this.errorEventProcessor = endpointConfig.errorEventProcessor || { process: async (error: any, details?: ErrorEventDetails) => {
+      // No-op by default. Consumers can provide their own implementation to handle error events as needed.
+      if(details) {
+        console.error(`[ApiClientForJWT] Error: `, { details, error });
+      }
+      else {
+        console.error(`[ApiClientForJWT] Error: `, error);
+      }
+    }};
 
     // Add request interceptor for URL logging
     this.axiosInstance.interceptors.request.use(
@@ -64,6 +87,10 @@ export class ApiClientForJWT implements IApiClient {
       },
       (error: any) => Promise.reject(error)
     );
+  }
+
+  public setErrorEventDetails = (details: ErrorEventDetails) => {
+    this.errorEventDetails = details;
   }
 
   /**
@@ -159,10 +186,17 @@ export class ApiClientForJWT implements IApiClient {
    * Make authenticated GET request
    */
   async get<T = any>(params: { url: string, params?: any, responseFilter?: ResponseProcessor }): Promise<AxiosResponse<T>> {
-    const response: AxiosResponse<T> = await this.axiosInstance.get(params.url, { 
-      params: params.params,
-      responseType: params.responseFilter ? 'stream' : 'json'
-    });
+    let response:AxiosResponse<T> = {} as AxiosResponse<T>;
+    try {
+      response = await this.axiosInstance.get(params.url, { 
+        params: params.params,
+        responseType: params.responseFilter ? 'stream' : 'json'
+      });
+    }
+    catch (error) {
+      this.errorEventProcessor?.process(error, this.errorEventDetails);
+      throw error;
+    }
 
     if(!params.responseFilter) {
       // The response has all of the data and can be returned as is.
@@ -177,28 +211,52 @@ export class ApiClientForJWT implements IApiClient {
    * Make authenticated POST request
    */
   async post<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.post(url, data);
+    try {
+      return await this.axiosInstance.post(url, data);
+    }
+    catch (error) {
+      this.errorEventProcessor?.process(error, this.errorEventDetails);
+      throw error;
+    }
   }
 
   /**
    * Make authenticated PUT request
    */
   async put<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.put(url, data);
+    try {
+      return await this.axiosInstance.put(url, data);
+    }
+    catch (error) {
+      this.errorEventProcessor?.process(error, this.errorEventDetails);
+      throw error;
+    }
   }
 
   /**
    * Make authenticated PATCH request
    */
   async patch<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.patch(url, data);
+    try {
+      return await this.axiosInstance.patch(url, data);
+    }
+    catch (error) {
+      this.errorEventProcessor?.process(error, this.errorEventDetails);
+      throw error;
+    }
   }
 
   /**
    * Make authenticated DELETE request
    */
   async delete<T = any>(url: string): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.delete(url);
+    try {
+      return await this.axiosInstance.delete(url);
+    }
+    catch (error) {
+      this.errorEventProcessor?.process(error, this.errorEventDetails);
+      throw error;
+    }
   }
 
   /**

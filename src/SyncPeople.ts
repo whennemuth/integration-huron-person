@@ -8,6 +8,7 @@ import { getDataSource } from './data-source/DataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
+import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 type HuronPersonIntegrationParams = {
@@ -20,6 +21,7 @@ type HuronPersonIntegrationParams = {
    * lookups against the target API instead of the stored (key + hash) cache. 
    */
   bulkReset?: boolean;
+  errorEventProcessor?: TargetApiErrorEventProcessor;
 };
 
 /**
@@ -31,11 +33,13 @@ class HuronPersonIntegration {
   private endToEnd: EndToEnd;
   private staticMapUsage?: StaticMapUsage;
   private bulkReset: boolean;
+  private errorEventProcessor?: TargetApiErrorEventProcessor;
 
   constructor(params: HuronPersonIntegrationParams) {
-    const { configPath, cache, config, staticMapUsage, bulkReset = false } = params;
+    const { configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor } = params;
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
+    this.errorEventProcessor = errorEventProcessor;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -44,6 +48,10 @@ class HuronPersonIntegration {
       // Load configuration with chaining API
       const configManager = ConfigManager.getInstance();
       this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig('people');
+    }
+
+    if(errorEventProcessor) {
+      this.config.dataTarget.endpointConfig.errorEventProcessor = errorEventProcessor;
     }
 
     // Note: DataMapper initialization is deferred to run() method where we can fetch current terms
@@ -78,7 +86,10 @@ class HuronPersonIntegration {
       timer.start();
 
       // Create integration components with currentTerms
-      const { countryMap=false, orgMap=false, stateMap=false } = this.staticMapUsage || {};
+      const { 
+        staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
+        errorEventProcessor
+      } = this;
       const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
       let responseFilter: ResponseProcessor | undefined;
@@ -86,7 +97,7 @@ class HuronPersonIntegration {
         responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
       }
       let dataSource: DataSource = getDataSource(config, responseFilter) as DataSource;
-      const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any });
+      const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any, errorEventProcessor });
       const deltaStrategy = DeltaStrategyFactory.createStrategy({ config, chunkId, bulkReset: this.bulkReset });
       const fieldFilterParms = {
         stateMappings: dataMapper.stateMappings,

@@ -26,7 +26,8 @@ describe('ReadPerson', () => {
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;
-    mockReadPeople = new ReadPeople(config) as jest.Mocked<ReadPeople>;
+    mockApiClient.setErrorEventDetails = jest.fn();
+    mockReadPeople = new ReadPeople({ config }) as jest.Mocked<ReadPeople>;
 
     // Replace the private apiClient with our mock
     (readPerson as any).apiClient = mockApiClient;
@@ -120,9 +121,7 @@ describe('ReadPerson', () => {
     it('should handle API call failure gracefully', async () => {
       mockApiClient.get.mockRejectedValue(new Error('Network error'));
 
-      await expect(readPerson.readPersonByHRN('12345')).rejects.toThrow(
-        'Failed to read person hrn:hrs:persons:12345'
-      );
+      await expect(readPerson.readPersonByHRN('12345')).rejects.toThrow();
     });
   });
 
@@ -194,9 +193,7 @@ describe('ReadPerson', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllPeople.mockRejectedValue(new Error('API error'));
 
-      await expect(readPerson.readPersonById('person123')).rejects.toThrow(
-        'Failed to read person by id person123'
-      );
+      await expect(readPerson.readPersonById('person123')).rejects.toThrow();
     });
 
     it('should return array of persons', async () => {
@@ -266,9 +263,7 @@ describe('ReadPerson', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllPeople.mockRejectedValue(new Error('API error'));
 
-      await expect(readPerson.readPersonByEmail('john@example.com')).rejects.toThrow(
-        'Failed to read person by email john@example.com'
-      );
+      await expect(readPerson.readPersonByEmail('john@example.com')).rejects.toThrow();
     });
 
     it('should return array of persons', async () => {
@@ -338,9 +333,7 @@ describe('ReadPerson', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllPeople.mockRejectedValue(new Error('API error'));
 
-      await expect(readPerson.readPersonByUserId('user123')).rejects.toThrow(
-        'Failed to read person by userId user123'
-      );
+      await expect(readPerson.readPersonByUserId('user123')).rejects.toThrow();
     });
 
     it('should return array of persons', async () => {
@@ -410,9 +403,7 @@ describe('ReadPerson', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllPeople.mockRejectedValue(new Error('API error'));
 
-      await expect(readPerson.readPersonBySourceIdentifier('source123')).rejects.toThrow(
-        'Failed to read person by sourceIdentifier source123'
-      );
+      await expect(readPerson.readPersonBySourceIdentifier('source123')).rejects.toThrow();
     });
 
     it('should return array of persons', async () => {

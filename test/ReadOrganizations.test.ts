@@ -21,10 +21,11 @@ describe('ReadOrganizations', () => {
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;
+    mockApiClient.setErrorEventDetails = jest.fn();
     mockQueryBuilder = new QueryBuilder(new Set(['name', 'id', 'active']), new Set(['name', 'id'])) as jest.Mocked<QueryBuilder>;
     mockQueryBuilder.buildQueryParams = jest.fn();
 
-    readOrganizations = new ReadOrganizations(config, mockQueryBuilder);
+    readOrganizations = new ReadOrganizations({ config, queryBuilder: mockQueryBuilder });
 
     // Replace the private apiClient with our mock
     (readOrganizations as any).apiClient = mockApiClient;

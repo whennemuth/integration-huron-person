@@ -336,7 +336,7 @@ export type OrgMappings = {
 };
 
 export const loadOrgMap = async (config: Config): Promise<OrgMappings> => {
-  const reader = new ReadOrganizations(config);
+  const reader = new ReadOrganizations({ config });
   console.log('Reading all organizations...');
   const allOrganizations: HuronOrganization[] = await reader.readAllOrganizationsNonTokenized({
     pagination: { pageSize: 500 },

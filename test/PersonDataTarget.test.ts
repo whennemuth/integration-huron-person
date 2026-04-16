@@ -33,6 +33,10 @@ class MockApiClient implements IApiClient {
     this.shouldThrow = shouldThrow;
   }
 
+  setErrorEventDetails(details: any): void {
+    // No-op for mock
+  }
+
   async get<T = any>(params: { url: string, params?: any, axiosInstance?: any }): Promise<{ data: T; status: number; statusText: string; headers: {}; config: any; }> {
     throw new Error('GET method not used in DataTarget tests');
   }
@@ -647,6 +651,9 @@ describe('HuronPersonDataTarget', () => {
       // Create a custom mock that throws on the second call
       let callCount = 0;
       const customMockApiClient = {
+        setErrorEventDetails(details: any): void {
+          // No-op for mock
+        },
         async post<T = any>(url: string, data?: any): Promise<{ data: T; status: number; statusText: string; headers: {}; config: any; }> {
           callCount++;
           

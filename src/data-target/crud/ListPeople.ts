@@ -12,7 +12,7 @@ class ListPeople {
   private peopleReader: ReadPeople;
 
   constructor(private config: Config, private pageSize: number = 100) {
-    this.peopleReader = new ReadPeople(config);
+    this.peopleReader = new ReadPeople({ config });
   }
 
   private getActiveFilter = (active?: boolean) => {

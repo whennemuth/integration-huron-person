@@ -1,7 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
 import { HuronOrganization } from './Organization';
@@ -39,10 +39,12 @@ class ReadOrganizations {
   private apiClient: ApiClientForJWT;
   private queryBuilder: QueryBuilder;
 
-  constructor(config: Config, queryBuilder?: QueryBuilder) {
+  constructor(params: { config: Config, queryBuilder?: QueryBuilder, errorEventProcessor?: TargetApiErrorEventProcessor }) {
+    const { config, queryBuilder, errorEventProcessor } = params;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;    
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
@@ -72,23 +74,18 @@ class ReadOrganizations {
    * @returns Promise resolving to the OrganizationsListResponse containing paginated results
    */
   public async readOrganizations(options: ReadOrganizationsOptions = {}): Promise<OrganizationsListResponse> {
-    try {
-      const queryParams = this.queryBuilder.buildQueryParams(options);
+    const queryParams = this.queryBuilder.buildQueryParams(options);
 
-      const response = await this.apiClient.get<OrganizationsListResponse>({
-        url: SchemaPath.ORGANIZATIONS,
-        params: queryParams
-      });
+    const response = await this.apiClient.get<OrganizationsListResponse>({
+      url: SchemaPath.ORGANIZATIONS,
+      params: queryParams
+    });
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to read organizations: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to read organizations:', error);
-      throw new Error(`Failed to read organizations: ${error}`);
+    if (response.status !== 200) {
+      throw new Error(`Failed to read organizations: HTTP ${response.status} ${response.statusText}`);
     }
+
+    return response.data;
   }
 
   /**
@@ -212,7 +209,7 @@ async function main() {
     .fromFileSystem()
     .getConfig('none');
 
-  const reader = new ReadOrganizations(config);
+  const reader = new ReadOrganizations({ config });
   const task = process.env.HURON_ORGS_TASK;
 
   try {

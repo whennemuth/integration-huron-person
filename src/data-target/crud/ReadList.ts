@@ -1,7 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, QueryBuilder } from '../QueryBuilder';
 
 /**
@@ -110,13 +110,14 @@ export class ReadList {
   private listTypesQueryBuilder: QueryBuilder;
   private listItemsQueryBuilder: QueryBuilder;
 
-  constructor(config: Config) {
+  constructor(config: Config, errorEventProcessor?: TargetApiErrorEventProcessor) {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
-    this.apiClient = new ApiClientForJWT(endpointConfig, cache);
+    this.apiClient = new ApiClientForJWT(endpointConfig, cache );
 
     // Define filter and sort fields for list types
     const listTypeFilterFields = new Set([
@@ -162,23 +163,22 @@ export class ReadList {
    * @returns Promise resolving to the ListTypesResponse containing paginated results
    */
   public async readListTypes(options: ReadListsOptions = {}): Promise<ListTypesResponse> {
-    try {
-      const queryParams = this.listTypesQueryBuilder.buildQueryParams(options);
+    const queryParams = this.listTypesQueryBuilder.buildQueryParams(options);
 
-      const response = await this.apiClient.get<ListTypesResponse>({
-        url: '/api/v1/lists',
-        params: queryParams
-      });
+    this.apiClient.setErrorEventDetails({ 
+      message: 'Huron list types retrieval error', 
+      object: { queryParams } }
+    );
+    const response = await this.apiClient.get<ListTypesResponse>({
+      url: '/api/v1/lists',
+      params: queryParams
+    });
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to read list types: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to read list types:', error);
-      throw new Error(`Failed to read list types: ${error}`);
+    if (response.status !== 200) {
+      throw new Error(`Failed to read list types: HTTP ${response.status} ${response.statusText}`);
     }
+
+    return response.data;
   }
 
   /**
@@ -226,25 +226,24 @@ export class ReadList {
    * @returns Promise resolving to the ListItemsResponse containing paginated results
    */
   public async readListItems(listTypeHrn: string, options: ReadListsOptions = {}): Promise<ListItemsResponse> {
-    try {
-      const queryParams = this.listItemsQueryBuilder.buildQueryParams(options);
+    const queryParams = this.listItemsQueryBuilder.buildQueryParams(options);
 
-      // Encode the HRN for use in the URL path
-      const encodedHrn = encodeURIComponent(listTypeHrn);
-      const response = await this.apiClient.get<ListItemsResponse>({
-        url: `/api/v1/lists/${encodedHrn}/items`,
-        params: queryParams
-      });
+    // Encode the HRN for use in the URL path
+    const encodedHrn = encodeURIComponent(listTypeHrn);
+    this.apiClient.setErrorEventDetails({ 
+      message: `Huron list items retrieval error for list type ${listTypeHrn}`, 
+      object: { queryParams, listTypeHrn } 
+    });
+    const response = await this.apiClient.get<ListItemsResponse>({
+      url: `/api/v1/lists/${encodedHrn}/items`,
+      params: queryParams
+    });
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to read list items for ${listTypeHrn}: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to read list items for ${listTypeHrn}:`, error);
-      throw new Error(`Failed to read list items for ${listTypeHrn}: ${error}`);
+    if (response.status !== 200) {
+      throw new Error(`Failed to read list items for ${listTypeHrn}: HTTP ${response.status} ${response.statusText}`);
     }
+
+    return response.data;
   }
 
   /**

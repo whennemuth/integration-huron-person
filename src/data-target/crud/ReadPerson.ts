@@ -1,11 +1,11 @@
 
+import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { SchemaPath } from '../SchemaBroker';
-import { ReadPeople } from './ReadPeople';
 import { HuronPerson } from './Person';
-import { BasicCache } from '../../Cache';
+import { ReadPeople } from './ReadPeople';
 
 /**
  * Response structure for person retrieval
@@ -25,10 +25,11 @@ interface PersonResponse {
 class ReadPerson {
   private apiClient: ApiClientForJWT;
 
-  constructor(private config: Config) {
+  constructor(private config: Config, errorEventProcessor?: TargetApiErrorEventProcessor) {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
@@ -40,22 +41,17 @@ class ReadPerson {
    * @returns Promise resolving to the Person data
    */
   public readPersonByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronPerson> => {
-    try {
-      if(/^\d+$/.test(hrn)) {
-        hrn = `hrn:hrs:persons:${hrn}`;
-      }
-      const endpoint = SchemaPath.PERSONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
-      const response = await this.apiClient.get<PersonResponse>({ url: endpoint, params: { includeFields } });
-
-      if (response.status !== 200) {
-        throw new Error(`Failed to read person ${hrn}: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data.data;
-    } catch (error) {
-      console.error(`Failed to read person with HRN ${hrn}:`, error);
-      throw new Error(`Failed to read person ${hrn}: ${error}`);
+    if(/^\d+$/.test(hrn)) {
+      hrn = `hrn:hrs:persons:${hrn}`;
     }
+    const endpoint = SchemaPath.PERSONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
+    const response = await this.apiClient.get<PersonResponse>({ url: endpoint, params: { includeFields } });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to read person ${hrn}: HTTP ${response.status} ${response.statusText}`);
+    }
+
+    return response.data.data;
   }
 
   /**
@@ -65,16 +61,11 @@ class ReadPerson {
    * @returns Promise resolving to the Person data
    */
   public readPersonById = async (personId: string, includeFields?: string[]): Promise<HuronPerson[]> => {
-    try {
-      return await this.readPersonBySingleFilter('id', personId, includeFields);
-    } catch (error) {
-      console.error(`Failed to read person with id ${personId}:`, error);
-      throw new Error(`Failed to read person by id ${personId}: ${error}`);
-    }
+    return await this.readPersonBySingleFilter('id', personId, includeFields);
   }
 
   private async readPersonBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {
-    const persons: any[] = await new ReadPeople(this.config).readAllPeople({
+    const persons: any[] = await new ReadPeople({ config: this.config }).readAllPeople({
       filters: [
         ReadPeople.createFilter({ field, value })
       ],
@@ -85,7 +76,7 @@ class ReadPerson {
 
   public async readPersonByMultipleFilters(fields: string[], value: string, includeFields?: string[]): Promise<any[]> {
     const filters = fields.map(field => ReadPeople.createFilter({ field, value, logicalOperator: 'or' }));
-    const persons: any[] = await new ReadPeople(this.config).readAllPeople({
+    const persons: any[] = await new ReadPeople({ config: this.config }).readAllPeople({
       filters,
       includeFields
     });
@@ -99,59 +90,33 @@ class ReadPerson {
    * (Note: could be multiple if somehow not unique)
    */
   public async readPersonByEmail(email: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      return await this.readPersonBySingleFilter('contactInformation.email', email, includeFields);
-    } catch (error) {
-      console.error(`Failed to read person with email ${email}:`, error);
-      throw new Error(`Failed to read person by email ${email}: ${error}`);
-    }
+    return await this.readPersonBySingleFilter('contactInformation.email', email, includeFields);
   }
 
   public async readPersonByUserId(userId: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      return await this.readPersonBySingleFilter('userId', userId, includeFields);
-    } catch (error) {
-      console.error(`Failed to read person with userId ${userId}:`, error);
-      throw new Error(`Failed to read person by userId ${userId}: ${error}`);
-    }
+    return await this.readPersonBySingleFilter('userId', userId, includeFields);
   }
 
   public async readPersonBySourceIdentifier(sourceIdentifier: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      return await this.readPersonBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
-    } catch (error) {
-      console.error(`Failed to read person with sourceIdentifier ${sourceIdentifier}:`, error);
-      throw new Error(`Failed to read person by sourceIdentifier ${sourceIdentifier}: ${error}`);
-    }
+    return await this.readPersonBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
   }
 
   public async readPersonByEmployeeId(employeeId: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      return await this.readPersonBySingleFilter('employeeId', employeeId, includeFields);
-    } catch (error) {
-      console.error(`Failed to read person with employeeId ${employeeId}:`, error);
-      throw new Error(`Failed to read person by employeeId ${employeeId}: ${error}`);
-    }
+    return await this.readPersonBySingleFilter('employeeId', employeeId, includeFields);
   }
 
   /**
    * Try to find a Huron person where the specified buid matches any of the "usual suspects" fields.
    */
   public async readPersonByHailMary(buid: string, includeFields?: string[]): Promise<HuronPerson[]> {
-    try {
-      return await this.readPersonByMultipleFilters(['id', 'sourceIdentifier'], buid, includeFields);
-    } catch (error) {
-      const msg = `Failed to read person with id or sourceIdentifier of ${buid}:`;
-      console.error(msg, error);
-      throw new Error(msg);
-    }
+    return await this.readPersonByMultipleFilters(['id', 'sourceIdentifier'], buid, includeFields);
   }
 }
 
 
 async function main() {
   const config = ConfigManager.
-    getInstance()
+    getInstance(true)
     .fromEnvironment()
     .fromFileSystem()
     .getConfig('none');
@@ -207,3 +172,4 @@ if (require.main === module) {
 }
 
 export { PersonResponse, ReadPerson };
+

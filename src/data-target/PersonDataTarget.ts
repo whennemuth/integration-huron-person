@@ -11,8 +11,7 @@ import {
 } from 'integration-core';
 import { Cache } from '../Cache';
 import { Config } from '../config/Config';
-import { error as logError } from '../Utils';
-import { ApiClientForJWT, EndpointConfigForJWT } from './ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronPerson } from './crud/Person';
 import { ReadPerson } from './crud/ReadPerson';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
@@ -43,14 +42,15 @@ export class HuronPersonDataTarget implements DataTarget {
   private config: Config;
   private hrn: string | undefined;
 
-  constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string }) {
+  constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string, errorEventProcessor?: TargetApiErrorEventProcessor }) {
   // constructor(config: Config, cache?: Cache<string, string>) {
-    const { config, cache, hrn } = params;
+    const { config, cache, hrn, errorEventProcessor } = params;
     this.config = config;
     this.hrn = hrn;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     
     // Create cache instance if caching is enabled
@@ -90,12 +90,20 @@ export class HuronPersonDataTarget implements DataTarget {
 
         if (crud === CrudOperation.CREATE) {
           // CREATE: Use POST to /api/v2/persons
+          this.apiClient.setErrorEventDetails({ message: 'Huron creation error', object: { 
+            hrn: personRequest.data?.hrn,
+            sourceIdentifier: personRequest.data?.sourceIdentifier 
+          }});
           response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
         } else if (crud === CrudOperation.UPDATE) {
           // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
           if (personRequest.data?.hrn) {
             endpoint = `${endpoint}/${personRequest.data.hrn}`;
             // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
+            this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
+              hrn: personRequest.data?.hrn, 
+              sourceIdentifier: personRequest.data?.sourceIdentifier 
+            }});
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
           } else {
             // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
@@ -115,6 +123,10 @@ export class HuronPersonDataTarget implements DataTarget {
             // Perform the patch now that the hrn is known
             personRequest.data.hrn = hrn;
             endpoint = `${endpoint}/${hrn}`;
+            this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
+              hrn, 
+              sourceIdentifier: personRequest.data?.sourceIdentifier 
+            }});
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
           }
         } else if (crud === CrudOperation.DELETE) {
@@ -125,6 +137,10 @@ export class HuronPersonDataTarget implements DataTarget {
             endpoint = `${endpoint}/${hrn}`;
             // For soft delete, we only need to set active: false
             const softDeleteData = { active: false };
+            this.apiClient.setErrorEventDetails({ message: 'Huron deletion error', object: { 
+              hrn, 
+              sourceIdentifier: data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier 
+            }});
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
           } else {
             return {
@@ -157,14 +173,7 @@ export class HuronPersonDataTarget implements DataTarget {
         crud
       };
     } catch (error) {
-      console.error(`Failed to push person record:`);
       const { response } = error as any || {};
-      if( response ) {
-        logError({ o:response, msg: 'API response', flat:true });
-      }
-      else {
-        logError({ o:error, msg: 'Error details', flat:true });
-      }
       return {
         status: Status.FAILURE,
         message: this.getResponseData(response?.data) || (error instanceof Error ? error.message : String(error)),

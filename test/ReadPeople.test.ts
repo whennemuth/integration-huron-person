@@ -21,10 +21,11 @@ describe('ReadPeople', () => {
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;
+    mockApiClient.setErrorEventDetails = jest.fn();
     mockQueryBuilder = new QueryBuilder(new Set(['firstName', 'lastName', 'active']), new Set(['firstName', 'lastName'])) as jest.Mocked<QueryBuilder>;
     mockQueryBuilder.buildQueryParams = jest.fn();
 
-    readPeople = new ReadPeople(config, mockQueryBuilder);
+    readPeople = new ReadPeople({ config, queryBuilder: mockQueryBuilder });
 
     // Replace the private apiClient with our mock
     (readPeople as any).apiClient = mockApiClient;
@@ -272,7 +273,7 @@ describe('ReadPeople', () => {
         config: {}
       } as any);
 
-      await expect(readPeople.readPeopleByFullName('John', 'Doe')).rejects.toThrow('Failed to read person with name John Doe');
+      await expect(readPeople.readPeopleByFullName('John', 'Doe')).rejects.toThrow('Failed to read people');
     });
   });
 
@@ -356,7 +357,7 @@ describe('ReadPeople', () => {
         config: {}
       } as any);
 
-      await expect(readPeople.readPeopleByNamePart('firstName', 'John')).rejects.toThrow('Failed to read person with name part firstName');
+      await expect(readPeople.readPeopleByNamePart('firstName', 'John')).rejects.toThrow('Failed to read people');
     });
   });
 
@@ -441,7 +442,7 @@ describe('ReadPeople', () => {
         config: {}
       } as any);
 
-      await expect(readPeople.readPeopleByLastName('Doe')).rejects.toThrow('Failed to read person with last name Doe');
+      await expect(readPeople.readPeopleByLastName('Doe')).rejects.toThrow('Failed to read people');
     });
   });
 

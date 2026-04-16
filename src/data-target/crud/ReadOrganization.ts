@@ -1,6 +1,6 @@
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { ApiClientForJWT, EndpointConfigForJWT } from '../ApiClientForJWT';
+import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { SchemaPath } from '../SchemaBroker';
 import { ReadOrganizations } from './ReadOrganizations';
 import { HuronOrganization } from './Organization';
@@ -24,10 +24,11 @@ interface OrganizationResponse {
 class ReadOrganization {
   private apiClient: ApiClientForJWT;
 
-  constructor(private config: Config) {
+  constructor(private config: Config, errorEventProcessor?: TargetApiErrorEventProcessor) {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
-      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout
+      timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
     const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
     this.apiClient = new ApiClientForJWT(endpointConfig, cache);
@@ -39,19 +40,18 @@ class ReadOrganization {
    * @returns Promise resolving to the Organization data
    */
   public readOrganizationByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronOrganization> => {
-    try {
-      const endpoint = SchemaPath.ORGANIZATIONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
-      const response = await this.apiClient.get<OrganizationResponse>({ url: endpoint, params: { includeFields } });
+    const endpoint = SchemaPath.ORGANIZATIONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
+    this.apiClient.setErrorEventDetails({ 
+      message: `Huron organization retrieval error for HRN ${hrn}`, 
+      object: { hrn, includeFields } 
+    });
+    const response = await this.apiClient.get<OrganizationResponse>({ url: endpoint, params: { includeFields } });
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to read organization ${hrn}: HTTP ${response.status} ${response.statusText}`);
-      }
-
-      return response.data.data;
-    } catch (error) {
-      console.error(`Failed to read organization with HRN ${hrn}:`, error);
-      throw new Error(`Failed to read organization ${hrn}: ${error}`);
+    if (response.status !== 200) {
+      throw new Error(`Failed to read organization ${hrn}: HTTP ${response.status} ${response.statusText}`);
     }
+
+    return response.data.data;
   }
 
   /**
@@ -61,16 +61,11 @@ class ReadOrganization {
    * @returns Promise resolving to the Organization data
    */
   public readOrganizationById = async (organizationId: string, includeFields?: string[]): Promise<HuronOrganization[]> => {
-    try {
-      return await this.readOrganizationBySingleFilter('id', organizationId, includeFields);
-    } catch (error) {
-      console.error(`Failed to read organization with id ${organizationId}:`, error);
-      throw new Error(`Failed to read organization by id ${organizationId}: ${error}`);
-    }
+    return await this.readOrganizationBySingleFilter('id', organizationId, includeFields);
   }
 
   private async readOrganizationBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {
-  const organizations: any[] = await new ReadOrganizations(this.config).readAllOrganizations({
+  const organizations: any[] = await new ReadOrganizations({ config: this.config }).readAllOrganizations({
       filters: [
         ReadOrganizations.createFilter({ field, value })
       ],
@@ -85,12 +80,7 @@ class ReadOrganization {
    * @returns Promise resolving to an array of Organization data matching the name
    */
   public async readOrganizationByName(name: string, includeFields?: string[]): Promise<HuronOrganization[]> {
-    try {
-      return await this.readOrganizationBySingleFilter('name', name, includeFields);
-    } catch (error) {
-      console.error(`Failed to read organization with name ${name}:`, error);
-      throw new Error(`Failed to read organization by name ${name}: ${error}`);
-    }
+    return await this.readOrganizationBySingleFilter('name', name, includeFields);
   }
 
   /**
@@ -99,12 +89,7 @@ class ReadOrganization {
    * @returns Promise resolving to an array of Organization data matching the source identifier
    */
   public async readOrganizationBySourceIdentifier(sourceIdentifier: string, includeFields?: string[]): Promise<HuronOrganization[]> {
-    try {
-      return await this.readOrganizationBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
-    } catch (error) {
-      console.error(`Failed to read organization with sourceIdentifier ${sourceIdentifier}:`, error);
-      throw new Error(`Failed to read organization by sourceIdentifier ${sourceIdentifier}: ${error}`);
-    }
+    return await this.readOrganizationBySingleFilter('sourceIdentifier', sourceIdentifier, includeFields);
   }
 
 }

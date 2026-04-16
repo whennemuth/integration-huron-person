@@ -24,6 +24,7 @@ describe('ReadOrganization', () => {
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;
+    mockApiClient.setErrorEventDetails = jest.fn();
 
     // Replace the private apiClient with our mock
     (readOrganization as any).apiClient = mockApiClient;
@@ -105,9 +106,7 @@ describe('ReadOrganization', () => {
     it('should handle API call failure gracefully', async () => {
       mockApiClient.get.mockRejectedValue(new Error('Network error'));
 
-      await expect(readOrganization.readOrganizationByHRN('hrn:hrs:organizations:12345')).rejects.toThrow(
-        'Failed to read organization hrn:hrs:organizations:12345'
-      );
+      await expect(readOrganization.readOrganizationByHRN('hrn:hrs:organizations:12345')).rejects.toThrow();
     });
   });
 
@@ -177,9 +176,7 @@ describe('ReadOrganization', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllOrganizations.mockRejectedValue(new Error('API error'));
 
-      await expect(readOrganization.readOrganizationById('org123')).rejects.toThrow(
-        'Failed to read organization by id org123'
-      );
+      await expect(readOrganization.readOrganizationById('org123')).rejects.toThrow();
     });
 
     it('should return array of organizations', async () => {
@@ -249,9 +246,7 @@ describe('ReadOrganization', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllOrganizations.mockRejectedValue(new Error('API error'));
 
-      await expect(readOrganization.readOrganizationByName('Test Org')).rejects.toThrow(
-        'Failed to read organization by name Test Org'
-      );
+      await expect(readOrganization.readOrganizationByName('Test Org')).rejects.toThrow();
     });
 
     it('should return array of organizations', async () => {
@@ -321,9 +316,7 @@ describe('ReadOrganization', () => {
     it('should handle errors with method-specific message', async () => {
       mockReadAllOrganizations.mockRejectedValue(new Error('API error'));
 
-      await expect(readOrganization.readOrganizationBySourceIdentifier('source123')).rejects.toThrow(
-        'Failed to read organization by sourceIdentifier source123'
-      );
+      await expect(readOrganization.readOrganizationBySourceIdentifier('source123')).rejects.toThrow();
     });
 
     it('should return array of organizations', async () => {

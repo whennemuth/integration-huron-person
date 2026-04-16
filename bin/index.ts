@@ -8,6 +8,7 @@ export { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';
 // General/Interface/Utility exports
 export { IApiClient } from '../src/ApiClient';
 export { AxiosResponseStreamFilter, ResponseProcessor } from '../src/stream/AxiosResponseStreamFilter';
+export * from '../src/Utils';
 
 // Data source exports
 export { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
@@ -19,7 +20,7 @@ export { ApiClientForApiKey as BuApiClientForApiKey, EndpointConfigForApiKey } f
 
 // Data target exports
 export { AuthToken, TokenAuthConfig } from '../src/data-target/AuthToken';
-export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiClient, EndpointConfigForJWT } from '../src/data-target/ApiClientForJWT';
+export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiClient, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../src/data-target/ApiClientForJWT';
 export * from '../src/data-target/crud/Person';
 export { ReadPerson } from '../src/data-target/crud/ReadPerson';
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';

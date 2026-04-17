@@ -17,9 +17,11 @@
     "test": "jest",
     "testsilent": "jest --silent",
     "clean": "rimraf dist",
+    "npm-clean": "npm cache clean --force",
     "uninstall-tgz": "npm uninstall integration-core",
-    "install-tgz": "npm install integration-core https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
+    "install-tgz": "npm install --force integration-core https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
     "reinstall-tgz": "npm run uninstall-tgz && npm run install-tgz",
+    "reinstall-tgz-clean": "npm run npm-clean && npm run uninstall-tgz && npm run install-tgz",
     "publish-s3": "npm run pack && aws s3 cp integration-huron-person-1.0.0.tgz s3://simple-npm-package-bucket/"
   },
   "keywords": [

@@ -9,6 +9,8 @@ export { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';
 export { IApiClient } from '../src/ApiClient';
 export { AxiosResponseStreamFilter, ResponseProcessor } from '../src/stream/AxiosResponseStreamFilter';
 export * from '../src/Utils';
+export { HashMapMerger } from '../src/delta-strategy/merging/HashMapMerger';
+export type { KeyHashPair, MergeResult } from '../src/delta-strategy/merging/HashMapMerger';
 
 // Data source exports
 export { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';

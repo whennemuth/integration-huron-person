@@ -1,4 +1,4 @@
-import { HashStorageUpdater } from '../src/HashStorageUpdater';
+import { HashStorageUpdater } from '../src/delta-strategy/merging/HashStorageUpdater';
 import { DeltaStorage, FieldSet } from 'integration-core';
 
 describe('HashStorageUpdater', () => {

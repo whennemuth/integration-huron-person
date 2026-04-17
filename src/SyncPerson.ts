@@ -10,7 +10,7 @@ import { HuronPerson } from './data-target/crud/Person';
 import { ReadPerson } from './data-target/crud/ReadPerson';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { HashStorageUpdater } from './HashStorageUpdater';
+import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { isEmpty } from './Utils';

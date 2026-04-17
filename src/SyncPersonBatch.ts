@@ -1,7 +1,7 @@
 import { CrudOperation, FieldSet, InputUtilsDecorator, Status } from 'integration-core';
 import { BasicCache } from './Cache';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { HashStorageUpdater } from './HashStorageUpdater';
+import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper } from './data-mapper/DataMapper';

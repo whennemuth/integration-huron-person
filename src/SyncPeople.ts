@@ -1,4 +1,4 @@
-import { DataSource, EndToEnd, Timer } from 'integration-core';
+import { DataSource, EndToEnd, IntegrationResult, Timer } from 'integration-core';
 import { Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -8,7 +8,7 @@ import { getDataSource } from './data-source/DataSource';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
+import { ApiRetryStrategy, TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 type HuronPersonIntegrationParams = {
@@ -24,9 +24,9 @@ type HuronPersonIntegrationParams = {
   errorEventProcessor?: TargetApiErrorEventProcessor;
   /**
    * retryStrategy: Optional retry strategy for handling transient API failures (429, 5xx, network errors).
-   * Should implement executeWithRetry(fn, context) method. Type is 'any' to avoid circular dependency with fargate project.
+   * Must implement ApiRetryStrategy interface.
    */
-  retryStrategy?: any;
+  retryStrategy?: ApiRetryStrategy;
 };
 
 /**
@@ -73,8 +73,9 @@ class HuronPersonIntegration {
    * Execute the complete integration process
    * @param taskName - Optional custom task name for logging
    * @param chunkId - Optional chunk identifier for parallel processing
+   * @returns IntegrationResult with processing statistics
    */
-  async run(taskName?: string, chunkId?: string): Promise<void> {
+  async run(taskName?: string, chunkId?: string): Promise<IntegrationResult> {
     try {
       const { config, config: { 
         dataSource: { people: { fieldsOfInterest } = {} } = {},
@@ -126,10 +127,12 @@ class HuronPersonIntegration {
         fieldFilter: fs => new FieldFilter({ ...fieldFilterParms, fieldSet: fs }).filter() 
       });
       
-      await this.endToEnd.execute();
+      const result = await this.endToEnd.execute();
 
       timer.stop();
       timer.logElapsed(`✓ ${taskName} completed`);
+      
+      return result;
     } catch (error) {
       console.error(`✗ ${taskName} failed:`, error);
       throw error;

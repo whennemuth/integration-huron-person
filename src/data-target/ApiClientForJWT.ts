@@ -15,6 +15,15 @@ export type ErrorEventDetails = {
 }
 
 /**
+ * Type definition for retry strategy that handles transient API failures.
+ * Implementations should provide logic for the strategy, such as exponential backoff 
+ * with retry logic. 
+ */
+export interface ApiRetryStrategy {
+  executeWithRetry: <T>(fn: () => Promise<T>, context?: string) => Promise<T>;
+}
+
+/**
  * Configuration for JWT-authenticated API endpoint
  */
 export type EndpointConfigForJWT = {
@@ -24,10 +33,9 @@ export type EndpointConfigForJWT = {
   errorEventDetails?: ErrorEventDetails;
   /**
    * Optional retry strategy for handling transient API failures.
-   * Should implement executeWithRetry(fn, context) method.
-   * Type is 'any' to avoid circular dependency with fargate project.
+   * Must implement ApiRetryStrategy interface with executeWithRetry method.
    */
-  retryStrategy?: any;
+  retryStrategy?: ApiRetryStrategy;
 } & (BasicAuthConfig | TokenAuthConfig);
 
 
@@ -40,7 +48,7 @@ export class ApiClientForJWT implements IApiClient {
   private tokenExpiry: number = 0;
   private errorEventProcessor: TargetApiErrorEventProcessor;
   private errorEventDetails?: ErrorEventDetails;
-  private retryStrategy?: any;
+  private retryStrategy?: ApiRetryStrategy;
 
   public static JWT_BASIC_TOKEN_CACHE_KEY = 'jwt-basic-token-cache';
   public static JWT_EXTERNAL_TOKEN_CACHE_KEY = 'jwt-external-token-cache';

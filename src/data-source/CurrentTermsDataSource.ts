@@ -113,8 +113,12 @@ class BuCdmCurrentTermsDataSource extends BuCdmDataSource implements DataSource 
 async function main() {
   try {
     // Load configuration
-    const configManager = ConfigManager.getInstance();
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('terms');
+    const configManager = ConfigManager.getInstance(true);
+    const config = configManager
+      .reset()
+      .fromEnvironment()
+      .fromFileSystem()
+      .getConfig('terms');
 
     // Output the loaded config to console
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

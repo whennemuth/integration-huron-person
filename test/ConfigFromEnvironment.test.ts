@@ -3,6 +3,7 @@ import { Config } from '../src/config/Config';
 
 describe('ConfigFromEnvironment', () => {
   const validConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {

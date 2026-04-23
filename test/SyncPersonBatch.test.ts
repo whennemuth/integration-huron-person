@@ -35,6 +35,7 @@ describe('BatchPersonSync', () => {
   ];
 
   const mockConfig: Config = {
+    executionMode: 'people',
     dataSource: {
       person: {
         endpointConfig: {

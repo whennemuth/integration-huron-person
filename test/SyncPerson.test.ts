@@ -38,6 +38,7 @@ describe('SinglePersonSync', () => {
   ];
 
   const mockConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {

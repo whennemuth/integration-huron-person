@@ -16,6 +16,7 @@ jest.mock('integration-core', () => ({
 
 describe('DeltaStrategyFactory', () => {
   const mockConfig: Config = {
+    executionMode: 'people',
     dataSource: {
       person: {
         endpointConfig: {

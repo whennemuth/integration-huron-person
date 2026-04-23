@@ -45,6 +45,9 @@ export type S3DataSourceConfig = S3FileConfig & {
  * Configuration interface for Huron Person Integration
  */
 export interface Config {
+  /** Execution mode for the integration */
+  executionMode: ExecutionMode;
+  
   /** DataSource configuration (where we fetch data from) - uses API key authentication */
   dataSource: {
     /** Configuration for single person operations */

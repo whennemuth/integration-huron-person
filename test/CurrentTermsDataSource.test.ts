@@ -12,6 +12,7 @@ describe('BuCdmCurrentTermsDataSource', () => {
   beforeAll(() => {
     // Create a mock config
     const mockConfig: Config = {
+    executionMode: 'terms',
       dataSource: {
         terms: {
           endpointConfig: {

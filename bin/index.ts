@@ -1,7 +1,7 @@
 // Configuration exports
 export * from '../src/config/Config';
 export { Cache, BasicCache } from '../src/Cache';
-export { Config } from '../src/config/Config';
+export { Config, ExecutionMode } from '../src/config/Config';
 export { ConfigManager } from '../src/config/ConfigManager';
 export { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';
 

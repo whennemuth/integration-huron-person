@@ -12,6 +12,7 @@ jest.mock('../src/data-mapper/DataMapperCountry');
 jest.mock('../src/data-source/CurrentTermsDataSource');
 
 const mockConfig: Config = {
+  executionMode: 'person',
   dataSource: {
     person: {
       endpointConfig: {

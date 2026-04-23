@@ -45,8 +45,8 @@ export abstract class BuCdmDataSource implements DataSource {
   }
 
   getFetchUrl(): string {
-    const { dataSource: { people = {}} = {}} = this.config;
-    const { endpointConfig: { baseUrl } = {}} = people as DataSourceConfig;
+    const endpointConfig = this.getEndpointConfig();
+    const { baseUrl } = {} = endpointConfig || {};
     const url = new URL(this.getFetchPath(), baseUrl);
     
     const queryParams = this.queryParams;
@@ -91,6 +91,29 @@ export abstract class BuCdmDataSource implements DataSource {
 import { BuCdmPeopleDataSource } from './PeopleCdmDataSource';
 import { BuS3PeopleDataSource } from './PeopleS3DataSource';
 
+export const getEndpointConfig = (config:Config): EndpointConfigForApiKey | undefined => {
+  const { executionMode, dataSource: { 
+    people = {}, 
+    person = {},
+    terms = {}
+  } = {}} = config;
+  let endpointConfig: EndpointConfigForApiKey;
+  switch(executionMode) {
+    case 'person':
+      endpointConfig = (person as DataSourceConfig)?.endpointConfig;
+      break;
+    case 'people':
+      endpointConfig = (people as DataSourceConfig)?.endpointConfig;
+      break;
+    case 'terms':
+      endpointConfig = (terms as DataSourceConfig)?.endpointConfig;
+      break;
+    case 'none': default:
+      return undefined;
+  }
+  return endpointConfig;
+}
+
 /**
  * Factory function to get the appropriate data source based on configuration
  * @param config Configuration object
@@ -98,8 +121,10 @@ import { BuS3PeopleDataSource } from './PeopleS3DataSource';
  * @returns DataSource instance (either CDM API or S3 based)
  */
 export const getDataSource = (config: Config, responseFilter?: ResponseProcessor): DataSource => {
+  const endpointConfig: EndpointConfigForApiKey | undefined = getEndpointConfig(config);
+  const { baseUrl } = endpointConfig || {};
   const { people: { bucketName, fetchPath } = {}} = config.dataSource as any;
-  if(fetchPath) {
+  if(baseUrl || fetchPath) {
     return new BuCdmPeopleDataSource({ config, responseFilter });
   }
   if( ! bucketName) {

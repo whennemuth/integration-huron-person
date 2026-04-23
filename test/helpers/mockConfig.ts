@@ -6,6 +6,7 @@ import { Config } from '../../src/config/Config';
  */
 export function createMockConfig(overrides?: Partial<Config>): Config {
   const defaultConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {

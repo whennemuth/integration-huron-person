@@ -12,6 +12,7 @@ describe('ConfigManager', () => {
   const mockConfigPath = '/test/config.json';
   
   const validConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {

@@ -12,6 +12,7 @@ describe('ConfigFromSecretsManager', () => {
   const mockSecretArn = 'test-secret-arn';
   
   const validConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {

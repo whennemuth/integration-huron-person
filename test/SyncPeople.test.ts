@@ -1,5 +1,5 @@
 import {
-  ConfigManager,
+  ConfigManager, ExecutionMode,
   DataMapper,
   HuronApiClient,
   HuronDeltaStrategyFactory,
@@ -55,6 +55,7 @@ describe('Package Exports', () => {
 
     it('should allow instantiation of all exported classes', () => {
       const mockConfig = {
+        executionMode: 'people' as ExecutionMode,
         dataSource: {
           person: {
             endpointConfig: {

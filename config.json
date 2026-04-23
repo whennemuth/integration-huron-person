@@ -2,7 +2,7 @@
   "dataSource": {
     "person": {
       "endpointConfig": {
-        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "baseUrl": "https://prod-butest-fm.snaplogic.io",
         "apiKey": "your-api-key-here",
         "timeout": 300000
       },
@@ -21,7 +21,7 @@
     },
     "people": {
       "endpointConfig": {
-        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "baseUrl": "https://prod-butest-fm.snaplogic.io",
         "apiKey": "your-api-key-here",
         "timeout": 7200000
       },

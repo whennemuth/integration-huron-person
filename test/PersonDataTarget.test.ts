@@ -135,6 +135,7 @@ describe('HuronPersonDataTarget', () => {
   let mockApiClient: MockApiClient;
   
   const mockConfig: Config = {
+    executionMode: 'person',
     dataSource: {
       person: {
         endpointConfig: {
@@ -193,6 +194,7 @@ describe('HuronPersonDataTarget', () => {
   describe('Configuration and Timeout Precedence', () => {
     it('should prioritize endpointConfig timeout over integration timeout', () => {
       const configWithBothTimeouts: Config = {
+        executionMode: 'person',
         dataSource: {
           person: {
             endpointConfig: {
@@ -246,6 +248,7 @@ describe('HuronPersonDataTarget', () => {
 
     it('should fallback to integration timeout when endpointConfig timeout is undefined', () => {
       const configWithOnlyIntegrationTimeout: Config = {
+        executionMode: 'person',
         dataSource: {
           person: {
             endpointConfig: {

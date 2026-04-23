@@ -48,10 +48,10 @@ describe('ConfigFromEnvironment', () => {
     // Clear any existing environment variables
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY];
-    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PERSON_FETCH_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY];
-    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_PATH];
+    delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY];
     delete process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH];
@@ -88,7 +88,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataSource person fetchPath', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PERSON_FETCH_PATH] = '/api/v2/prod/persons';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH] = '/api/v2/prod/persons';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();
@@ -113,7 +113,7 @@ describe('ConfigFromEnvironment', () => {
     });
 
     it('should override DataSource people fetchPath', () => {
-      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_PATH] = '/api/v2/prod/people';
+      process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH] = '/api/v2/prod/people';
 
       const configFromEnv = new ConfigFromEnvironment(validConfig);
       const result = configFromEnv.getConfig();

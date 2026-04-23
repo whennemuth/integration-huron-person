@@ -168,11 +168,11 @@ Automatically maps environment variables to configuration structure:
 | **Data Source (BU CDM API) - Person Mode** | |
 | `DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL` | `dataSource.person.endpointConfig.baseUrl` |
 | `DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY` | `dataSource.person.endpointConfig.apiKey` |
-| `DATASOURCE_PERSON_FETCH_PATH` | `dataSource.person.fetchPath` |
+| `DATASOURCE_ENDPOINTCONFIG_PERSON_PATH` | `dataSource.person.fetchPath` |
 | **Data Source (BU CDM API) - People Mode** | |
 | `DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL` | `dataSource.people.endpointConfig.baseUrl` |
 | `DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY` | `dataSource.people.endpointConfig.apiKey` |
-| `DATASOURCE_PEOPLE_FETCH_PATH` | `dataSource.people.fetchPath` |
+| `DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH` | `dataSource.people.fetchPath` |
 | **Data Target (Huron API)** | |
 | `DATATARGET_ENDPOINTCONFIG_BASE_URL` | `dataTarget.endpointConfig.baseUrl` |
 | `DATATARGET_ENDPOINTCONFIG_USERNAME` | `dataTarget.endpointConfig.username` |

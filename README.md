@@ -109,7 +109,7 @@ Complete configuration with all available options:
   "dataSource": {
     "person": {
       "endpointConfig": {
-        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "baseUrl": "https://prod-butest-fm.snaplogic.io",
         "apiKey": "your_person_api_key_here",
         "timeout": 300000
       },
@@ -123,7 +123,7 @@ Complete configuration with all available options:
     },
     "people": {
       "endpointConfig": {
-        "baseUrl": "https://prod-budev-fm.snaplogic.io",
+        "baseUrl": "https://prod-butest-fm.snaplogic.io",
         "apiKey": "your_people_api_key_here",
         "timeout": 600000
       },
@@ -168,14 +168,14 @@ The ConfigManager supports environment variable overrides for secure credential 
 
 ```bash
 # Data Source Overrides (API Key Authentication) - Person Mode
-export DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL="https://prod-budev-fm.snaplogic.io"
+export DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL="https://prod-butest-fm.snaplogic.io"
 export DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY="prod_person_api_key_here"
-export DATASOURCE_PERSON_FETCH_PATH="/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
+export DATASOURCE_ENDPOINTCONFIG_PERSON_PATH="/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
 
 # Data Source Overrides (API Key Authentication) - People Mode
-export DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL="https://prod-budev-fm.snaplogic.io"
+export DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL="https://prod-butest-fm.snaplogic.io"
 export DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY="prod_people_api_key_here"
-export DATASOURCE_PEOPLE_FETCH_PATH="/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation"
+export DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH="/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation"
 
 # Data Target Overrides (JWT Authentication)
 export DATATARGET_ENDPOINTCONFIG_BASE_URL="https://bu.hrs-staging.com"

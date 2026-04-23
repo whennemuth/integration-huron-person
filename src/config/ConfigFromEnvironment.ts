@@ -10,10 +10,10 @@ export class ConfigFromEnvironment {
   static readonly ENV_VARS = {
     DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_PERSON_BASE_URL',
     DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PERSON_API_KEY',
-    DATASOURCE_PERSON_FETCH_PATH: 'DATASOURCE_PERSON_FETCH_PATH',
+    DATASOURCE_ENDPOINTCONFIG_PERSON_PATH: 'DATASOURCE_ENDPOINTCONFIG_PERSON_PATH',
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_BASE_URL',
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY',
-    DATASOURCE_PEOPLE_FETCH_PATH: 'DATASOURCE_PEOPLE_FETCH_PATH',
+    DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH',
     DATASOURCE_PEOPLE_FETCH_BATCHED: 'DATASOURCE_PEOPLE_FETCH_BATCHED',
     DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED: 'DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED',
     DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION: 'DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION',
@@ -76,11 +76,11 @@ export class ConfigFromEnvironment {
       };
     }
 
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PERSON_FETCH_PATH]) {
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH]) {
       envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
       (envOverrides.dataSource as any).person = {
         ...(envOverrides.dataSource as any).person,
-        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PERSON_FETCH_PATH],
+        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PERSON_PATH],
       };
     }
 
@@ -107,11 +107,11 @@ export class ConfigFromEnvironment {
       };
     }
 
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_PATH]) {
+    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]) {
       envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
-        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_PATH]
+        fetchPath: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH]
       };
     }
 

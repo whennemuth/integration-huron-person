@@ -64,6 +64,7 @@ export class ConfigManager {
       
       // Merge with precedence: existing config wins over new config
       this.config = this.deepMerge(fileConfig, this.config);
+      console.log(`Merged configuration from file system (${configPath}).`);
       this.isValidated = false;
     } catch (error) {
       console.warn(`No valid configuration to load from file system (${configPath}): ${error}`);
@@ -85,6 +86,7 @@ export class ConfigManager {
       else {
         // Merge with precedence: existing config wins over new config
         this.config = this.deepMerge(envConfig, this.config);
+        console.log('Merged individual environment variables into configuration.');
       }
         
       this.isValidated = false;
@@ -100,6 +102,7 @@ export class ConfigManager {
       try {
         const config = JSON.parse(jsonString);
         this.config = this.deepMerge(config, this.config);
+        console.log(`Merged configuration from ${envVarName} environment variable.`);
         this.isValidated = false;
       } catch (error) {
         console.warn(`No valid configuration to load from ${envVarName}: ${error}`);
@@ -120,6 +123,7 @@ export class ConfigManager {
           
           // Merge with precedence: existing config wins over new config
           this.config = this.deepMerge(secretConfig, this.config);
+          console.log(`Merged configuration from Secrets Manager (${secretName}).`);
           this.isValidated = false;
         } catch (error) {
           console.warn(`No valid configuration to load from Secrets Manager (${secretName}): ${error}`);
@@ -167,6 +171,7 @@ export class ConfigManager {
       this.isValidated = true;
     }
 
+    this.config.executionMode = executionMode;
     return this.config as Config;
   }
 
@@ -194,6 +199,7 @@ export class ConfigManager {
       this.isValidated = true;
     }
 
+    this.config.executionMode = executionMode;
     return this.config as Config;
   }
 

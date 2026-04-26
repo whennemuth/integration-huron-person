@@ -6,7 +6,7 @@
         "apiKey": "your-api-key-here",
         "timeout": 300000
       },
-      "fetchPath": "/api/1/rest/feed-master/queue/BUDev/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
+      "fetchPath": "/api/1/rest/feed-master/queue/BUTest/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
       "fieldsOfInterest": [
         "personid",
         "personBasic.names[*].firstName",
@@ -25,7 +25,7 @@
         "apiKey": "your-api-key-here",
         "timeout": 7200000
       },
-      "fetchPath": "/api/1/rest/feed/run/task/BUDev/Admin-Integration-Services/GenericGets/huronIRBPersonByPopulation",
+      "fetchPath": "/api/1/rest/feed/run/task/BUTest/Admin-Integration-Services/GenericGets/huronIRBgetPersonByPopulation",
       "fetchSchedule": {
         "enabled": false,
         "cronExpression": "cron(0 2 * * ? *)"

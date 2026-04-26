@@ -85,6 +85,10 @@ describe('ConfigManager', () => {
         const result = configManager.fromFileSystem(mockConfigPath);
         
         expect(result).toBe(configManager); // Chain continues
+        
+        // Try to get config - this will trigger operation execution and warning
+        expect(() => configManager.getConfig('person')).toThrow('No configuration loaded');
+        
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('No valid configuration to load from file system')
         );
@@ -238,6 +242,10 @@ describe('ConfigManager', () => {
         .fromJsonString();
       
       expect(result).toBe(configManager); // Chain continues
+      
+      // Try to get config - this will trigger operation execution and warnings
+      expect(() => configManager.getConfig('person')).toThrow('No configuration loaded');
+      
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('No valid configuration to load from file system')
       );
@@ -278,6 +286,10 @@ describe('ConfigManager', () => {
       const result = configManager.fromJsonString();
       
       expect(result).toBe(configManager); // Chain continues
+      
+      // Try to get config - this will trigger operation execution and warning
+      expect(() => configManager.getConfig('person')).toThrow('No configuration loaded');
+      
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('No valid configuration to load from HURON_PERSON_CONFIG_JSON')
       );
@@ -311,6 +323,63 @@ describe('ConfigManager', () => {
       // Clean up
       delete process.env.HURON_PERSON_CONFIG_JSON;
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('Async Configuration Loading with fromSecretManager', () => {
+    it('should throw error when using getConfig() with fromSecretManager in chain', () => {
+      expect(() => {
+        configManager
+          .reset()
+          .fromFileSystem(mockConfigPath)
+          .fromSecretManager('test-secret')
+          .getConfig('person');
+      }).toThrow('Cannot use getConfig() when fromSecretManager() is in the chain');
+    });
+
+    it('should execute operations in correct order with async sources', async () => {
+      // Mock Secrets Manager to return a config with specific values
+      const secretConfig = { 
+        ...validConfig, 
+        integration: { ...validConfig.integration, clientId: 'secret-client-id', batchSize: 100 } 
+      };
+      
+      // Mock the ConfigFromSecretsManager to return our test config
+      jest.mock('../src/config/ConfigFromSecretsManager', () => {
+        return {
+          ConfigFromSecretsManager: jest.fn().mockImplementation(() => ({
+            loadConfig: jest.fn().mockResolvedValue(secretConfig)
+          }))
+        };
+      });
+
+      // File system config has different values
+      const fileConfig = { 
+        ...validConfig, 
+        integration: { ...validConfig.integration, clientId: 'file-client-id', batchSize: 50 } 
+      };
+      mockedFs.existsSync.mockReturnValue(true);
+      mockedFs.readFileSync.mockReturnValue(JSON.stringify(fileConfig));
+
+      // Environment config has yet another value
+      process.env.CLIENT_ID = 'env-client-id';
+      process.env.BATCH_SIZE = '75';
+
+      const result = await configManager
+        .reset()
+        .fromFileSystem(mockConfigPath)  // Called first = highest precedence
+        .fromEnvironment()               // Called second = overrides secrets
+        .fromSecretManager('test-secret')  // Called third = lowest precedence
+        .getConfigAsync('person');
+
+      // File system should win (called first in chain)
+      expect(result.integration.clientId).toBe('file-client-id');
+      expect(result.integration.batchSize).toBe(50);
+
+      // Clean up
+      delete process.env.CLIENT_ID;
+      delete process.env.BATCH_SIZE;
+      jest.unmock('../src/config/ConfigFromSecretsManager');
     });
   });
 

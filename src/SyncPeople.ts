@@ -57,6 +57,11 @@ class HuronPersonIntegration {
       this.config = configManager.reset().fromEnvironment().fromFileSystem(configPath).getConfig('people');
     }
 
+    // Store cache on config if provided - this enables JWT token caching across all API clients
+    if (cache) {
+      this.config.cache = cache as any;
+    }
+
     if(errorEventProcessor) {
       this.config.dataTarget.endpointConfig.errorEventProcessor = errorEventProcessor;
     }

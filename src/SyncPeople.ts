@@ -27,6 +27,7 @@ type HuronPersonIntegrationParams = {
    * Must implement ApiRetryStrategy interface.
    */
   retryStrategy?: ApiRetryStrategy;
+  cleanupPreviousData?: boolean; // Optional flag to control whether previous data should be cleaned up after update
 };
 
 /**
@@ -40,13 +41,19 @@ class HuronPersonIntegration {
   private bulkReset: boolean;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: any;
+  private cleanupPreviousData?: boolean;
 
   constructor(params: HuronPersonIntegrationParams) {
-    const { configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, retryStrategy } = params;
+    const { 
+      configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, 
+      retryStrategy, cleanupPreviousData=true 
+    } = params;
+    
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
     this.errorEventProcessor = errorEventProcessor;
     this.retryStrategy = retryStrategy;
+    this.cleanupPreviousData = cleanupPreviousData;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -105,7 +112,7 @@ class HuronPersonIntegration {
       // Create integration components with currentTerms
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
-        errorEventProcessor
+        errorEventProcessor, cleanupPreviousData
       } = this;
       const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
@@ -129,7 +136,8 @@ class HuronPersonIntegration {
         dataTarget,
         deltaStrategy,
         // Apply field filtering to remove non-hashable fields before hashing
-        fieldFilter: fs => new FieldFilter({ ...fieldFilterParms, fieldSet: fs }).filter() 
+        fieldFilter: fs => new FieldFilter({ ...fieldFilterParms, fieldSet: fs }).filter(),
+        cleanupPreviousData
       });
       
       const result = await this.endToEnd.execute();

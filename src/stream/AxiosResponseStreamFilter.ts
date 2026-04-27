@@ -18,6 +18,15 @@ export interface ResponseProcessor {
 
 /**
  * Configuration for AxiosResponseStreamFilterConfig
+ * 
+ * fieldsOfInterest: List of fields to retain in the response objects (all other fields will be removed)
+ * example: [ 
+ *   "personid",
+ *   "personBasic.names[*].firstName",
+ *   "personBasic.names[*].lastName",
+ *   "personBasic.names[*].middleName"
+ * ]
+ * customFilterCase: Optional function to apply custom filtering logic on each object (receives source object and can modify target object)
  */
 export interface AxiosResponseStreamFilterConfig {
   fieldsOfInterest: string[];

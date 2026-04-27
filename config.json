@@ -6,13 +6,7 @@
         "apiKey": "your-api-key-here",
         "timeout": 300000
       },
-      "fetchPath": "/api/1/rest/feed-master/queue/BUTest/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson",
-      "fieldsOfInterest": [
-        "personid",
-        "personBasic.names[*].firstName",
-        "personBasic.names[*].lastName",
-        "personBasic.names[*].middleName"
-      ]
+      "fetchPath": "/api/1/rest/feed-master/queue/BUTest/Admin-Integration-Services/CommonServiceWrappers/huronIRBPerson"
     },
     "_people": {
       "bucketName": "huron-person-file-drop-dev",
@@ -29,13 +23,7 @@
       "fetchSchedule": {
         "enabled": false,
         "cronExpression": "cron(0 2 * * ? *)"
-      },
-      "fieldsOfInterest": [
-        "personid",
-        "personBasic.names[*].firstName",
-        "personBasic.names[*].lastName",
-        "personBasic.names[*].middleName"
-      ]
+      }
     },
     "terms": {
       "endpointConfig": {

@@ -122,6 +122,13 @@ class HuronPersonIntegration {
       }
       let dataSource: DataSource = getDataSource(config, responseFilter) as DataSource;
       const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any, errorEventProcessor });
+      
+      // JWT Safeguard: Ensure valid token before any data operations
+      // This guarantees that we have a JWT token acquired and cached before we start processing
+      console.log('[SyncPeople] Acquiring JWT token for data target API...');
+      await dataTarget.ensureValidToken();
+      console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
+      
       const deltaStrategy = DeltaStrategyFactory.createStrategy({ config, chunkId, bulkReset: this.bulkReset });
       const fieldFilterParms = {
         stateMappings: dataMapper.stateMappings,

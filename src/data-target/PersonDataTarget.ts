@@ -292,6 +292,28 @@ export class HuronPersonDataTarget implements DataTarget {
 
     return { operation, data };
   }
+
+  /**
+   * Public method to explicitly acquire/refresh JWT token
+   * Useful for ensuring token exists before starting data operations
+   */
+  async ensureValidToken(): Promise<void> {
+    return this.apiClient.ensureValidToken();
+  }
+
+  /**
+   * Get current JWT token expiry time
+   */
+  getTokenExpiryTime(): number {
+    return this.apiClient.getTokenExpiryTime();
+  }
+
+  /**
+   * Get minutes until JWT token expires
+   */
+  getTokenExpiryMinutes(): number {
+    return this.apiClient.getTokenExpiryMinutes();
+  }
 }
 
 

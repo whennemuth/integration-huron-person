@@ -105,10 +105,85 @@ export class ApiClientForJWT implements IApiClient {
       },
       (error: any) => Promise.reject(error)
     );
+
+    // Add response interceptor to handle 401 errors with token refresh and retry
+    // LOOP PROTECTION: Uses _retry flag to prevent infinite retry loops.
+    // If a request gets 401, we refresh token and retry once. If the retry also
+    // gets 401, the _retry flag is already set, so we reject immediately rather
+    // than retrying again. This ensures max 2 attempts per request (original + 1 retry).
+    this.axiosInstance.interceptors.response.use(
+      (response: any) => response,
+      async (error: any) => {
+        const originalRequest = error.config;
+        
+        // Check if error is 401 (Unauthorized) and we haven't already retried this request
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+          originalRequest._retry = true;
+          
+          try {
+            console.log('[ApiClientForJWT] Received 401 Unauthorized. Clearing cached token and refreshing...');
+            
+            // Clear any cached token
+            if (this.cache) {
+              const cacheKey = this.endpointConfig.authMethod === 'basic' 
+                ? ApiClientForJWT.JWT_BASIC_TOKEN_CACHE_KEY 
+                : ApiClientForJWT.JWT_EXTERNAL_TOKEN_CACHE_KEY;
+              this.cache.delete(cacheKey);
+              console.log(`[ApiClientForJWT] Cleared cached token (key: ${cacheKey})`);
+            }
+            
+            // Clear instance token to force fresh authentication
+            this.jwtToken = null;
+            this.tokenExpiry = 0;
+            
+            // Force new token acquisition
+            await this.ensureValidToken();
+            
+            if (this.jwtToken) {
+              // Update the authorization header with new token
+              originalRequest.headers.Authorization = `Bearer ${this.jwtToken}`;
+              console.log('[ApiClientForJWT] Successfully refreshed token. Retrying original request...');
+              
+              // Retry the original request with new token
+              return this.axiosInstance(originalRequest);
+            }
+            else {
+              console.error('[ApiClientForJWT] Failed to acquire new JWT token after 401 error');
+              return Promise.reject(error);
+            }
+          } 
+          catch (refreshError) {
+            console.error('[ApiClientForJWT] Error during token refresh after 401:', refreshError);
+            return Promise.reject(refreshError);
+          }
+        }
+        
+        return Promise.reject(error);
+      }
+    );
   }
 
   public setErrorEventDetails = (details: ErrorEventDetails) => {
     this.errorEventDetails = details;
+  }
+
+  /**
+   * Get current JWT token expiry time in milliseconds (0 if no token)
+   */
+  public getTokenExpiryTime(): number {
+    return this.tokenExpiry;
+  }
+
+  /**
+   * Get minutes until token expires (with 5-minute buffer already applied)
+   */
+  public getTokenExpiryMinutes(): number {
+    const now = Date.now();
+    const bufferTime = 5 * 60 * 1000;
+    if (!this.jwtToken || this.tokenExpiry <= 0) {
+      return 0;
+    }
+    return Math.round((this.tokenExpiry - now - bufferTime) / 60000);
   }
 
   /**
@@ -165,8 +240,9 @@ export class ApiClientForJWT implements IApiClient {
 
   /**
    * Ensure we have a valid JWT token, refresh if necessary
+   * Public method so it can be explicitly called when needed
    */
-  private async ensureValidToken(): Promise<void> {
+  public async ensureValidToken(): Promise<void> {
     const now = Date.now();
     const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
     const { endpointConfig: { authMethod }, decodeTokenExpiry } = this;

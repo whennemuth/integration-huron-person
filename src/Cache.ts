@@ -21,7 +21,7 @@ export abstract class BasicCache implements Cache<string, string> {
    */
   public static getInstance(cachePath?: string): BasicCache {
     if (!BasicCache.instance) {
-      BasicCache.instance = process.env.AWS_LAMBDA_FUNCTION_NAME 
+      BasicCache.instance = (process.env.AWS_LAMBDA_FUNCTION_NAME || !cachePath)
         ? new InMemoryCache() 
         : new FileSystemCache(cachePath);
     }

@@ -33,7 +33,7 @@
       },
       "fetchPath": "/api/1/rest/feed/run/task/BUProd/Admin-Integration-Services/GenericGets/getCurrentTermFromCS"
     },
-    "idpName": "bu-sso_TEST",
+    "idpName": "bu-sso",
     "idpDomain": "bu.edu"
   },
   "dataTarget": {

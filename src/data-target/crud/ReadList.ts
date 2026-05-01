@@ -116,7 +116,7 @@ export class ReadList {
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
       errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
     };
-    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+    const cache = BasicCache.getInstance(config);
     this.apiClient = new ApiClientForJWT(endpointConfig, cache );
 
     // Define filter and sort fields for list types

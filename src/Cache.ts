@@ -1,3 +1,5 @@
+import { Config } from "./config/Config";
+
 export type Cache<K, V> = {
   get(key: K): V | undefined;
   set(key: K, value: V): void;
@@ -8,7 +10,7 @@ export type Cache<K, V> = {
 
 export abstract class BasicCache implements Cache<string, string> {
   private cache: Map<string, string>;
-  private static instance: BasicCache | null = null;
+  private static instance: BasicCache | undefined = undefined;
 
   constructor() {
     this.cache = new Map<string, string>();
@@ -19,11 +21,33 @@ export abstract class BasicCache implements Cache<string, string> {
    * @param cachePath Optional path for file system cache directory
    * @returns Singleton cache instance (in-memory for AWS Lambda, file system otherwise)
    */
-  public static getInstance(cachePath?: string): BasicCache {
+  public static getInstance(config?: Config): BasicCache | undefined {
     if (!BasicCache.instance) {
-      BasicCache.instance = (process.env.AWS_LAMBDA_FUNCTION_NAME || !cachePath)
-        ? new InMemoryCache() 
-        : new FileSystemCache(cachePath);
+      
+      // Deconstruct environment variables and config values for cache settings
+      const { AWS_LAMBDA_FUNCTION_NAME, IS_ECS_TASK, CACHE_ENABLED, CACHE_PATH } = process.env;
+      const { cache: { path, enabled=true } = {} } = config || {};
+
+      // Environment variables (if presesent) take precedence over config values for cache settings
+      const cachePath = CACHE_PATH || path;
+      const cacheEnabled = CACHE_ENABLED !== undefined ? 
+        CACHE_ENABLED.toLowerCase() === 'true' : 
+        enabled;
+
+      if(!cacheEnabled) {
+        console.log('Caching is disabled');
+        return undefined;
+      }
+      
+      if (cachePath) {       
+        BasicCache.instance = new FileSystemCache(cachePath);
+      }
+      else if (AWS_LAMBDA_FUNCTION_NAME) {
+        BasicCache.instance = new InMemoryCache();
+      } 
+      else if (IS_ECS_TASK === 'true') {
+        BasicCache.instance = new InMemoryCache();
+      }
     }
     return BasicCache.instance;
   }
@@ -32,7 +56,7 @@ export abstract class BasicCache implements Cache<string, string> {
    * Reset the singleton instance (mainly for testing purposes)
    */
   public static resetInstance(): void {
-    BasicCache.instance = null;
+    BasicCache.instance = undefined;
   }
 
   public get(key: string): string | undefined {

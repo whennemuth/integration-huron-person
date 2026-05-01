@@ -160,7 +160,7 @@ async function main() {
     }
 
     // Create the token cache
-    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+    const cache = BasicCache.getInstance(config);
 
     // Turn the comma-separated BUIDs into an array
     const buids = buidsString.split(',').map(buid => buid.trim());

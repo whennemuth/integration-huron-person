@@ -392,7 +392,7 @@ async function main() {
     buid = buid!;
 
     // Create the token cache
-    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+    const cache = BasicCache.getInstance(config);
 
     // Sync (create/update) the person and exit
     const sync = new SinglePersonSync({ 

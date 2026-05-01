@@ -128,14 +128,21 @@ describe('Cache', () => {
   describe('BasicCache singleton behavior', () => {
     afterEach(() => {
       BasicCache.resetInstance();
+      delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+      delete process.env.IS_ECS_TASK;
+      delete process.env.CACHE_ENABLED;
+      delete process.env.CACHE_PATH;
     });
 
     it('should return the same instance on multiple getInstance calls', () => {
       const testPath = path.join(__dirname, 'temp-singleton-test');
+      const mockConfig = {
+        cache: { enabled: true, path: testPath }
+      } as any;
       
-      const cache1 = BasicCache.getInstance(testPath);
-      const cache2 = BasicCache.getInstance(testPath);
-      const cache3 = BasicCache.getInstance(); // Different path should still return same instance
+      const cache1 = BasicCache.getInstance(mockConfig);
+      const cache2 = BasicCache.getInstance(mockConfig);
+      const cache3 = BasicCache.getInstance(); // No config should still return same instance
       
       // All calls should return the same instance
       expect(cache2).toBe(cache1);
@@ -153,18 +160,21 @@ describe('Cache', () => {
 
     it('should not reload from file on subsequent getInstance calls', () => {
       const testPath = path.join(__dirname, 'temp-singleton-reload-test');
+      const mockConfig = {
+        cache: { enabled: true, path: testPath }
+      } as any;
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       
       // First call - creates instance and loads from file
-      const cache1 = BasicCache.getInstance(testPath);
-      cache1.set('key1', 'value1');
+      const cache1 = BasicCache.getInstance(mockConfig);
+      cache1!.set('key1', 'value1');
       
       const firstCallLogs = consoleSpy.mock.calls.length;
       consoleSpy.mockClear();
       
       // Second call - should return existing instance without reloading
-      const cache2 = BasicCache.getInstance(testPath);
-      cache2.set('key1', 'value1'); // Same value, should not log due to optimization
+      const cache2 = BasicCache.getInstance(mockConfig);
+      cache2!.set('key1', 'value1'); // Same value, should not log due to optimization
       
       // Should have no new logs (no file reload, no set operation)
       expect(consoleSpy).not.toHaveBeenCalled();

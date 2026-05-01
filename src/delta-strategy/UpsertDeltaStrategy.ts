@@ -173,7 +173,7 @@ async function main() {
     }
     
     // Create the token cache
-    const cache = config.cache?.enabled ? BasicCache.getInstance(config.cache.path) : undefined;
+    const cache = BasicCache.getInstance(config);
     
     // Use SinglePersonSync to get mapped person data
     const sync = new SinglePersonSync({ config, buid, cache, dataMapper });    

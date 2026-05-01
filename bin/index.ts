@@ -29,7 +29,7 @@ export { ReadPeople } from '../src/data-target/crud/ReadPeople';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
 
 // Data mapper exports
-export { DataMapper, getDataMapper } from '../src/data-mapper/DataMapper';
+export { DataMapper, getDataMapper, _fieldDefinitions as FieldDefinitions } from '../src/data-mapper/DataMapper';
 export { FieldFilter, FieldFilterParams } from '../src/data-mapper/FieldFilter';
 
 // Delta strategy exports

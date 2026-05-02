@@ -74,6 +74,25 @@ export class HuronPersonDataTarget implements DataTarget {
     const { data, crud } = params;
     const { DRY_RUN='false' } = process.env;
     const dryRun = DRY_RUN.toLowerCase().trim() === 'true';
+
+    /**
+     * Get all keys that could potentially identify a person record, and return those that are present.
+     * @param data 
+     * @returns 
+     */
+    const getPersonIdentifierInfo = (data: any): string => {
+      const { hrn, id, userId, sourceIdentifier, employeeId } = data || {};
+      const retvalObj = {
+        hrn: hrn || undefined,
+        id: id || undefined,
+        userId: userId || undefined,
+        sourceIdentifier: sourceIdentifier || undefined,
+        employeeId: employeeId || undefined
+      }
+      return Object.values(retvalObj).find(v => v !== undefined) ?
+        JSON.stringify(retvalObj) : 
+        'unknown';
+    };
     
     try {
       // Convert FieldSet to API request format

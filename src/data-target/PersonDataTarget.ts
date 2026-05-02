@@ -107,7 +107,7 @@ export class HuronPersonDataTarget implements DataTarget {
       else {
 
         if (crud === CrudOperation.CREATE) {
-          console.log(`Pushing single person record with CREATE operation:`, personRequest.data?.id || 'unknown');
+          console.log(`Pushing single person record with CREATE operation:`, getPersonIdentifierInfo(personRequest.data));
           // CREATE: Use POST to /api/v2/persons
           this.apiClient.setErrorEventDetails({ message: 'Huron creation error', object: { 
             hrn: personRequest.data?.hrn,
@@ -116,7 +116,7 @@ export class HuronPersonDataTarget implements DataTarget {
           response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
         } else if (crud === CrudOperation.UPDATE) {
           // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
-          console.log(`Pushing single person record with PATCH operation:`, personRequest.data?.id || 'unknown');
+          console.log(`Pushing single person record with PATCH operation:`, getPersonIdentifierInfo(personRequest.data));
           if (personRequest.data?.hrn) {
             endpoint = `${endpoint}/${personRequest.data.hrn}`;
             // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
@@ -150,7 +150,7 @@ export class HuronPersonDataTarget implements DataTarget {
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
           }
         } else if (crud === CrudOperation.DELETE) {
-          console.log(`Soft deleting single person record with PATCH operation:`, personRequest.data?.id || 'unknown');
+          console.log(`Soft deleting single person record with PATCH operation:`, getPersonIdentifierInfo(data));
           // DELETE: Implement as soft delete by setting active: false
           // Extract HRN from the original fieldSet data
           const hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn;
@@ -164,9 +164,11 @@ export class HuronPersonDataTarget implements DataTarget {
             }});
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
           } else {
+            const errorMsg = 'Cannot perform soft delete: no HRN available for person';
+            console.error(`${errorMsg}:`, getPersonIdentifierInfo(data));
             return {
               status: Status.FAILURE,
-              message: 'Cannot perform soft delete: no HRN available for person',
+              message: errorMsg,
               timestamp: new Date(),
               primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'sourceIdentifier' in fv),
               crud

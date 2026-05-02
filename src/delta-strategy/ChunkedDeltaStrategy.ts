@@ -40,6 +40,23 @@ export class ChunkedDeltaStrategy implements DeltaStrategy {
   /**
    * Compute delta using integrated clientId for reading previous data,
    * but preserving original clientId for writing chunk-specific deltas.
+   * 
+   * CRITICAL: In chunked processing, we filter out 'removed' records from the delta result.
+   * 
+   * Why? Because chunks contain only a SUBSET of the total population:
+   * - Current data (chunk): Contains person B only (e.g., 1 out of 10,000 records)
+   * - Previous data (shared): Contains persons A, B, C, D... (all 10,000 records from prior run)
+   * - Without filtering: Delta would compute person A as "removed" (present in previous, missing in current)
+   * - Reality: Person A is NOT removed from source system - it's just in a different chunk!
+   * 
+   * In chunked mode:
+   * - Each chunk processes ONLY the records it contains (additions and updates)
+   * - Removals can ONLY be determined by the merger after consolidating ALL chunks
+   * - If a person is truly removed from source, it will be absent from ALL chunks
+   * - The merger compares the consolidated result against shared previous-input.ndjson
+   * 
+   * Therefore, we return removed: [] to prevent chunks from incorrectly soft-deleting
+   * records that are most likely being processed by other parallel chunks.
    */
   public async computeDelta(params: {
     storage: DeltaStorage;
@@ -59,6 +76,18 @@ export class ChunkedDeltaStrategy implements DeltaStrategy {
     };
     
     // Delegate to wrapped strategy with modified clientId
-    return this.deltaStrategy.computeDelta(modifiedParams);
+    const result = await this.deltaStrategy.computeDelta(modifiedParams);
+    
+    // Filter out removed records - they're not actually removed, just in other chunks
+    // Log if any removals were detected so we can track this behavior
+    if (result.removed.length > 0) {
+      console.log(`ChunkedDeltaStrategy: Filtered out ${result.removed.length} removed record(s) - ` +
+        `these records are in other chunks, not actually removed from source system`);
+    }
+    
+    return {
+      ...result,
+      removed: [] // Always empty in chunked processing
+    };
   }
 }

@@ -42,6 +42,21 @@ export type S3DataSourceConfig = S3FileConfig & {
 }
 
 /**
+ * Defines how person deletions are handled in the target system
+ * - SOFT: Records are marked as deleted (e.g., with a 'deleted' flag) but not removed from the system
+ * - HARD: Records are permanently removed from the system
+ * - NONE: No deletion is performed; deleted records in the source are ignored and left unchanged in the target
+ * 
+ * The choice of deletion type depends on the capabilities of the target system and the desired data retention policies.
+ */
+export enum TargetPersonDeleteType {
+  SOFT = 'soft',
+  HARD = 'hard',
+  LOG  = 'log',
+  NONE = 'none'
+}
+
+/**
  * Configuration interface for Huron Person Integration
  */
 export interface Config {
@@ -74,6 +89,8 @@ export interface Config {
     personsPath: string;
     /** Endpoint for fetching organization data */
     organizationsPath: string;
+    /** Determines how person deletions are handled in the target system */
+    personDeleteType?: TargetPersonDeleteType;
     /** Optional dryrun flag. Indicates that CRUD operation to target is logged instead of executed */
     dryRun?: boolean;
   };

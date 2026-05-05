@@ -46,7 +46,8 @@
       "timeout": 30000
     },
     "personsPath": "/api/v2/persons",
-    "organizationsPath": "/api/v2/organizations"
+    "organizationsPath": "/api/v2/organizations",
+    "personDeleteType": "soft"
   },
   "integration": {
     "clientId": "huron-person-integration",

@@ -10,7 +10,7 @@ import {
   Timer
 } from 'integration-core';
 import { Cache } from '../Cache';
-import { Config } from '../config/Config';
+import { Config, TargetPersonDeleteType } from '../config/Config';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronPerson } from './crud/Person';
 import { ReadPerson } from './crud/ReadPerson';
@@ -21,6 +21,7 @@ import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
  */
 export interface PersonPushRequest {
   operation: 'create' | 'update' | 'delete';
+  deleteType?: TargetPersonDeleteType;
   data: any;
 }
 
@@ -155,14 +156,31 @@ export class HuronPersonDataTarget implements DataTarget {
           // Extract HRN from the original fieldSet data
           const hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn;
           if (hrn) {
-            endpoint = `${endpoint}/${hrn}`;
-            // For soft delete, we only need to set active: false
-            const softDeleteData = { active: false };
-            this.apiClient.setErrorEventDetails({ message: 'Huron deletion error', object: { 
-              hrn, 
-              sourceIdentifier: data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier 
-            }});
-            response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
+            const { SOFT, HARD, LOG, NONE } = TargetPersonDeleteType;
+            const deleteType = personRequest.deleteType || SOFT; // Default to SOFT delete if not specified
+            let patch = true;
+            switch (deleteType) {
+              case HARD:
+                console.warn(`HARD delete requested for HRN ${hrn}. But only SOFT delete (deactivation) is allowed - deactivating instead.`);
+                break;
+              case LOG:
+                console.log(`${hrn} not present anymore in source system. Logging this event but not deactivating in Huron as per configuration.`);
+                patch = false;
+                break;
+              case NONE:
+                patch = false;
+                break;
+            }
+            if(patch) {
+              endpoint = `${endpoint}/${hrn}`;
+              // For soft delete, we only need to set active: false
+              const softDeleteData = { hrn, active: false };
+              this.apiClient.setErrorEventDetails({ message: 'Huron deletion error', object: { 
+                hrn, 
+                sourceIdentifier: data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier 
+              }});
+              response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
+            }
           } else {
             const errorMsg = 'Cannot perform soft delete: no HRN available for person';
             console.error(`${errorMsg}:`, getPersonIdentifierInfo(data));
@@ -196,7 +214,7 @@ export class HuronPersonDataTarget implements DataTarget {
         crud
       };
     } catch (error) {
-      const { response } = error as any || {};
+      const { response } = error as any || {};      
       return {
         status: Status.FAILURE,
         message: this.getResponseData(response?.data) || (error instanceof Error ? error.message : String(error)),

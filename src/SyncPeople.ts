@@ -1,4 +1,4 @@
-import { DataSource, EndToEnd, IntegrationResult, Timer } from 'integration-core';
+import { DataSource, EndToEnd, FieldSet, IntegrationResult, Timer } from 'integration-core';
 import { Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -22,6 +22,7 @@ type HuronPersonIntegrationParams = {
    * lookups against the target API instead of the stored (key + hash) cache. 
    */
   bulkReset?: boolean;
+  lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>
   errorEventProcessor?: TargetApiErrorEventProcessor;
   /**
    * retryStrategy: Optional retry strategy for handling transient API failures (429, 5xx, network errors).
@@ -40,6 +41,7 @@ class HuronPersonIntegration {
   private endToEnd: EndToEnd;
   private staticMapUsage?: StaticMapUsage;
   private bulkReset: boolean;
+  private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: any;
   private cleanupPreviousData?: boolean;
@@ -47,12 +49,13 @@ class HuronPersonIntegration {
   constructor(params: HuronPersonIntegrationParams) {
     const { 
       configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, 
-      retryStrategy, cleanupPreviousData=true 
+      retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache
     } = params;
     
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
     this.errorEventProcessor = errorEventProcessor;
+    this.lookupPersonInTargetSystemCache = lookupPersonInTargetSystemCache;
     this.retryStrategy = retryStrategy;
     this.cleanupPreviousData = cleanupPreviousData;
     
@@ -130,7 +133,13 @@ class HuronPersonIntegration {
       await dataTarget.ensureValidToken();
       console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
       
-      const deltaStrategy = DeltaStrategyFactory.createStrategy({ config, chunkId, bulkReset: this.bulkReset });
+      const deltaStrategy = DeltaStrategyFactory.createStrategy({ 
+        config, 
+        chunkId, 
+        bulkReset: this.bulkReset,
+        lookupPersonInTargetSystemCache: this.lookupPersonInTargetSystemCache
+      });
+      
       const fieldFilterParms = {
         stateMappings: dataMapper.stateMappings,
         countryMappings: dataMapper.countryMappings,

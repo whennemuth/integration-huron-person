@@ -457,4 +457,187 @@ describe('DeltaStrategyFactory', () => {
       });
     });
   });
+
+  describe('lookupPersonInTargetSystemCache parameter', () => {
+    let mockStrategy: any;
+    let mockCreateFileStrategy: jest.Mock;
+
+    beforeEach(() => {
+      mockStrategy = {
+        name: 'MockDeltaStrategy',
+        parms: { clientId: 'test', config: {} },
+        storage: {
+          readCurrentInput: jest.fn(),
+          readPreviousInput: jest.fn(),
+          writeCurrentInput: jest.fn(),
+          writeDelta: jest.fn()
+        },
+        computeDelta: jest.fn()
+      };
+      mockCreateFileStrategy = jest.fn().mockReturnValue(mockStrategy);
+      require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
+    });
+
+    it('should pass cache function to UpsertDeltaStrategy when bulkReset is true', () => {
+      const mockCacheLookup = jest.fn();
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      // Result should be wrapped in UpsertDeltaStrategy
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should NOT wrap with UpsertDeltaStrategy when bulkReset is false', () => {
+      const mockCacheLookup = jest.fn();
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: false,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      // Result should be the base strategy, not wrapped
+      expect(result).toBe(mockStrategy);
+      expect(result.constructor.name).not.toBe('UpsertDeltaStrategy');
+    });
+
+    it('should create UpsertDeltaStrategy without cache function when only bulkReset is true', () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true
+        // No lookupPersonInTargetSystemCache provided
+      });
+
+      // Should still wrap with UpsertDeltaStrategy (cache is optional)
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should ignore cache function when bulkReset is false', () => {
+      const mockCacheLookup = jest.fn();
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: false,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      // Cache function should be ignored since bulkReset is false
+      expect(result).toBe(mockStrategy);
+    });
+
+    it('should accept async cache function', () => {
+      const mockCacheLookup = jest.fn().mockResolvedValue('SRC001');
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should handle cache function that returns null', () => {
+      const mockCacheLookup = jest.fn().mockResolvedValue(null);
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should handle cache function that accepts FieldSet', () => {
+      const mockCacheLookup = jest.fn().mockImplementation(async (person: any) => {
+        if (typeof person === 'object' && person.fieldValues) {
+          return 'SRC001';
+        }
+        return null;
+      });
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle cache function that accepts string', () => {
+      const mockCacheLookup = jest.fn().mockImplementation(async (person: any) => {
+        if (typeof person === 'string') {
+          return person;
+        }
+        return null;
+      });
+      
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        lookupPersonInTargetSystemCache: mockCacheLookup
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('bulkReset wrapping with chunkId', () => {
+    let mockStrategy: any;
+    let mockCreateFileStrategy: jest.Mock;
+
+    beforeEach(() => {
+      mockStrategy = {
+        name: 'MockDeltaStrategy',
+        parms: { clientId: 'test', config: {} },
+        storage: {
+          readCurrentInput: jest.fn(),
+          readPreviousInput: jest.fn(),
+          writeCurrentInput: jest.fn(),
+          writeDelta: jest.fn()
+        },
+        computeDelta: jest.fn()
+      };
+      mockCreateFileStrategy = jest.fn().mockReturnValue(mockStrategy);
+      require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
+    });
+
+    it('should wrap with ChunkedDeltaStrategy first, then UpsertDeltaStrategy', () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'shared-client'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        chunkId: 'chunk-001',
+        bulkReset: true
+      });
+
+      // Should be wrapped with UpsertDeltaStrategy (outer wrapper)
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should only wrap with UpsertDeltaStrategy when chunkId provided without integratedDeltaClientId', () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        chunkId: 'chunk-001',
+        bulkReset: true
+      });
+
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+  });
 });

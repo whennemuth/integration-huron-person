@@ -31,7 +31,8 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
 
   constructor(
     private deltaStrategy: DeltaStrategy,
-    private config: Config
+    private config: Config,
+    private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any> // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
   ) {
     this.parms = deltaStrategy.parms;
     this.readPerson = new ReadPerson(config);
@@ -64,7 +65,19 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
     // Query target system for each person to determine if they exist
     for (const person of currentFieldSets) {
       try {
-        const existingPerson = await this.lookupPersonInTargetSystem(person);
+        let existingPerson:any;
+        if (this.lookupPersonInTargetSystemCache) {
+          const sourceIdentifier = await this.lookupPersonInTargetSystemCache(person);
+          if (sourceIdentifier) {
+            console.log(`  → Found sourceIdentifier ${sourceIdentifier} in cache for person.`);
+            existingPerson = { sourceIdentifier};
+          }
+        }
+
+        if( ! existingPerson) {
+          console.log(`  → SourceIdentifier not found in cache for person, querying target system directly...`);
+          existingPerson = await this.lookupPersonInTargetSystem(person);
+        }
         
         if (existingPerson) {
           // Person exists - should be updated

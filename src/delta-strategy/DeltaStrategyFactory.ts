@@ -5,6 +5,7 @@ import {
   DeltaStrategyForFileSystem,
   DeltaStrategyForS3Bucket,
   DeltaStrategyParams,
+  FieldSet,
   FileConfig,
   isDatabaseConfig,
   isS3Config
@@ -20,6 +21,7 @@ export interface CreateStrategyParams {
   config: Config;
   chunkId?: string;
   bulkReset?: boolean;
+  lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>; // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
 }
 
 /**
@@ -32,7 +34,7 @@ export class DeltaStrategyFactory {
    * @param params - Parameters object containing config, optional chunkId, and optional bulkReset flag
    */
   static createStrategy(params: CreateStrategyParams): DeltaStrategy {
-    const { config, chunkId, bulkReset = false } = params;
+    const { config, chunkId, bulkReset = false, lookupPersonInTargetSystemCache } = params;
     const { storage } = config;
     
     // Create custom output path/key prefix function if chunkId is provided
@@ -121,7 +123,7 @@ export class DeltaStrategyFactory {
     // Wrap with UpsertDeltaStrategy if bulkReset is enabled
     if (bulkReset) {
       console.log('🔄 Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
-      deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config);
+      deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
     }
 
     return deltaStrategy;

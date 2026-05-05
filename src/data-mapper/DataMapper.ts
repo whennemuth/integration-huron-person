@@ -1,6 +1,6 @@
 import { DataMapper as CoreDataMapper, CrudOperation, Field, Input } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
-import { anyEmpty, isEmpty, removeEmptyValues } from '../Utils';
+import { anyEmpty, getLocalConfig, isEmpty, removeEmptyValues } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
 import { EmailMapper } from './DataMapperEmail';
 import { NameMapper } from './DataMapperName';
@@ -328,7 +328,9 @@ export const getDataMapperMaps = async (config: Config, staticMapUsage?: StaticM
 
 if(require.main === module) {
   (async () => {
-    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
     const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
     const { currentTerms=[], stateMappings, countryMappings, orgMappings } = dataMapper;
     console.log(`DataMapper: ${JSON.stringify({

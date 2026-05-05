@@ -8,7 +8,7 @@ import { FieldFilter } from "../data-mapper/FieldFilter";
 import { BuCdmPersonDataSource } from "../data-source/PersonDataSource";
 import { HuronPerson } from "../data-target/crud/Person";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
-import { isABuid } from "../Utils";
+import { getLocalConfig, isABuid } from "../Utils";
 
 export type SourcePersonParms = {
   config: Config,
@@ -171,13 +171,14 @@ export class SourcePerson {
 
 
 if(require.main === module) {
-  const { HURON_PERSON_HRN:hrn, HURON_PERSON_SOURCE_ID:buid } = process.env;
+  const { HURON_PERSON_HRN:hrn, HURON_PERSON_SOURCE_ID:buid, HURON_PERSON_CONFIG_PATH } = process.env;
   if( !hrn && !buid) {
     console.error('Please provide either HURON_PERSON_HRN or HURON_PERSON_SOURCE_ID environment variable to run the reverse hash comparison');
     process.exit(1);
   }
   (async () => {
-    const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none');
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem(localConfigPath).getConfig('none');
 
     const sourceDataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
 

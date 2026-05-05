@@ -13,7 +13,7 @@ import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { isEmpty } from './Utils';
+import { getLocalConfig, isEmpty } from './Utils';
 
 /**
  * Base parameters shared by both single and batch person sync operations.
@@ -347,11 +347,13 @@ class SinglePersonSync {
  */
 async function main() {
   let rawData: any[] | undefined;
+  const { HURON_PERSON_CONFIG_PATH } = process.env;
 
   try {
     // Load configuration
     const configManager = ConfigManager.getInstance();
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
     const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });

@@ -9,6 +9,7 @@ import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { ApiRetryStrategy, TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
+import { getLocalConfig } from '../bin';
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 type HuronPersonIntegrationParams = {
@@ -176,10 +177,23 @@ class HuronPersonIntegration {
  * on the container or serverless function configuration.
  */
 async function main() {
+  const { CACHE_ENABLED, CACHE_PATH, HURON_PERSON_CONFIG_PATH } = process.env;
+
+  if(CACHE_ENABLED !== 'true') {
+    console.log('CACHE_ENABLED environment variable is not set to "true". You need to cache the access token for bulk operations.');
+    return;
+  }
+
+  if( ! CACHE_PATH) {
+    console.log('CACHE_PATH environment variable is not set. You need to set this to a writable path for caching the access token for bulk operations.');
+    return;
+  }
+
   try {
     // Load configuration
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
     const configManager = ConfigManager.getInstance();
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('people');
+    const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('people');
     const { dataSource: { people } = {} } = config;
 
     // Remove fieldsOfInterest to disable source person lookup field filtering for this run, ensuring all fields from the source are available for mapping and delta processing. This is necessary because the batch sync may require fields that are not included in the default fieldsOfInterest.

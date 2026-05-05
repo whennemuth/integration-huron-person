@@ -5,6 +5,7 @@ import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater'
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper } from './data-mapper/DataMapper';
+import { getLocalConfig } from '../bin';
 
 type BatchPersonSyncParams = PersonSyncParams & {
   buids: string[];
@@ -129,10 +130,12 @@ class BatchPersonSync {
  * Main entry point for command line execution - batch person sync
  */
 async function main() {
+  const { HURON_PERSON_CONFIG_PATH } = process.env;
   try {
     // Load configuration
     const configManager = ConfigManager.getInstance();
-    const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
     const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });

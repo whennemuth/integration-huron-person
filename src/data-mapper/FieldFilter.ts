@@ -4,7 +4,7 @@ import { _fieldDefinitions, getDataMapperMaps, ReverseDataMapper } from "./DataM
 import { CountryMappings } from "./DataMapperCountry";
 import { StateMappings } from "./DataMapperState";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
-import { deepClone, removeEmptyValues } from "../Utils";
+import { deepClone, getLocalConfig, removeEmptyValues } from "../Utils";
 import { OrgMappings } from "./DataMapperOrg";
 
 
@@ -181,7 +181,9 @@ if(require.main === module) {
     process.exit(1);
   }
   (async () => {
-    const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem().getConfig('none');
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem(localConfigPath).getConfig('none');
 
     const huronPerson = await new ReadPerson(config).readPersonByHRN(hrn!);
 

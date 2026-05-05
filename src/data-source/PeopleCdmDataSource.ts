@@ -54,12 +54,12 @@ async function main() {
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const localConfigPath = process.env.HURON_PERSON_CONFIG_PATH || getLocalConfig();
-    const config = configManager
+    const config = await configManager
       .reset()
       .fromSecretManager(process.env.SECRET_ARN) // Load from Secrets Manager first if SECRET_ARN is provided
       .fromEnvironment()
       .fromFileSystem(localConfigPath)
-      .getConfig('people');
+      .getConfigAsync('people');
 
     // Output the loaded config to console.
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

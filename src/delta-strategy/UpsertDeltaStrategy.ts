@@ -184,12 +184,12 @@ async function main() {
   try {    
     // Load configuration
     const configManager = ConfigManager.getInstance();
-    const config = configManager
+    const config = await configManager
       .reset()
       .fromSecretManager(process.env.SECRET_ARN) // Load from Secrets Manager first if SECRET_ARN is provided
       .fromEnvironment()
       .fromFileSystem()
-      .getConfig('person');
+      .getConfigAsync('person');
 
     const { integration: { clientId = 'unknown-client' } = {}} = config;
 

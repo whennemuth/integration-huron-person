@@ -5,6 +5,7 @@ import * as readline from 'readline';
 import { Readable } from 'stream';
 import { Config, S3DataSourceConfig } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
+import { getLocalConfig } from '../Utils';
 
 /**
  * DataSource implementation for reading person data from S3 NDJSON files
@@ -143,10 +144,12 @@ class BuS3PeopleDataSource implements DataSource {
 async function main() {
   try {
     // Load configuration
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
     const configManager = ConfigManager.getInstance();
 
     // const config = configManager.reset().fromEnvironment().fromFileSystem().getConfig('people');
-    const config = configManager.reset().fromFileSystem().getConfig('people');
+    const config = configManager.reset().fromFileSystem(localConfigPath).getConfig('people');
 
     // Output the loaded config to console.
     console.log('Loaded Configuration:', JSON.stringify(config, null, 2));

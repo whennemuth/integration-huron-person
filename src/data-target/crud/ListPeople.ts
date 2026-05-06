@@ -39,6 +39,10 @@ class ListPeople {
     return this.listAll(['hrn'], active);
   }
 
+  public listSourceIdentifiers = async (active?: boolean): Promise<HuronPerson[]> => {
+    return this.listAll(['sourceIdentifier'], active);
+  }
+
   public listAllKeys = async (active?: boolean): Promise<HuronPerson[]> => {
     return this.listAll(['hrn', 'id', 'sourceIdentifier'], active);
   }
@@ -80,6 +84,12 @@ if (require.main === module) {
           console.log('Listing hrns only...');
           listPeople = new ListPeople(config, 500);
           people = await listPeople.listPrimaryKeys(active); // Example: list active people with primary keys only
+          console.log(`Number of people, status = ${status}: ${people.length}`);
+          break;
+        case 'sid':
+          console.log('Listing sourceIdentifiers only...');
+          listPeople = new ListPeople(config, 500);
+          people = await listPeople.listSourceIdentifiers(active);
           console.log(`Number of people, status = ${status}: ${people.length}`);
           break;
         case 'keys':

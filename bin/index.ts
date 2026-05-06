@@ -26,6 +26,7 @@ export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiCli
 export * from '../src/data-target/crud/Person';
 export { ReadPerson } from '../src/data-target/crud/ReadPerson';
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';
+export { ListPeople } from '../src/data-target/crud/ListPeople';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
 
 // Data mapper exports

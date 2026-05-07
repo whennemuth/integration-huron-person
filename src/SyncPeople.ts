@@ -30,6 +30,7 @@ type HuronPersonIntegrationParams = {
    */
   retryStrategy?: ApiRetryStrategy;
   cleanupPreviousData?: boolean; // Optional flag to control whether previous data should be cleaned up after update
+  ignoreRemovals?: boolean; // Optional flag to control whether person removals should be ignored in delta computation (used for chunked processing where removals are determined by merger)
 };
 
 /**
@@ -45,12 +46,25 @@ class HuronPersonIntegration {
   private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: any;
   private cleanupPreviousData?: boolean;
+  private ignoreRemovals: boolean;
 
   constructor(params: HuronPersonIntegrationParams) {
     const { 
       configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, 
-      retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache
+      retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false
     } = params;
+
+    console.log(`⚙️  HuronPersonIntegration params: ${JSON.stringify({
+      configPath,
+      cache: !!cache ? 'provided' : 'not provided',
+      config: !!config ? 'provided' : 'not provided',
+      staticMapUsage,
+      bulkReset,
+      lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided',
+      ignoreRemovals,
+      retryStrategy: !!retryStrategy ? retryStrategy : 'not provided',
+      cleanupPreviousData: !!cleanupPreviousData ? cleanupPreviousData : 'not provided'
+    })}`);
     
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
@@ -58,6 +72,7 @@ class HuronPersonIntegration {
     this.lookupPersonInTargetSystemCache = lookupPersonInTargetSystemCache;
     this.retryStrategy = retryStrategy;
     this.cleanupPreviousData = cleanupPreviousData;
+    this.ignoreRemovals = ignoreRemovals;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -116,7 +131,8 @@ class HuronPersonIntegration {
       // Create integration components with currentTerms
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
-        errorEventProcessor, cleanupPreviousData
+        errorEventProcessor, cleanupPreviousData, bulkReset, ignoreRemovals,
+        lookupPersonInTargetSystemCache
       } = this;
       const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
@@ -136,10 +152,11 @@ class HuronPersonIntegration {
       const deltaStrategy = DeltaStrategyFactory.createStrategy({ 
         config, 
         chunkId, 
-        bulkReset: this.bulkReset,
-        lookupPersonInTargetSystemCache: this.lookupPersonInTargetSystemCache
+        bulkReset,
+        lookupPersonInTargetSystemCache,
+        ignoreRemovals
       });
-      
+
       const fieldFilterParms = {
         stateMappings: dataMapper.stateMappings,
         countryMappings: dataMapper.countryMappings,

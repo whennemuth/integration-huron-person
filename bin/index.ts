@@ -37,6 +37,7 @@ export { FieldFilter, FieldFilterParams } from '../src/data-mapper/FieldFilter';
 export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
 export { UpsertDeltaStrategy } from '../src/delta-strategy/UpsertDeltaStrategy';
 export { ChunkedDeltaStrategy } from '../src/delta-strategy/ChunkedDeltaStrategy';
+export { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/IgnoreRemovalsDeltaStrategy';
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';

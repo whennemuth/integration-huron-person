@@ -13,12 +13,14 @@ import {
 import { Config } from '../config/Config';
 import { UpsertDeltaStrategy } from './UpsertDeltaStrategy';
 import { ChunkedDeltaStrategy } from './ChunkedDeltaStrategy';
+import { IgnoreRemovalsDeltaStrategy } from './IgnoreRemovalsDeltaStrategy';
 
 /**
  * Parameters for creating a delta strategy
  */
 export interface CreateStrategyParams {
   config: Config;
+  ignoreRemovals?: boolean;
   chunkId?: string;
   bulkReset?: boolean;
   lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>; // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
@@ -34,8 +36,20 @@ export class DeltaStrategyFactory {
    * @param params - Parameters object containing config, optional chunkId, and optional bulkReset flag
    */
   static createStrategy(params: CreateStrategyParams): DeltaStrategy {
-    const { config, chunkId, bulkReset = false, lookupPersonInTargetSystemCache } = params;
+    const { 
+      config, chunkId, bulkReset = false, lookupPersonInTargetSystemCache, ignoreRemovals = false 
+    } = params;
     const { storage } = config;
+
+    console.log(`Creating delta strategy: ${
+      JSON.stringify({
+        storageType: storage.type,
+        chunkId,
+        bulkReset,
+        ignoreRemovals,
+        lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided'
+      })
+    }`);
     
     // Create custom output path/key prefix function if chunkId is provided
     const createChunkedOutputPath = chunkId 
@@ -114,15 +128,31 @@ export class DeltaStrategyFactory {
         configurable: true
       });
     }
-    // Wrap with ChunkedDeltaStrategy if chunkId is provided (parallel chunk processing)
-    // This ensures all chunks read from the integrated previous-input.ndjson
+
+    /**
+     * Wrap with IgnoreRemovalsDeltaStrategy if ignoreRemovals flag is set. Used if the
+     * source system API call is only returning a subset of the total population as per 
+     * its own delta adjudication. In this scenario, we want to preserve any "removed"
+     * records from the delta result since they may not be truly removed from the source
+     * system - they just weren't included in this API response.
+     */
+    if(ignoreRemovals) {
+      console.log('🔄  Ignored removals processing mode - wrapping strategy with IgnoreRemovalsDeltaStrategy');
+      deltaStrategy = new IgnoreRemovalsDeltaStrategy(deltaStrategy);
+    }
+
+    /**
+     * Wrap with ChunkedDeltaStrategy if chunkId is provided (parallel chunk processing)
+     * This ensures all chunks read from the integrated previous-input.ndjson
+     */
     if (chunkId && (config as any).integratedDeltaClientId) {
-      console.log('Chunked processing mode - wrapping strategy with ChunkedDeltaStrategy');
+      console.log('🔄  Chunked processing mode - wrapping strategy with ChunkedDeltaStrategy');
       deltaStrategy = new ChunkedDeltaStrategy(deltaStrategy, config);
     }
-    // Wrap with UpsertDeltaStrategy if bulkReset is enabled
+
+    /** Wrap with UpsertDeltaStrategy if bulkReset is enabled */
     if (bulkReset) {
-      console.log('🔄 Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
+      console.log('🔄  Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
       deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
     }
 

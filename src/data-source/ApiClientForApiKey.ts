@@ -13,6 +13,7 @@ export interface EndpointConfigForApiKey {
 
 /**
  * HTTP client for API key-authenticated APIs
+ * MEMORY OPTIMIZATION: Supports recreating axios instance to prevent connection pool buildup
  */
 export class ApiClientForApiKey implements IApiClient {
   private axiosInstance: AxiosInstance;
@@ -26,6 +27,21 @@ export class ApiClientForApiKey implements IApiClient {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': endpointConfig.apiKey,
+      },
+    });
+  }
+  
+  /**
+   * MEMORY OPTIMIZATION: Recreate the axios instance to clear connection pools and internal buffers.
+   * Call this between batch operations to prevent memory accumulation.
+   */
+  public recreateInstance(): void {
+    this.axiosInstance = axios.create({
+      baseURL: this.endpointConfig.baseUrl,
+      timeout: this.endpointConfig.timeout || 30000,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.endpointConfig.apiKey,
       },
     });
   }

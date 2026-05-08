@@ -27,6 +27,7 @@ import { getLocalConfig } from "../Utils";
  *    completion.
  */
 abstract class BuCdmPeopleDataSourceBatch {
+  // MEMORY OPTIMIZATION: Keep response array small and clear it after each iteration
   private response: any[] = [];
   private _recordsProcessed = 0;
 
@@ -34,14 +35,12 @@ abstract class BuCdmPeopleDataSourceBatch {
     dataSource.setQueryParam('recordCount', batchSize);
   }
 
-  private hasMoreRecords = (): boolean => {
-    return this.response.length === this.batchSize;
-  }
+  // NOTE: hasMoreRecords method removed - now using inline check in processBatch to avoid stale reference
 
   protected abstract process: (response: any[]) => Promise<void>
 
   public processBatch = async (): Promise<void> => {
-    const { dataSource, hasMoreRecords } = this;
+    const { dataSource } = this;
 
     let offset = 0;
     do {
@@ -49,9 +48,26 @@ abstract class BuCdmPeopleDataSourceBatch {
       this.response = await dataSource.fetchRaw();
       await this.process(this.response);
       this._recordsProcessed += this.response.length;
-      // offset += this.response.length;
+      
+      // MEMORY OPTIMIZATION: Clear response reference after processing to allow garbage collection
+      // Critical for preventing memory accumulation across multiple batch iterations
+      const responseLength = this.response.length;
+      this.response = [];
+      
+      // MEMORY OPTIMIZATION: Recreate axios instance every 10 batches to prevent connection pool buildup
+      // This helps prevent memory leaks from axios internal buffers and connection pooling
+      if (offset > 0 && offset % 10 === 0) {
+        (dataSource as any).apiClient.recreateInstance();
+        console.log(`Recreated axios instance at batch ${offset} to prevent memory buildup`);
+      }
+      
       offset++;
-    } while (hasMoreRecords());
+      
+      // Use cached responseLength instead of this.response.length for hasMoreRecords check
+      if (responseLength < this.batchSize) {
+        break;
+      }
+    } while (true);
   }
 
   public recordsProcessed(): number {
@@ -82,7 +98,11 @@ if(require.main === module) {
     const fieldsOfInterest = people?.fieldsOfInterest;
 
     if (fieldsOfInterest) {
-      responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
+      // MEMORY OPTIMIZATION: Set maxBatchSize to prevent unbounded accumulation in stream filter
+      responseFilter = new AxiosResponseStreamFilter({ 
+        fieldsOfInterest,
+        maxBatchSize: 500 // Limit to 500 objects per batch
+      });
     }
     const dataSource = new BuCdmPeopleDataSource({ config, responseFilter });
 

@@ -63,6 +63,7 @@ export abstract class BuCdmDataSource implements DataSource {
 
   /**
    * Fetch raw data from the CDM API
+   * MEMORY OPTIMIZATION: Explicit cleanup added to prevent memory leaks in batch operations
    */
   async fetchRaw(): Promise<any[]> {
     try {
@@ -79,6 +80,10 @@ export abstract class BuCdmDataSource implements DataSource {
       const rawData = response.data.response;
       timer.logElapsed(`Successfully fetched ${rawData.length} records`);
   
+      // MEMORY OPTIMIZATION: Clear response reference to allow garbage collection
+      // This is critical in batch operations where fetchRaw is called repeatedly
+      (response as any).data = null;
+      
       return rawData;
     } catch (error) {
       console.error(`Failed to fetch data from ${this.name}:`, error);

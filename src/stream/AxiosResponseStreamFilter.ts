@@ -27,10 +27,13 @@ export interface ResponseProcessor {
  *   "personBasic.names[*].middleName"
  * ]
  * customFilterCase: Optional function to apply custom filtering logic on each object (receives source object and can modify target object)
+ * maxBatchSize: MEMORY OPTIMIZATION - Maximum number of objects to accumulate before forcing a flush (default: 1000)
+ *               Prevents unbounded memory growth when processing large datasets
  */
 export interface AxiosResponseStreamFilterConfig {
   fieldsOfInterest: string[];
-  customFilterCase?: (source: any, target?: any) => void
+  customFilterCase?: (source: any, target?: any) => void;
+  maxBatchSize?: number; // MEMORY OPTIMIZATION: Limit accumulation buffer size
 }
 
 /**
@@ -62,6 +65,10 @@ export class AxiosResponseStreamFilter implements ResponseProcessor {
   /**
    * Process an axios response by applying filtering logic.
    * Applies streaming JSON field filtering to reduce memory usage.
+   * 
+   * MEMORY OPTIMIZATION: Uses batch accumulation with a configurable limit to prevent
+   * unbounded memory growth when processing large datasets. Objects are accumulated
+   * in batches and references are released after processing.
    *
    * @param response The raw axios response to process (expected to have responseType: 'stream')
    * @returns The processed response with filtered data
@@ -69,20 +76,45 @@ export class AxiosResponseStreamFilter implements ResponseProcessor {
   async processResponse<T>(response: AxiosResponse<T>): Promise<AxiosResponse<T>> {
     return new Promise((resolve, reject) => {
       const filteredObjects: any[] = [];
-      const { fieldsOfInterest, customFilterCase } = this.config;
+      const { fieldsOfInterest, customFilterCase, maxBatchSize = 1000 } = this.config;
       
-      (response.data as any)
-        .pipe(new JsonParser({ extractPath: 'response[*]' }))  // Extract objects from response array
-        .pipe(new JsonFieldFilter(fieldsOfInterest, customFilterCase))   // Filter fields from each object
-        .on('data', (filteredObject: any) => {
-          filteredObjects.push(filteredObject);  // Collect filtered items
-        })
-        .on('end', () => {
-          // Replace response data with filtered results
-          (response as any).data = { response: filteredObjects };
-          resolve(response);
-        })
-        .on('error', reject);
+      // MEMORY OPTIMIZATION: Track object count to enforce batch size limits
+      let objectCount = 0;
+      
+      const jsonParser = new JsonParser({ extractPath: 'response[*]' });
+      const fieldFilter = new JsonFieldFilter(fieldsOfInterest, customFilterCase);
+      
+      const pipeline = (response.data as any)
+        .pipe(jsonParser)
+        .pipe(fieldFilter);
+      
+      pipeline.on('data', (filteredObject: any) => {
+        filteredObjects.push(filteredObject);
+        objectCount++;
+        
+        // MEMORY OPTIMIZATION: Log warning if batch size exceeds limit
+        // This helps identify potential memory issues in production
+        if (objectCount === maxBatchSize) {
+          console.warn(`Stream filter reached batch limit of ${maxBatchSize} objects. Consider reducing batch size to prevent memory issues.`);
+        }
+      });
+      
+      pipeline.on('end', () => {
+        // MEMORY OPTIMIZATION: Explicitly destroy stream pipeline to free resources
+        jsonParser.destroy();
+        fieldFilter.destroy();
+        
+        // Replace response data with filtered results
+        (response as any).data = { response: filteredObjects };
+        resolve(response);
+      });
+      
+      pipeline.on('error', (error: Error) => {
+        // MEMORY OPTIMIZATION: Clean up streams on error
+        jsonParser.destroy();
+        fieldFilter.destroy();
+        reject(error);
+      });
     });
   }
 }

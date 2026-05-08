@@ -292,10 +292,10 @@ describe('UserIdMapper', () => {
       const mapper = UserIdMapper({ person, idpName: defaultIdpName });
       const result = mapper.getUserId();
 
-      expect(result).toEqual('bu-sso_undefined@bu.edu'); // SAP has highest priority but no name
+      expect(result).toBeUndefined(); // Should return undefined since SAP account is missing name, even though it has highest priority
     });
 
-    it('should not convert nulls to undefined when removeNullValues is false', () => {
+    it('should handle null names in account array', () => {
       const person = {
         personid: 'U12345678',
         personDetails: {
@@ -311,27 +311,9 @@ describe('UserIdMapper', () => {
       const mapper = UserIdMapper({ person, idpName: defaultIdpName, removeNullValues: false });
       const result = mapper.getUserId();
 
-      expect(result).toEqual('bu-sso_null@bu.edu');
+      expect(result).toBeUndefined();
     });
 
-    it('should convert nulls to undefined when removeNullValues is true (default)', () => {
-      const person = {
-        personid: 'U12345678',
-        personDetails: {
-          account: [
-            {
-              source: 'SAP',
-              name: null
-            }
-          ]
-        }
-      };
-
-      const mapper = UserIdMapper({ person, idpName: defaultIdpName, removeNullValues: true });
-      const result = mapper.getUserId();
-
-      expect(result).toEqual('bu-sso_undefined@bu.edu');
-    });
 
     it('should handle empty personid', () => {
       const person = {

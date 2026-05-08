@@ -10,12 +10,18 @@ import { OrgMappings } from "./DataMapperOrg";
 
 const excludeFields = [ 'userId', 'roles', '__arrayFieldOperations' ];
 
-const fieldsToKeep = _fieldDefinitions.flatMap(fd => {
-  if(excludeFields.includes(fd.name)) {
-    return [];
-  }
-  return fd.name;
-});
+/**
+ * Get the list of fields to keep (not exclude) from _fieldDefinitions.
+ * This is a function to avoid module initialization order issues.
+ */
+const getFieldsToKeep = (): string[] => {
+  return (_fieldDefinitions ?? []).flatMap(fd => {
+    if(excludeFields.includes(fd.name)) {
+      return [];
+    }
+    return fd.name;
+  });
+};
 
 
 export interface FieldFilterParams {
@@ -48,6 +54,8 @@ export class FieldFilter {
       params: { fieldSet, fieldSet: { fieldValues = [] } = {} }, 
       normalizeOrg, normalizeState, normalizeCountry
     } = this;
+
+    const fieldsToKeep = getFieldsToKeep();
 
     /** First filter off fields that are not in the fieldsToKeep list, which should remove non-hashable fields like userId and roles */
     /** Deep clone to avoid mutating the original fieldValues array and its objects */

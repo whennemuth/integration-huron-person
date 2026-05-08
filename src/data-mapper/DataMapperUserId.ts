@@ -42,8 +42,11 @@ export const UserIdMapper = (params: {
         });
         // Construct composite UserID: {idpName}_{account}@{idpDomain}
         // Example: bu-sso_wrh@bu.edu or bu-sso_TEST_wrh@bu.edu
-        const accountName = `${sortedAccounts[0]?.name}`.toLowerCase();
-        return `${idpName}_${accountName}@${idpDomain}`;
+        const accountName = sortedAccounts[0]?.name;
+        if(!accountName) {
+          return undefined;
+        }
+        return `${idpName}_${accountName.toLowerCase()}@${idpDomain}`;
       }
     }
   }

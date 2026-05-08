@@ -1,4 +1,4 @@
-import { DataMapper as CoreDataMapper, CrudOperation, Field, Input } from 'integration-core';
+import { DataMapper as CoreDataMapper, CrudOperation, Field, FieldSet, Input, InputParser } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, getLocalConfig, isEmpty, removeEmptyValues } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
@@ -11,6 +11,7 @@ import { StateLookup, StateMappings, StateRow } from './DataMapperState';
 import { CountryLookup, CountryMappings, CountryRow } from './DataMapperCountry';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
+import { BuCdmPersonDataSource } from '../data-source/PersonDataSource';
 
 /**
  * Parameters for DataMapper constructor
@@ -176,9 +177,7 @@ export class DataMapper implements CoreDataMapper {
         { firstName },
         { middleName },
         { lastName },
-        { contactInformation: { email, addressLine1, city, stateProvince, postalCode, country } },
         { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
-        { employer: { hrn: employerHrn } },
         // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
         { __arrayFieldOperations: { append: [ 'roles' ] } }
       ] as Field[];
@@ -187,14 +186,31 @@ export class DataMapper implements CoreDataMapper {
       if (userId !== undefined) {
         fieldValues.push({ userId });
       }
+
+      // Add employer only if it is not an empty object.
+      if(!isEmpty(employerHrn)) {
+        fieldValues.push({ employer: { hrn: employerHrn } });
+      }
+
+      // Add contactInformation only if at least one sub-field has a value (otherwise the mapper will return an empty object which we want to avoid)
+      if (email || addressLine1 || city || stateProvince || postalCode || country) {
+        fieldValues.push({ contactInformation: { 
+          email, addressLine1, city, stateProvince, postalCode, country 
+        }});
+      }
       
       // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
       if(orgAssignments.organization) {
         const orgHrn = this._orgHrn(orgAssignments.organization);
-        if(isEmpty(orgHrn) && !this._criticalValidationFailureMessage) {
+        if(isEmpty(orgHrn)) {
+          if(!this._criticalValidationFailureMessage) {
+            this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+          }
           this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
         }
-        fieldValues.push({ organization: { hrn: orgHrn } });
+        else {
+          fieldValues.push({ organization: { hrn: orgHrn } });
+        }
       }
 
       if(personHrn) {

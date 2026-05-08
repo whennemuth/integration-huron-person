@@ -86,8 +86,10 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
       const result2 = new FieldFilter(filterParams2).filter();
 
       // Both should normalize to the same value (10003827)
-      expect(result1.fieldValues[0]).toEqual({ employer: '10003827' });
-      expect(result2.fieldValues[0]).toEqual({ employer: '10003827' });
+      const employer1 = result1.fieldValues.find(fv => 'employer' in fv);
+      const employer2 = result2.fieldValues.find(fv => 'employer' in fv);
+      expect(employer1).toEqual({ employer: '10003827' });
+      expect(employer2).toEqual({ employer: '10003827' });
       expect(result1.fieldValues).toEqual(result2.fieldValues);
     });
 
@@ -130,9 +132,12 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
       const result = new FieldFilter(filterParams).filter();
 
       expect(result.fieldValues).toHaveLength(3);
-      expect(result.fieldValues[0]).toEqual({ employer: '12345' });
-      expect(result.fieldValues[1]).toEqual({ secondaryUnit: '54321' });
-      expect(result.fieldValues[2]).toEqual({ additionalUnit: '99999' });
+      const employer = result.fieldValues.find(fv => 'employer' in fv);
+      const secondaryUnit = result.fieldValues.find(fv => 'secondaryUnit' in fv);
+      const additionalUnit = result.fieldValues.find(fv => 'additionalUnit' in fv);
+      expect(employer).toEqual({ employer: '12345' });
+      expect(secondaryUnit).toEqual({ secondaryUnit: '54321' });
+      expect(additionalUnit).toEqual({ additionalUnit: '99999' });
     });
 
     it('should normalize state and country lookup expressions', () => {
@@ -171,7 +176,9 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
 
       const result = new FieldFilter(filterParams).filter();
 
-      expect(result.fieldValues[0].contactInformation).toEqual({
+      const contactInfoField = result.fieldValues.find(fv => 'contactInformation' in fv);
+      expect(contactInfoField).toBeDefined();
+      expect(contactInfoField!.contactInformation).toEqual({
         stateProvince: 'MA',
         country: 'US'
       });
@@ -260,8 +267,11 @@ describe('SyncEvaluator - Lookup Expression Handling', () => {
 
       // Both should normalize to exactly the same values
       expect(result1.fieldValues).toEqual(result2.fieldValues);
-      expect(result1.fieldValues[0]).toEqual({ employer: '10003827' });
-      expect(result1.fieldValues[1].contactInformation).toEqual({
+      const employer1 = result1.fieldValues.find(fv => 'employer' in fv);
+      expect(employer1).toEqual({ employer: '10003827' });
+      const contactInfo1 = result1.fieldValues.find(fv => 'contactInformation' in fv);
+      expect(contactInfo1).toBeDefined();
+      expect(contactInfo1!.contactInformation).toEqual({
         stateProvince: 'MA',
         country: 'US'
       });

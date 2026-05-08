@@ -123,10 +123,29 @@ class MockApiClient implements IApiClient {
   }
 }
 
-// Helper function to create FieldSet
+// Helper function to create FieldSet (minimal, as specified)
 function createFieldSet(fields: Record<string, any>): FieldSet {
   return {
     fieldValues: Object.entries(fields).map(([key, value]) => ({ [key]: value }))
+  };
+}
+
+// Helper function to create FieldSet with required fields for Huron API validation
+function createValidFieldSet(fields: Record<string, any>): FieldSet {
+  // Merge provided fields with required defaults
+  const defaults = {
+    id: fields.id || 'test-id-' + Math.random().toString(36).substr(2, 9),
+    firstName: fields.firstName || 'TestFirst',
+    lastName: fields.lastName || 'TestLast',
+    employer: fields.employer || { hrn: 'hrn:hrs:orgs:999' },
+    organization: fields.organization || { hrn: 'hrn:hrs:orgs:888' }
+  };
+  
+  // Override defaults with provided fields
+  const merged = { ...defaults, ...fields };
+  
+  return {
+    fieldValues: Object.entries(merged).map(([key, value]) => ({ [key]: value }))
   };
 }
 
@@ -385,7 +404,7 @@ describe('HuronPersonDataTarget', () => {
       mockApiClient = new MockApiClient(mockResponse);
       (dataTarget as any).apiClient = mockApiClient;
 
-      const fieldSet = createFieldSet({
+      const fieldSet = createValidFieldSet({
         firstName: 'New',
         lastName: 'Person',
         email: 'new.person@example.com'
@@ -623,13 +642,13 @@ describe('HuronPersonDataTarget', () => {
       } as any));
 
       const addedData = [
-        createFieldSet({ firstName: 'John', lastName: 'Doe' })
+        createValidFieldSet({ firstName: 'John', lastName: 'Doe' })
       ];
       const updatedData = [
-        createFieldSet({ id: 'person-2', sourceIdentifier: 'person-2', firstName: 'Jane' })
+        createValidFieldSet({ id: 'person-2', sourceIdentifier: 'person-2', firstName: 'Jane' })
       ];
       const removedData = [
-        createFieldSet({ id: 'person-3', hrn: 'hrn:hrs:persons:3' })
+        createValidFieldSet({ id: 'person-3', hrn: 'hrn:hrs:persons:3' })
       ];
 
       const params: PushAllParms = { 
@@ -688,11 +707,11 @@ describe('HuronPersonDataTarget', () => {
       (dataTarget as any).apiClient = customMockApiClient;
 
       const addedData = [
-        createFieldSet({ firstName: 'John' }),
-        createFieldSet({ email: 'invalid-email' })
+        createValidFieldSet({ firstName: 'John', lastName: 'Doe' }),
+        createValidFieldSet({ firstName: 'Valid', lastName: 'Person', email: 'test@example.com' })
       ];
       const updatedData = [
-        createFieldSet({ id: 'person-3', sourceIdentifier: 'person-3', firstName: 'Updated' })
+        createValidFieldSet({ id: 'person-3', sourceIdentifier: 'person-3', firstName: 'Updated', lastName: 'Name' })
       ];
       const removedData: FieldSet[] = [];
 
@@ -713,7 +732,7 @@ describe('HuronPersonDataTarget', () => {
       (dataTarget as any).apiClient = mockApiClient;
 
       const addedData = [
-        createFieldSet({ firstName: 'Test' })
+        createValidFieldSet({ firstName: 'Test', lastName: 'Person' })
       ];
       const updatedData: any[] = [];
       const removedData: any[] = [];
@@ -883,16 +902,16 @@ describe('HuronPersonDataTarget', () => {
       mockReadPerson.mockImplementation(() => mockReadPersonInstance as any);
 
       const addedData = [
-        createFieldSet({ firstName: 'John', lastName: 'Doe' }),
-        createFieldSet({ firstName: 'Jane', lastName: 'Smith' })
+        createValidFieldSet({ firstName: 'John', lastName: 'Doe' }),
+        createValidFieldSet({ firstName: 'Jane', lastName: 'Smith' })
       ];
 
       const updatedData = [
-        createFieldSet({ id: 'person-1', firstName: 'Updated' })
+        createValidFieldSet({ id: 'person-1', firstName: 'Updated', lastName: 'Person' })
       ];
 
       const removedData = [
-        createFieldSet({ id: 'person-2' })
+        createValidFieldSet({ id: 'person-2', hrn: 'hrn:hrs:persons:2' })
       ];
 
       const params: PushAllParms = {

@@ -3,6 +3,7 @@ import {
   BatchStatus,
   CrudOperation,
   DataTarget,
+  FieldSet,
   PushAllParms,
   PushOneParms,
   SinglePushResult,
@@ -11,7 +12,8 @@ import {
 } from 'integration-core';
 import { Cache } from '../Cache';
 import { Config, TargetPersonDeleteType } from '../config/Config';
-import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
+import { MappingValidator } from '../data-mapper/MappingValidator';
+import { ApiClientForJWT, EndpointConfigForJWT, ErrorEventDetails, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronPerson } from './crud/Person';
 import { ReadPerson } from './crud/ReadPerson';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
@@ -42,16 +44,18 @@ export class HuronPersonDataTarget implements DataTarget {
   private apiClient: ApiClientForJWT;
   private config: Config;
   private hrn: string | undefined;
+  private errorEventProcessor
 
   constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string, errorEventProcessor?: TargetApiErrorEventProcessor }) {
   // constructor(config: Config, cache?: Cache<string, string>) {
     const { config, cache, hrn, errorEventProcessor } = params;
     this.config = config;
     this.hrn = hrn;
+    this.errorEventProcessor = errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
-      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
+      errorEventProcessor: this.errorEventProcessor
     };
     
     // Create cache instance if caching is enabled
@@ -260,12 +264,20 @@ export class HuronPersonDataTarget implements DataTarget {
         } else {
           crud = CrudOperation.DELETE;
         }
+
+        const validationFailure = this.getValidationFailure({ record, crud });
+        if (validationFailure) {
+          failures.push(validationFailure);
+          continue;
+        }
         
         const result = await this.pushOne({ data: record, crud });
         
         if (result.status === Status.SUCCESS) {
+          console.log(`✓ Successfull ${crud} for: ${JSON.stringify(result)}`);
           successes.push(result);
         } else {
+          console.error(`✗ Failed ${crud} for: ${JSON.stringify(result)}`);
           failures.push(result);
         }
       }
@@ -292,6 +304,71 @@ export class HuronPersonDataTarget implements DataTarget {
       timestamp: new Date(),
       message: `Batch push completed: ${successes.length} successes, ${failures.length} failures`
     };
+  }
+
+  /**
+   * The prospective CRUD operation cannot be carried out with a record that would cause the
+   * Huron API to reject the request due to validation errors. In this case, we preemptively 
+   * fail the push of this record and log the validation violations AS IF the API had 
+   * rejected the request.
+   * @param params 
+   * @returns 
+   */
+  private getValidationFailure = (params: { record: FieldSet, crud: CrudOperation }): SinglePushResult | undefined => {
+    const { record, crud } = params;
+    const mappingValidator = new MappingValidator(record);
+    if(crud === CrudOperation.CREATE && !mappingValidator.isValidForTarget()) {
+      const pk = record.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv);
+      const sourceIdentifier = record.fieldValues.find((fv: any) => 'sourceIdentifier' in fv)?.sourceIdentifier;
+      const hrn = record.fieldValues.find((fv: any) => 'hrn' in fv)?.hrn;
+      
+      const errMsg = `✗ ${crud} cancelled!`;
+      const info = {
+        primaryKey: pk,
+        reason: '✗ Validation failed',
+        violations: mappingValidator.getViolations()
+      }
+      console.error(`${errMsg}: ${JSON.stringify(info)}`);
+
+      // Simulate a 400 Bad Request error structure that matches what ApiErrorTracking expects
+      const simulatedError = {
+        message: errMsg,
+        response: {
+          status: 400,
+          statusText: 'Bad Request',
+          data: {
+            errors: [
+              {
+                status: 400,
+                internalErrorMessage: mappingValidator.getViolations().join('; '),
+                incidentId: `VALIDATION-${sourceIdentifier || hrn || 'UNKNOWN'}`,
+                detail: mappingValidator.getViolations()
+              }
+            ]
+          }
+        }
+      };
+
+      const errorDetails: ErrorEventDetails = {
+        message: 'Huron creation error',
+        object: { 
+          hrn, 
+          sourceIdentifier 
+        }
+      };
+
+      // Process the simulated error through errorEventProcessor (logs to console and DynamoDB)
+      this.errorEventProcessor?.process(simulatedError, errorDetails);
+
+      return {
+        status: Status.FAILURE,
+        message: `Validation failed for record with primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
+        timestamp: new Date(),
+        primaryKey: pk,
+        crud
+      };
+    }
+    return undefined;
   }
 
   /**

@@ -48,6 +48,12 @@ class BuCdmPersonDataSource extends BuCdmDataSource implements DataSource {
  */
 async function main() {
   try {
+    const { SYNC_BUID: buid } = process.env;
+    if(!buid) {
+      console.error('Missing required SYNC_BUID environment variable!');
+      process.exit(1);
+    }
+
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const localConfigPath = process.env.HURON_PERSON_CONFIG_PATH || getLocalConfig();
@@ -70,7 +76,7 @@ async function main() {
     if (fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
     }
-    const dataSource = new BuCdmPersonDataSource({ config, responseFilter, buid: 'U21967744' });
+    const dataSource = new BuCdmPersonDataSource({ config, responseFilter, buid });
 
     // Fetch raw person data
     const rawData = await dataSource.fetchRaw();

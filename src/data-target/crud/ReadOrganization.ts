@@ -5,6 +5,7 @@ import { SchemaPath } from '../SchemaBroker';
 import { ReadOrganizations } from './ReadOrganizations';
 import { HuronOrganization } from './Organization';
 import { BasicCache } from '../../Cache';
+import { getLocalConfig } from '../../Utils';
 
 /**
  * Response structure for organization retrieval
@@ -97,10 +98,12 @@ class ReadOrganization {
 
 
 async function main() {
-  const config = ConfigManager.
-    getInstance()
+  const { HURON_PERSON_CONFIG_PATH, SYNC_BUID:buid } = process.env;
+  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+  const config: Config = ConfigManager.getInstance()
+    .reset()
     .fromEnvironment()
-    .fromFileSystem()
+    .fromFileSystem(localConfigPath)
     .getConfig('none');
 
   const reader = new ReadOrganization(config);

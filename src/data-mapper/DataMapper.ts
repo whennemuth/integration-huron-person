@@ -325,19 +325,40 @@ export const getDataMapperMaps = async (config: Config, staticMapUsage?: StaticM
 } 
 
 
-
-if(require.main === module) {
-  (async () => {
-    const { HURON_PERSON_CONFIG_PATH } = process.env;
+export const getPersonFieldSet = async (): Promise<FieldSet> => {
+    const { HURON_PERSON_CONFIG_PATH, SYNC_BUID:buid, PRINT_MAPPINGS='false' } = process.env;
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
     const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
     const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
-    const { currentTerms=[], stateMappings, countryMappings, orgMappings } = dataMapper;
-    console.log(`DataMapper: ${JSON.stringify({
-      stateMapSize: stateMappings?.forwardMap?.size,
-      countryMapSize: countryMappings?.forwardMap?.size,
-      orgMapSize: orgMappings?.forwardMap?.size,
-      currentTerms
-    }, null, 2)}`);
+
+    // Optionally print the mappings
+    const printMappings = PRINT_MAPPINGS.toLowerCase() === 'true';
+    if(printMappings) {
+      const { currentTerms=[], stateMappings, countryMappings, orgMappings } = dataMapper;
+      console.log(`DataMapper: ${JSON.stringify({
+        stateMapSize: stateMappings?.forwardMap?.size,
+        countryMapSize: countryMappings?.forwardMap?.size,
+        orgMapSize: orgMappings?.forwardMap?.size,
+        currentTerms
+      }, null, 2)}`);      
+    }
+
+    // Fetch raw person data for the specified BUID
+    const dataSource = new BuCdmPersonDataSource({ config, buid });
+    const rawData = await dataSource.fetchRaw();
+
+    // Map raw data to Input format using the DataMapper
+    const unparsedInput:Input = dataMapper.map(rawData);
+    const parsedInput = new InputParser({ _input: unparsedInput }).parse();
+
+    // Return the first FieldSet (there should only be one since we're fetching by BUID), or an empty FieldSet if none exist
+    return parsedInput.fieldSets?.[0] as FieldSet;
+}
+
+if(require.main === module) {
+  (async () => {
+    const fieldSet = await getPersonFieldSet();
+    const fldValues = fieldSet?.fieldValues;
+    console.log(`Mapped Input: ${JSON.stringify(fldValues, null, 2)}`);
   })()
 };

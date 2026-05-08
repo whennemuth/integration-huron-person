@@ -1,9 +1,10 @@
+import { BuCdmPersonDataSource } from "../../bin";
 import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
-import { Term } from "../data-source/CurrentTermsDataSource";
+import { BuCdmCurrentTermsDataSource, Term } from "../data-source/CurrentTermsDataSource";
 import { HuronOrganization } from "../data-target/crud/Organization";
 import { ReadOrganizations } from "../data-target/crud/ReadOrganizations";
-import { isEmpty, isNotEmpty, removeNullValues as removeNulls } from "../Utils";
+import { getLocalConfig, isEmpty, isNotEmpty, removeEmptyValues, removeNullValues as removeNulls } from "../Utils";
 
 export type OrgType = { priority: number; type: string; source?: string; }
 
@@ -363,7 +364,27 @@ export const loadOrgMap = async (config: Config): Promise<OrgMappings> => {
 
 if(require.main === module) {
   (async () => {
-    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem().getConfig('person');
+    const { HURON_PERSON_CONFIG_PATH, SYNC_BUID:buid } = process.env;
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
     const orgMap = await loadOrgMap(config);
     console.log(`Organization Map: ${JSON.stringify(Array.from(orgMap.forwardMap.entries()).slice(0, 10), null, 2)}...`); // Log first 10 entries for brevity
+
+    if(!buid) {
+      console.error('Missing required SYNC_BUID environment variable!');
+      process.exit(1);
+    }
+    const termsDataSource = new BuCdmCurrentTermsDataSource({ config });
+    const currentTerms = await termsDataSource.fetchRaw();
+    const dataSource = new BuCdmPersonDataSource({ config, buid });
+    const rawData = await dataSource.fetchRaw();
+    const person = removeEmptyValues(rawData[0]) || {};
+
+    const orgAssignments: OrgAssignments = OrgMapper({ 
+      person, 
+      currentTerms, 
+      removeNullValues: false 
+    }).getOrgs();
+
+    console.log(`Organization Assignments: ${JSON.stringify(orgAssignments, null, 2)}`);
   })()};

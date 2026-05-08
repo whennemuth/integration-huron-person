@@ -161,8 +161,8 @@ class SinglePersonSync {
 
   private getTargetPerson = async (buid: string, config: Config): Promise<HuronPerson | undefined> => {
     const reader = new ReadPerson(config);
-    console.log(`TARGET CHECK: Looking up person with BUID ${buid} in target as "id"...`);
-    const personData = await reader.readPersonById(buid) ?? [];
+    console.log(`TARGET CHECK: Looking up person with BUID ${buid} in target as "sourceIdentifier"...`);
+    const personData = await reader.readPersonBySourceIdentifier(buid) ?? [];
     const targetPerson = personData.length > 0 ? personData[0] : undefined;
     if (targetPerson) {
       console.log(`Found ${buid} in target (indicates a patch)`);
@@ -356,7 +356,7 @@ async function main() {
     const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
+    const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
     let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;

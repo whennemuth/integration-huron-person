@@ -198,20 +198,6 @@ export class DataMapper implements CoreDataMapper {
           email, addressLine1, city, stateProvince, postalCode, country 
         }});
       }
-      
-      // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
-      if(orgAssignments.organization) {
-        const orgHrn = this._orgHrn(orgAssignments.organization);
-        if(isEmpty(orgHrn)) {
-          if(!this._criticalValidationFailureMessage) {
-            this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
-          }
-          this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
-        }
-        else {
-          fieldValues.push({ organization: { hrn: orgHrn } });
-        }
-      }
 
       if(personHrn) {
         fieldValues.push({ hrn: personHrn });
@@ -220,23 +206,44 @@ export class DataMapper implements CoreDataMapper {
       if(title) {
         fieldValues.push({ title });
       }
+      
+      // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
+      if(orgAssignments.organization) {
+        const orgHrn = this._orgHrn(orgAssignments.organization);
+        if(isEmpty(orgHrn)) {
+          if(!this._criticalValidationFailureMessage) {
+            this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+          }
+        }
+        else {
+          fieldValues.push({ organization: { hrn: orgHrn } });
+        }
+      }
 
       // Add secondaryUnit if present
       if(orgAssignments.secondaryUnit) {
         const secondaryHrn = this._orgHrn(orgAssignments.secondaryUnit);
         if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
-          this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
+          if(!this._infoValidationFailureMessage) {
+            this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
+          }
         }
-        fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
+        else {
+          fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
+        }
       }
       
       // Add additionalUnit if present
       if(orgAssignments.additionalUnit) {
         const additionalHrn = this._orgHrn(orgAssignments.additionalUnit);
         if(isEmpty(additionalHrn) && !this._infoValidationFailureMessage) {
-          this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+          if(!this._infoValidationFailureMessage) {
+            this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+          }
         }
-        fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
+        else {
+          fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
+        }
       }
 
       return { fieldValues };

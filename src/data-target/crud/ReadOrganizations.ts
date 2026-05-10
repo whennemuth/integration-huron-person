@@ -1,6 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
+import { getLocalConfig } from '../../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
@@ -204,12 +205,9 @@ class ReadOrganizations {
 }
 
 async function main() {
-  const config = ConfigManager.
-    getInstance()
-    .fromEnvironment()
-    .fromFileSystem()
-    .getConfig('none');
-
+  const { HURON_PERSON_CONFIG_PATH } = process.env;
+  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+  const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('none');
   const reader = new ReadOrganizations({ config });
   const task = process.env.HURON_ORGS_TASK;
 
@@ -220,6 +218,9 @@ async function main() {
         console.log('Reading all organizations...');
         const allOrganizations = await reader.readAllOrganizations();
         console.log(`Found ${allOrganizations.length} organizations`);
+        // Print all organization ids that are not numeric
+        const nonNumericOrgs = allOrganizations.filter(org => isNaN(Number(org.id)));
+        console.log(`Organizations with non-numeric IDs (${nonNumericOrgs.length}):`, JSON.stringify(nonNumericOrgs.map(org => ( `${org.id}: ${org.name}` )), null, 2));
         break;
       case 'page':
         // Pagination customized - read into the second page (items 11 through 20)

@@ -1,0 +1,101 @@
+[
+  {
+    "term": "2261",
+    "termDescription": "Spring 2025-2026",
+    "academicCareer": "DENT",
+    "termBeginDate": "20260105",
+    "termEndDate": "20260627",
+    "currentInd": "Y",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2265",
+    "termDescription": "Summer 2026",
+    "academicCareer": "GRAD",
+    "termBeginDate": "20260519",
+    "termEndDate": "20260807",
+    "currentInd": "N",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2261",
+    "termDescription": "Spring 2026",
+    "academicCareer": "GRAD",
+    "termBeginDate": "20260120",
+    "termEndDate": "20260508",
+    "currentInd": "Y",
+    "futureTerm": "2265"
+  },
+  {
+    "term": "2265",
+    "termDescription": "Summer 2026-2027",
+    "academicCareer": "LAW",
+    "termBeginDate": "20260519",
+    "termEndDate": "20260821",
+    "currentInd": "N",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2261",
+    "termDescription": "Spring 2025-2026",
+    "academicCareer": "LAW",
+    "termBeginDate": "20260112",
+    "termEndDate": "20260508",
+    "currentInd": "Y",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2261",
+    "termDescription": "Spring 2025-2026",
+    "academicCareer": "MEDS",
+    "termBeginDate": "20260102",
+    "termEndDate": "20260630",
+    "currentInd": "Y",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2221",
+    "termDescription": "Spring 2022",
+    "academicCareer": "NONC",
+    "termBeginDate": "20220120",
+    "termEndDate": "20220513",
+    "currentInd": "Y",
+    "futureTerm": "2225"
+  },
+  {
+    "term": "2265",
+    "termDescription": "Summer 2026",
+    "academicCareer": "NOND",
+    "termBeginDate": "20260519",
+    "termEndDate": "20260807",
+    "currentInd": "N",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2261",
+    "termDescription": "Spring 2026",
+    "academicCareer": "NOND",
+    "termBeginDate": "20260120",
+    "termEndDate": "20260508",
+    "currentInd": "Y",
+    "futureTerm": "2265"
+  },
+  {
+    "term": "2265",
+    "termDescription": "Summer 2026",
+    "academicCareer": "UGRD",
+    "termBeginDate": "20260519",
+    "termEndDate": "20260807",
+    "currentInd": "N",
+    "futureTerm": "2268"
+  },
+  {
+    "term": "2261",
+    "termDescription": "Spring 2026",
+    "academicCareer": "UGRD",
+    "termBeginDate": "20260120",
+    "termEndDate": "20260508",
+    "currentInd": "Y",
+    "futureTerm": "2265"
+  }
+]

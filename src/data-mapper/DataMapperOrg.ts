@@ -156,7 +156,8 @@ export type OrgAssignments = {
 export type OrgMapperParams = {
   person: any,
   currentTerms: Term[];
-  removeNullValues?: boolean
+  removeNullValues?: boolean;
+  orgHrn?: (sourceOrgId: string) => string | undefined;
 }
 
 /**
@@ -164,19 +165,27 @@ export type OrgMapperParams = {
  * based on priority and alphabetical ordering.
  * 
  * Priority is determined by the OrgTypes array (employeeInfo > studentInfo > affiliateInfo).
- * For students, organizations are sorted alphabetically before assignment.
+ * For students, organizations are derived from:
+ * - Primary (employer/organization): /studentInfo/studentSemester[x]/studentSemesterInfo/degreeProgram[y]/academicOrganization/code
+ * - Secondary (secondaryUnit/additionalUnit): /studentInfo/studentSemester[x]/studentSemesterInfo/degreeProgram[y]/academicGroup/code (only if mapped)
  * 
- * Assignment rules:
- * - 1st organization → employer AND organization (both get same value)
- * - 2nd organization → secondaryUnit
- * - 3rd organization → additionalUnit
- * - 4th+ organizations → discarded
+ * Assignment rules for students:
+ * - employer: Use first mapped primary code (via orgHrn); fallback to first primary code
+ * - organization: Always equals employer
+ * - secondaryUnit: Use first mapped secondary code
+ * - additionalUnit: Use second mapped secondary code
+ * 
+ * Assignment rules for employees/affiliates:
+ * - employer: First org code
+ * - organization: Always equals employer
+ * - secondaryUnit: Second org code
+ * - additionalUnit: Third org code
  * 
  * @param person 
  * @returns Object with organization field assignments
  */
 export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignments } => {
-  let { person, currentTerms, removeNullValues = true } = params;
+  let { person, currentTerms, removeNullValues = true, orgHrn } = params;
 
   if(removeNullValues) {
     person = removeNulls(person);
@@ -234,8 +243,11 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
   // Filter to only include current semesters based on currentTerms data
   const currentSemesters = studentSemester.filter((semester: any) => isCurrentSemester(semester, currentTerms));
   
-  // Collect all academic organization codes from current academic programs
-  const studentOrgCodes: string[] = [];
+  // Collect organization codes from degree programs:
+  // - primaryOrgCodes: from degreeProgram.academicOrganization.code (for employer/organization)
+  // - secondaryOrgCodes: from degreeProgram.academicGroup.code (for secondaryUnit/additionalUnit, only if mapped)
+  const primaryOrgCodes: string[] = [];
+  const secondaryOrgCodes: string[] = [];
   
   for (const semester of currentSemesters) {
     const { studentSemesterInfo: { degreeProgram = [] } = {}} = semester;
@@ -244,23 +256,44 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
     const currentPrograms = degreeProgram.filter((program: any) => isCurrentAcademicProgram(program));
     
     for (const program of currentPrograms) {
-      const { academicPlan = [] } = program;
+      // Extract academicOrganization.code from degree program (one level up from academicPlan)
+      const { 
+        academicOrganization, 
+        academicOrganization: { code: primaryOrgCode } = {},
+        academicGroup, college
+      } = program || {};
+
+      if (isNotEmpty(primaryOrgCode)) {
+        primaryOrgCodes.push(`${primaryOrgCode}`.trim());
+      }
       
-      // Extract academicOrganization.code from each academic plan
-      for (const plan of academicPlan) {
-        const orgCode = plan?.academicOrganization?.code;
-        if (isNotEmpty(orgCode)) {
-          studentOrgCodes.push(`${orgCode}`.trim());
-        }
+      // Extract academicGroup.code from degree program for secondary/additional units
+      const secondaryOrgCode = program?.academicGroup?.code;
+      if (isNotEmpty(secondaryOrgCode)) {
+        secondaryOrgCodes.push(`${secondaryOrgCode}`.trim());
+      }
+
+      // TEMPORARY: supplemental logging
+      if(isEmpty(primaryOrgCode) || !orgHrn?.(primaryOrgCode)) {
+        console.log(`Unmappable/missing academicOrganization: ${JSON.stringify({
+          academicOrganization, academicGroup, college
+        })}`);
       }
     }
   }
   
-  // Deduplicate and sort alphabetically
-  const uniqueSortedOrgCodes = Array.from(new Set(studentOrgCodes)).sort();
+  // Deduplicate and sort both arrays alphabetically
+  const uniqueSortedPrimaryOrgCodes = Array.from(new Set(primaryOrgCodes)).sort();
+  const uniqueSortedSecondaryOrgCodes = Array.from(new Set(secondaryOrgCodes)).sort();
   
-  // Add to orgIdList in alphabetical order
-  for (const code of uniqueSortedOrgCodes) {
+  // Store student org data for use in getOrgs()
+  const studentOrgData = {
+    primary: uniqueSortedPrimaryOrgCodes,
+    secondary: uniqueSortedSecondaryOrgCodes
+  };
+  
+  // Add primary codes to orgIdList (for priority sorting)
+  for (const code of uniqueSortedPrimaryOrgCodes) {
     orgIdList.push({ source: 'studentInfo', orgId: code });
   }
 
@@ -302,21 +335,109 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
       const orgArray = Array.from(orgSet);
       
       // Assign organizations according to CSV specification:
-      // - Employees/Students: 1st → employer AND organization, 2nd → secondaryUnit, 3rd → additionalUnit
-      // - Affiliates: Only set employer = "AFFILIATE" (organization, secondaryUnit, additionalUnit are EXEMPTED per CSV spec)
+      // - employer: For students with orgHrn, use first mapped primary code; otherwise use first primary code
+      // - organization: Always equals employer
+      // - secondaryUnit/additionalUnit: Use mapped secondary codes
       const assignments: OrgAssignments = {};
       
-      if (orgArray.length > 0) {
-        assignments.employer = orgArray[0];
+      // Special handling for students: use primary codes for employer, secondary codes for units
+      if (highestPrioritySource === 'studentInfo' && studentOrgData) {
+        let employerCode: string | undefined;
         
-        // For affiliates, organization field is EXEMPTED (not set)
-        if (highestPrioritySource !== 'affiliateInfo') {
-          assignments.organization = orgArray[0];
+        // Try to find a mapped primary code for employer (if orgHrn provided)
+        if (orgHrn && studentOrgData.primary.length > 0) {
+          for (const code of studentOrgData.primary) {
+            const mapped = orgHrn(code);
+            if (mapped) {
+              employerCode = code;
+              break; // Use first mapped code
+            }
+            else {
+              console.warn(`No mapping found for org code: ${code}`);
+            }
+          }
         }
-      }
-      
-      // secondaryUnit and additionalUnit only apply to employees and students, not affiliates
-      if (highestPrioritySource !== 'affiliateInfo') {
+        
+        // Fallback to first primary code if no mapping found or orgHrn not provided
+        if (!employerCode && studentOrgData.primary.length > 0) {
+          employerCode = studentOrgData.primary[0];
+        }
+        
+        // Set employer and organization (organization = employer)
+        if (employerCode) {
+          assignments.employer = employerCode;
+          assignments.organization = employerCode;
+        }
+        
+        // For secondaryUnit and additionalUnit, use secondary codes that are mapped
+        if (orgHrn && studentOrgData.secondary.length > 0) {
+          const mappedSecondaryCodes: string[] = [];
+          
+          for (const code of studentOrgData.secondary) {
+            const mapped = orgHrn(code);
+            if (mapped) {
+              mappedSecondaryCodes.push(code);
+            }
+            else {
+              console.warn(`No mapping found for org code: ${code}`);
+            }
+          }
+          
+          // Filter out codes that duplicate employer/organization
+          const uniqueSecondaryCodes = mappedSecondaryCodes.filter(code => code !== assignments.employer);
+          
+          if (uniqueSecondaryCodes.length > 0) {
+            assignments.secondaryUnit = uniqueSecondaryCodes[0];
+          }
+          
+          if (uniqueSecondaryCodes.length > 1) {
+            assignments.additionalUnit = uniqueSecondaryCodes[1];
+          }
+        }
+      } else if (highestPrioritySource === 'studentInfo' && orgArray.length > 0) {
+        // Fallback if studentOrgData is not available (shouldn't happen in normal flow)
+        let employerCode: string | undefined;
+        
+        // Try to find a mapped code for employer (if orgHrn provided)
+        if (orgHrn) {
+          for (const code of orgArray) {
+            const mapped = orgHrn(code);
+            if (mapped) {
+              employerCode = code;
+              break; // Use first mapped code
+            }
+            else {
+              console.warn(`No mapping found for org code: ${code}`);
+            }
+          }
+        }
+        
+        // Fallback to first code if no mapping found or orgHrn not provided
+        if (!employerCode) {
+          employerCode = orgArray[0];
+        }
+        
+        // Set employer and organization (organization = employer)
+        assignments.employer = employerCode;
+        assignments.organization = employerCode;
+        
+        // For secondaryUnit and additionalUnit, use remaining codes (excluding employer)
+        const remainingCodes = orgArray.filter(code => code !== employerCode);
+        
+        if (remainingCodes.length > 0) {
+          assignments.secondaryUnit = remainingCodes[0];
+        }
+        
+        if (remainingCodes.length > 1) {
+          assignments.additionalUnit = remainingCodes[1];
+        }
+      } else {
+        // For employees and affiliates: use positional assignment
+        if (orgArray.length > 0) {
+          assignments.employer = orgArray[0];
+          assignments.organization = orgArray[0]; // organization = employer
+        }
+        
         if (orgArray.length > 1) {
           assignments.secondaryUnit = orgArray[1];
         }
@@ -380,10 +501,14 @@ if(require.main === module) {
     const rawData = await dataSource.fetchRaw();
     const person = removeEmptyValues(rawData[0]) || {};
 
+    // Create orgHrn function from the loaded orgMap
+    const orgHrn = (sourceOrgId: string) => orgMap.forwardMap.get(sourceOrgId);
+
     const orgAssignments: OrgAssignments = OrgMapper({ 
       person, 
       currentTerms, 
-      removeNullValues: false 
+      removeNullValues: false,
+      orgHrn
     }).getOrgs();
 
     console.log(`Organization Assignments: ${JSON.stringify(orgAssignments, null, 2)}`);

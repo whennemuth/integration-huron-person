@@ -152,7 +152,8 @@ export class DataMapper implements CoreDataMapper {
       const orgAssignments: OrgAssignments = OrgMapper({ 
         person, 
         currentTerms, 
-        removeNullValues: false 
+        removeNullValues: false,
+        orgHrn: this._orgHrn
       }).getOrgs();
 
       // Basic data check

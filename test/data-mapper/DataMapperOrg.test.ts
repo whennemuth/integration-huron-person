@@ -35,15 +35,16 @@ const createMockCurrentTerms = (): Term[] => [
   }
 ];
 
-// Helper to create a student semester with academic plan structure
+// Helper to create a student semester with degree program structure
+// Uses degreeProgram.academicOrganization.code for primary (employer/organization)
+// Optionally uses degreeProgram.academicGroup.code for secondary (secondaryUnit/additionalUnit)
 const createStudentSemester = (
   termCode: string, 
   careerCode: string, 
-  orgCodes: string | string[],
-  isCurrentProgram: 'Y' | 'N' = 'Y'
+  orgCode: string,
+  isCurrentProgram: 'Y' | 'N' = 'Y',
+  academicGroupCode?: string
 ) => {
-  const orgCodesArray = Array.isArray(orgCodes) ? orgCodes : [orgCodes];
-  
   return {
     studentSemesterInfo: {
       academicTerm: {
@@ -57,11 +58,15 @@ const createStudentSemester = (
       degreeProgram: [
         {
           isCurrentAcademicProgram: isCurrentProgram,
-          academicPlan: orgCodesArray.map(code => ({
-            academicOrganization: {
-              code
+          academicOrganization: {
+            code: orgCode
+          },
+          ...(academicGroupCode ? {
+            academicGroup: {
+              code: academicGroupCode
             }
-          }))
+          } : {}),
+          academicPlan: []
         }
       ]
     }
@@ -139,7 +144,7 @@ describe('OrgMapper', () => {
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', 'CAS')
+            createStudentSemester('2261', 'UGRD', 'CAS', 'Y')
           ]
         }
       };
@@ -149,19 +154,44 @@ describe('OrgMapper', () => {
     });
 
     it('should assign multiple student orgs across employer, organization, and secondaryUnit', () => {
+      // Create mock orgHrn that maps all codes
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
+      
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', ['CAS', 'ENG'])
+            {
+              studentSemesterInfo: {
+                academicTerm: { term: { code: '2261' } },
+                academicCareer: { code: 'UGRD' },
+                degreeProgram: [
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CAS' }, // Primary
+                    academicGroup: { code: 'ENG' }, // Secondary
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'QST' }, // Primary
+                    academicGroup: { code: 'SED' }, // Secondary
+                    academicPlan: []
+                  }
+                ]
+              }
+            }
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
+      // Primary codes sorted: CAS, QST -> employer = CAS (first)
+      // Secondary codes sorted and mapped: ENG, SED -> secondaryUnit = ENG, additionalUnit = SED
       expect(result).toEqual({ 
-        employer: 'CAS', 
+        employer: 'CAS',
         organization: 'CAS',
-        secondaryUnit: 'ENG'
+        secondaryUnit: 'ENG',
+        additionalUnit: 'SED'
       });
     });
 
@@ -173,8 +203,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      // For affiliates, only employer is set; organization is EXEMPTED per CSV spec
-      expect(result).toEqual({ employer: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should handle affiliate info with department', () => {
@@ -185,8 +214,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      // For affiliates, only employer is set; organization is EXEMPTED per CSV spec
-      expect(result).toEqual({ employer: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should prioritize employee over student', () => {
@@ -237,7 +265,7 @@ describe('OrgMapper', () => {
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', 'CAS')
+            createStudentSemester('2261', 'UGRD', 'CAS', 'Y')
           ]
         },
         affiliateInfo: {
@@ -1084,8 +1112,8 @@ describe('OrgMapper', () => {
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', 'CAS'), // Current semester (matches mockCurrentTerms)
-            createStudentSemester('2251', 'UGRD', 'ENG')  // Past semester (not in mockCurrentTerms)
+            createStudentSemester('2261', 'UGRD', 'CAS', 'Y'), // Current semester (matches mockCurrentTerms)
+            createStudentSemester('2251', 'UGRD', 'ENG', 'Y')  // Past semester (not in mockCurrentTerms)
           ]
         }
       };
@@ -1098,8 +1126,8 @@ describe('OrgMapper', () => {
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', 'CAS'),  // Matches current term
-            createStudentSemester('2261', 'LAW', 'LAW')   // Same term but different career (not in mockCurrentTerms)
+            createStudentSemester('2261', 'UGRD', 'CAS', 'Y'),  // Matches current term
+            createStudentSemester('2261', 'LAW', 'LAW', 'Y')   // Same term but different career (not in mockCurrentTerms)
           ]
         }
       };
@@ -1109,17 +1137,20 @@ describe('OrgMapper', () => {
     });
 
     it('should handle multiple current semesters with different careers', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
-            createStudentSemester('2261', 'UGRD', 'CAS'),  // Current UGRD
-            createStudentSemester('2261', 'GRAD', 'MET')   // Current GRAD
+            createStudentSemester('2261', 'UGRD', 'CAS', 'Y', 'CAS'),  // Current UGRD with academicGroup
+            createStudentSemester('2261', 'GRAD', 'MET', 'Y', 'MET')   // Current GRAD with academicGroup
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET' }); // Both current semester orgs
+      // Primary: CAS, MET -> employer = CAS
+      // Secondary: CAS, MET (both mapped) -> skip CAS (duplicate), secondaryUnit = MET
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET' });
     });
 
     it('should exclude semesters with missing term code', () => {
@@ -1231,6 +1262,7 @@ describe('OrgMapper', () => {
     });
 
     it('should handle student with multiple degree programs in current semester', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1247,23 +1279,15 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicGroup: { code: 'CAS' },
+                    academicPlan: []
                   },
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'ENG' },
+                    academicGroup: { code: 'ENG' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1271,9 +1295,11 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG' }); // Both colleges from current semester
+      // Primary: CAS, ENG -> employer = CAS
+      // Secondary: CAS, ENG (both mapped) -> skip CAS (duplicate), secondaryUnit = ENG
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG' });
     });
 
     it('should prioritize employee over student even with current semester filtering', () => {
@@ -1311,23 +1337,15 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicGroup: { code: 'CAS' },
+                    academicPlan: []
                   },
                   {
                     isCurrentAcademicProgram: 'N',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'ENG' },
+                    academicGroup: { code: 'ENG' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1354,6 +1372,7 @@ describe('OrgMapper', () => {
     });
 
     it('should handle multiple current academic programs (dual degree)', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1368,23 +1387,15 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'ENG' },
+                    academicGroup: { code: 'QST' },
+                    academicPlan: []
                   },
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'QST'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicGroup: { code: 'MET' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1392,12 +1403,15 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'ENG', organization: 'ENG', secondaryUnit: 'QST' }); // Both current programs
+      // Primary: CAS, ENG (sorted) -> employer = CAS
+      // Secondary: MET, QST (sorted, both mapped) -> secondaryUnit = MET, additionalUnit = QST
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET', additionalUnit: 'QST' });
     });
 
-    it('should extract organizations from academicPlan array', () => {
+    it('should extract organizations from degreeProgram level', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1412,18 +1426,15 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicGroup: { code: 'ENG' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'QST' },
+                    academicGroup: { code: 'MET' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1431,12 +1442,14 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG' }); // Both plans
+      // Primary: CAS, QST -> employer = CAS
+      // Secondary: ENG, MET (both mapped) -> secondaryUnit = ENG, additionalUnit = MET
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG', additionalUnit: 'MET' });
     });
 
-    it('should deduplicate organization codes from multiple academic plans', () => {
+    it('should deduplicate organization codes from multiple degree programs', () => {
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1451,23 +1464,18 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'ENG' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CAS' }, // Duplicate
+                    academicPlan: []
                   }
                 ]
               }
@@ -1477,10 +1485,11 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG' }); // Deduplicated
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Deduplicated, no secondaryUnit
     });
 
     it('should sort organizations alphabetically', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1495,23 +1504,21 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'QST'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'QST' }, // 3rd alphabetically
+                    academicGroup: { code: 'MET' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CAS' }, // 1st alphabetically
+                    academicGroup: { code: 'CAS' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'ENG' }, // 2nd alphabetically
+                    academicGroup: { code: 'QST' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1519,14 +1526,95 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
-      // Verify organizations are assigned in alphabetical order
+      // Primary: CAS, ENG, QST (sorted) -> employer = CAS
+      // Secondary: CAS, MET, QST (sorted, all mapped) -> secondaryUnit = MET (skip CAS duplicate), additionalUnit = QST
       expect(result).toEqual({
         employer: 'CAS',
         organization: 'CAS',
-        secondaryUnit: 'ENG',
+        secondaryUnit: 'MET',
         additionalUnit: 'QST'
+      });
+    });
+
+    it('should skip secondary codes that duplicate employer/organization', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
+      const person = {
+        studentInfo: {
+          studentSemester: [
+            {
+              studentSemesterInfo: {
+                academicTerm: {
+                  term: { code: '2261' }
+                },
+                academicCareer: {
+                  code: 'UGRD'
+                },
+                degreeProgram: [
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CDS' }, // Primary
+                    academicGroup: { code: 'CDS' }, // Secondary but duplicates primary
+                    academicPlan: []
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      };
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
+      const result = mapper.getOrgs();
+      // employer = CDS, secondaryUnit should be omitted (duplicate)
+      expect(result).toEqual({
+        employer: 'CDS',
+        organization: 'CDS'
+        // No secondaryUnit because CDS would duplicate employer
+      });
+    });
+
+    it('should skip secondary codes that duplicate and use next available', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
+      const person = {
+        studentInfo: {
+          studentSemester: [
+            {
+              studentSemesterInfo: {
+                academicTerm: {
+                  term: { code: '2261' }
+                },
+                academicCareer: {
+                  code: 'UGRD'
+                },
+                degreeProgram: [
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CDS' },
+                    academicGroup: { code: 'CDS' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'ENG' },
+                    academicGroup: { code: 'MET' },
+                    academicPlan: []
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      };
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
+      const result = mapper.getOrgs();
+      // Primary: CDS, ENG -> employer = CDS
+      // Secondary: CDS, MET -> skip CDS (duplicate), use MET for secondaryUnit
+      expect(result).toEqual({
+        employer: 'CDS',
+        organization: 'CDS',
+        secondaryUnit: 'MET'
+        // No additionalUnit because only one non-duplicate secondary code
       });
     });
 
@@ -1624,7 +1712,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({});
     });
 
-    it('should combine orgs from multiple current programs with multiple plans each', () => {
+    it('should combine orgs from multiple current programs', () => {
+      const mockOrgHrn = (sourceOrgId: string) => `hrn:hrs:orgs:${sourceOrgId}`;
       const person = {
         studentInfo: {
           studentSemester: [
@@ -1639,33 +1728,21 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'ENG' },
+                    academicGroup: { code: 'CAS' },
+                    academicPlan: []
                   },
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'QST'
-                        }
-                      },
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'QST' },
+                    academicGroup: { code: 'ENG' },
+                    academicPlan: []
+                  },
+                  {
+                    isCurrentAcademicProgram: 'Y',
+                    academicOrganization: { code: 'CAS' },
+                    academicGroup: { code: 'QST' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1673,8 +1750,10 @@ describe('OrgMapper', () => {
           ]
         }
       };
-      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
+      const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms, orgHrn: mockOrgHrn });
       const result = mapper.getOrgs();
+      // Primary: CAS, ENG, QST (sorted) -> employer = CAS
+      // Secondary: CAS, ENG, QST (sorted, all mapped) -> skip CAS (duplicate), secondaryUnit = ENG, additionalUnit = QST
       expect(result).toEqual({
         employer: 'CAS',
         organization: 'CAS',
@@ -1698,13 +1777,8 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'CAS'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'CAS' },
+                    academicPlan: []
                   }
                 ]
               }
@@ -1720,13 +1794,8 @@ describe('OrgMapper', () => {
                 degreeProgram: [
                   {
                     isCurrentAcademicProgram: 'Y',
-                    academicPlan: [
-                      {
-                        academicOrganization: {
-                          code: 'ENG'
-                        }
-                      }
-                    ]
+                    academicOrganization: { code: 'ENG' },
+                    academicPlan: []
                   }
                 ]
               }

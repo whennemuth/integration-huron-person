@@ -80,6 +80,12 @@ export class HuronPersonDataTarget implements DataTarget {
     const { DRY_RUN='false' } = process.env;
     const dryRun = DRY_RUN.toLowerCase().trim() === 'true';
 
+    // Validate the record before attempting to push
+    const validationFailure = this.getValidationFailure({ record: data, crud });
+    if (validationFailure) {
+      return validationFailure;
+    }
+
     /**
      * Get all keys that could potentially identify a person record, and return those that are present.
      * @param data 
@@ -350,7 +356,7 @@ export class HuronPersonDataTarget implements DataTarget {
       };
 
       const errorDetails: ErrorEventDetails = {
-        message: 'Huron creation error',
+        message: `Huron ${crud.toUpperCase()} error: ${mappingValidator.getViolations().join('; ')}`,
         object: { 
           hrn, 
           sourceIdentifier 

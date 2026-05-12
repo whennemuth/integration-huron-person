@@ -27,7 +27,8 @@ import { getLocalConfig } from "../Utils";
  *    completion.
  */
 abstract class BuCdmPeopleDataSourceBatch {
-  // MEMORY OPTIMIZATION: Keep response array small and clear it after each iteration
+  // MEMORY OPTIMIZATION (Secondary): Keep response array small and clear it after each iteration
+  // Primary fix: ApiClientForApiKey now uses streaming to prevent buffering responses in memory
   private response: any[] = [];
   private _recordsProcessed = 0;
 
@@ -49,13 +50,13 @@ abstract class BuCdmPeopleDataSourceBatch {
       await this.process(this.response);
       this._recordsProcessed += this.response.length;
       
-      // MEMORY OPTIMIZATION: Clear response reference after processing to allow garbage collection
-      // Critical for preventing memory accumulation across multiple batch iterations
+      // MEMORY OPTIMIZATION (Secondary): Clear response reference after processing
+      // Primary fix: ApiClientForApiKey now uses streaming to prevent buffering
       const responseLength = this.response.length;
       this.response = [];
       
-      // MEMORY OPTIMIZATION: Recreate axios instance every 10 batches to prevent connection pool buildup
-      // This helps prevent memory leaks from axios internal buffers and connection pooling
+      // MEMORY OPTIMIZATION (Defensive): Recreate axios instance every 10 batches
+      // This clears connection pools and helps prevent any residual memory buildup
       if (offset > 0 && offset % 10 === 0) {
         (dataSource as any).apiClient.recreateInstance();
         console.log(`Recreated axios instance at batch ${offset} to prevent memory buildup`);

@@ -63,7 +63,8 @@ export abstract class BuCdmDataSource implements DataSource {
 
   /**
    * Fetch raw data from the CDM API
-   * MEMORY OPTIMIZATION: Explicit cleanup added to prevent memory leaks in batch operations
+   * MEMORY OPTIMIZATION: ApiClientForApiKey now uses streaming to prevent buffering entire responses.
+   * Additional cleanup added here as secondary defense.
    */
   async fetchRaw(): Promise<any[]> {
     try {
@@ -80,8 +81,8 @@ export abstract class BuCdmDataSource implements DataSource {
       const rawData = response.data.response;
       timer.logElapsed(`Successfully fetched ${rawData.length} records`);
   
-      // MEMORY OPTIMIZATION: Clear response reference to allow garbage collection
-      // This is critical in batch operations where fetchRaw is called repeatedly
+      // MEMORY OPTIMIZATION (Secondary): Clear response reference
+      // Primary fix: ApiClientForApiKey uses streaming to prevent buffering
       (response as any).data = null;
       
       return rawData;

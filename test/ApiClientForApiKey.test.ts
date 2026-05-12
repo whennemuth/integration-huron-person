@@ -37,6 +37,8 @@ describe('ApiClientForApiKey', () => {
       expect(mockedAxios.create).toHaveBeenCalledWith({
         baseURL: mockConfig.baseUrl,
         timeout: mockConfig.timeout,
+        maxContentLength: 100 * 1024 * 1024,
+        maxBodyLength: 100 * 1024 * 1024,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': mockConfig.apiKey,
@@ -55,6 +57,8 @@ describe('ApiClientForApiKey', () => {
       expect(mockedAxios.create).toHaveBeenCalledWith({
         baseURL: configWithoutTimeout.baseUrl,
         timeout: 30000, // default timeout
+        maxContentLength: 100 * 1024 * 1024,
+        maxBodyLength: 100 * 1024 * 1024,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': configWithoutTimeout.apiKey,

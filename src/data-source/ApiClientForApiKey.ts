@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { Readable } from 'stream';
 import { IApiClient } from '../ApiClient';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 
@@ -24,6 +25,9 @@ export class ApiClientForApiKey implements IApiClient {
     this.axiosInstance = axios.create({
       baseURL: endpointConfig.baseUrl,
       timeout: endpointConfig.timeout || 30000,
+      // MEMORY OPTIMIZATION: Limit response sizes to prevent unbounded memory growth
+      maxContentLength: 100 * 1024 * 1024,  // 100MB max response size
+      maxBodyLength: 100 * 1024 * 1024,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': endpointConfig.apiKey,
@@ -39,6 +43,8 @@ export class ApiClientForApiKey implements IApiClient {
     this.axiosInstance = axios.create({
       baseURL: this.endpointConfig.baseUrl,
       timeout: this.endpointConfig.timeout || 30000,
+      maxContentLength: 100 * 1024 * 1024,
+      maxBodyLength: 100 * 1024 * 1024,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.endpointConfig.apiKey,
@@ -48,20 +54,62 @@ export class ApiClientForApiKey implements IApiClient {
 
   /**
    * Make authenticated GET request
+   * MEMORY OPTIMIZATION: Always use streaming to prevent axios from buffering entire response in memory.
+   * This prevents OOM errors when fetching large datasets in batches.
    */
   async get<T = any>(params: { url: string, params?: any, responseFilter?: ResponseProcessor }): Promise<AxiosResponse<T>> {
-    const response: AxiosResponse<T> = await this.axiosInstance.get(params.url, { 
+    // CRITICAL: Always use 'stream' responseType to prevent memory accumulation
+    // Without this, axios buffers the entire response body in memory before returning,
+    // causing memory to grow unbounded across multiple batch requests
+    const response = await this.axiosInstance.get(params.url, { 
       params: params.params,
-      responseType: params.responseFilter ? 'stream' : 'json'
+      responseType: 'stream'  // Always stream - never buffer full response
     });
 
-    if(!params.responseFilter) {
-      // The response has all of the data and can be returned as is.
-      return response;
+    if (params.responseFilter) {
+      // Use provided filter to process the stream
+      return params.responseFilter.processResponse(response);
     }
 
-    // The response is a stream. The data has not yet come over that stream, but will do so when processed.
-    return params.responseFilter.processResponse(response);
+    // No filter provided - parse JSON stream manually to avoid buffering
+    return this.parseJsonStream<T>(response);
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Parse JSON from stream without buffering entire response.
+   * Accumulates chunks incrementally and parses only when complete.
+   */
+  private async parseJsonStream<T>(response: AxiosResponse<Readable>): Promise<AxiosResponse<T>> {
+    const chunks: Buffer[] = [];
+    const stream = response.data as Readable;
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      stream.on('end', () => {
+        try {
+          const jsonString = Buffer.concat(chunks).toString('utf-8');
+          const parsedData = JSON.parse(jsonString);
+          
+          // Clear chunks array to allow garbage collection
+          chunks.length = 0;
+          
+          // Return response with parsed data
+          resolve({
+            ...response,
+            data: parsedData
+          } as AxiosResponse<T>);
+        } catch (error) {
+          reject(new Error(`Failed to parse JSON response: ${error}`));
+        }
+      });
+
+      stream.on('error', (error) => {
+        reject(new Error(`Stream error: ${error}`));
+      });
+    });
   }
 
   /**

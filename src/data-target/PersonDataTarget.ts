@@ -343,17 +343,18 @@ export class HuronPersonDataTarget implements DataTarget {
       const hrn = record.fieldValues.find((fv: any) => 'hrn' in fv)?.hrn;
       const skipReason = mappingValidator.getSkipReason();
       
-      const errMsg = `✗ ${crud} cancelled!`;
-      const info = {
-        primaryKey: pk,
-        reason: '✗ Validation failed',
-        violations: mappingValidator.getViolations()
-      }
-      console.error(`${errMsg}: ${JSON.stringify(info)}`);
-
       // Only log to DynamoDB if this is a genuine error (not a skip scenario)
       // Skip scenarios are expected/natural and shouldn't be tracked as errors
       if (!skipReason) {
+        // Log the validation error only for genuine failures (not skips)
+        const errMsg = `✗ ${crud} cancelled!`;
+        const info = {
+          primaryKey: pk,
+          reason: '✗ Validation failed',
+          violations: mappingValidator.getViolations()
+        }
+        console.error(`${errMsg}: ${JSON.stringify(info)}`);
+        
         // Simulate a 400 Bad Request error structure that matches what ApiErrorTracking expects
         const simulatedError = {
           message: errMsg,

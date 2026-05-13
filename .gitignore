@@ -52,5 +52,6 @@ config.local.json
 
 fetchedPersonData.json
 fetched_people*.json
+currentTerms.json
 questions.txt
 RESUME-NEXT.txt

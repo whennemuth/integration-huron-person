@@ -298,7 +298,8 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      // Student-only with no current term (no term/career codes in semester) should return skipReason
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
     });
 
     it('should handle undefined sources', () => {
@@ -1186,7 +1187,8 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // Excluded due to missing term code
+      // Student-only with no current term enrollment should return skipReason
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
     });
 
     it('should exclude semesters with missing academicCareer code', () => {
@@ -1222,7 +1224,8 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // Excluded due to missing career code
+      // Student-only with no current term enrollment should return skipReason
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
     });
 
     it('should exclude all student orgs when currentTerms is empty', () => {
@@ -1235,7 +1238,8 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: [] });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // No current terms = no student orgs
+      // Student-only with no current term enrollment should return skipReason
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
     });
 
     it('should exclude student orgs when no terms have currentInd=Y', () => {
@@ -1258,7 +1262,8 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: nonCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // No current terms = no student orgs
+      // Student-only with no current term enrollment should return skipReason
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
     });
 
     it('should handle student with multiple degree programs in current semester', () => {

@@ -132,6 +132,7 @@ export class DataMapper implements CoreDataMapper {
 
       const { personid } = person;
       const { idpName, idpDomain, addressTypes, currentTerms, } = this._params;
+      
       const { firstName, middleName, lastName } = NameMapper({ person, removeNullValues: false }).getName() ?? {};
       const userId = UserIdMapper({ 
         person, idpName, idpDomain, removeNullValues: false 
@@ -149,12 +150,17 @@ export class DataMapper implements CoreDataMapper {
       const stateProvince = addressMapper.getStateProvince();
       const postalCode = addressMapper.getPostalCode();
       const country = addressMapper.getCountry();
+      
+      // OrgMapper determines organization assignments AND skip reason
       const orgAssignments: OrgAssignments = OrgMapper({ 
         person, 
         currentTerms, 
         removeNullValues: false,
         orgHrn: this._orgHrn
       }).getOrgs();
+      
+      // Extract skipReason from orgAssignments (set by OrgMapper if applicable)
+      const skipReason = orgAssignments.skipReason;
 
       // Basic data check
       if(isEmpty(personid)) {
@@ -180,7 +186,9 @@ export class DataMapper implements CoreDataMapper {
         { lastName },
         { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
         // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
-        { __arrayFieldOperations: { append: [ 'roles' ] } }
+        { __arrayFieldOperations: { append: [ 'roles' ] } },
+        // Special field to carry skip reason through the pipeline (not sent to API - will be "skipped")
+        ...(skipReason ? [{ __skipReason: skipReason }] : [])
       ] as Field[];
       
       // Add userId only if it has a value (undefined for UPDATE operations)

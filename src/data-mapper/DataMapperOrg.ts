@@ -109,7 +109,34 @@ const getPositionStatus = (position: any, currentDate: Date = new Date()): Posit
 };
 
 /**
- * Determines if a student semester is current based on the currentTerms data.
+ * Determines if a degree program is current based on the isCurrentAcademicProgram field.
+ * A degree program is considered current if isCurrentAcademicProgram === 'Y'.
+ * 
+ * @param degreeProgram - Degree program object
+ * @returns true if the degree program is current, false otherwise
+ */
+const isCurrentAcademicProgram = (degreeProgram: any): boolean => {
+  const currentIndicator = degreeProgram?.isCurrentAcademicProgram;
+  return currentIndicator === 'Y';
+};
+
+export type OrgAssignments = {
+  employer?: string;
+  organization?: string;
+  secondaryUnit?: string;
+  additionalUnit?: string;
+  skipReason?: string; // Set when person should be skipped (e.g., student-only with no current term)
+};
+
+export type OrgMapperParams = {
+  person: any,
+  currentTerms: Term[];
+  removeNullValues?: boolean;
+  orgHrn?: (sourceOrgId: string) => string | undefined;
+}
+
+/**
+ * Determines if a semester is current based on the currentTerms data.
  * A semester is considered current if its term code and academic career code match
  * a term in currentTerms where currentInd === 'Y'.
  * 
@@ -133,32 +160,6 @@ const isCurrentSemester = (semester: any, currentTerms: Term[]): boolean => {
     term.academicCareer === semesterCareerCode
   );
 };
-
-/**
- * Determines if a degree program is current based on the isCurrentAcademicProgram field.
- * A degree program is considered current if isCurrentAcademicProgram === 'Y'.
- * 
- * @param degreeProgram - Degree program object
- * @returns true if the degree program is current, false otherwise
- */
-const isCurrentAcademicProgram = (degreeProgram: any): boolean => {
-  const currentIndicator = degreeProgram?.isCurrentAcademicProgram;
-  return currentIndicator === 'Y';
-};
-
-export type OrgAssignments = {
-  employer?: string;
-  organization?: string;
-  secondaryUnit?: string;
-  additionalUnit?: string;
-};
-
-export type OrgMapperParams = {
-  person: any,
-  currentTerms: Term[];
-  removeNullValues?: boolean;
-  orgHrn?: (sourceOrgId: string) => string | undefined;
-}
 
 /**
  * This mapper selects from the available organization IDs and assigns them to specific fields
@@ -195,7 +196,7 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
 
   const { 
     employeeInfo: { positions: employeePositions = []} = { positions: [] }, 
-    studentInfo: { studentSemester = [] } = {}, 
+    studentInfo: { studentSemester = [], admissionHistory = [] } = {}, 
     affiliateInfo
   } = person;
 
@@ -243,6 +244,28 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
   // Filter to only include current semesters based on currentTerms data
   const currentSemesters = studentSemester.filter((semester: any) => isCurrentSemester(semester, currentTerms));
   
+  // Check if student-only with no current term enrollment (for skip determination)
+  let skipReason: string | undefined;
+  const personId = person?.personid || 'UNKNOWN';
+  const hasEmployee = employeePositions.length > 0;
+  const hasAffiliate = affiliateInfo && (
+    isNotEmpty(affiliateInfo.organizationalUnit?.code) || 
+    isNotEmpty(affiliateInfo.department?.code)
+  );
+
+  if (studentSemester.length > 0 && currentSemesters.length === 0) {
+    // Check if this is truly student-only (no employee or affiliate)    
+    if (!hasEmployee && !hasAffiliate) {
+      skipReason = `Student-only with no current term enrollment (personId: ${personId})`;
+      console.warn(`⚠ Person ${personId}: Student-only with no current term enrollment - will be skipped`);
+    }
+  }
+  else if (!hasEmployee && !hasAffiliate && studentSemester.length === 0 && admissionHistory.length > 0) {
+    const personId = person?.personid || 'UNKNOWN';
+    skipReason = `Non-enrolled student with admission history (personId: ${personId})`;
+    console.warn(`⚠ Person ${personId}: Non-enrolled student with admission history - will be skipped`);
+  }
+
   // Collect organization codes from degree programs:
   // - primaryOrgCodes: from degreeProgram.academicOrganization.code (for employer/organization)
   // - secondaryOrgCodes: from degreeProgram.academicGroup.code (for secondaryUnit/additionalUnit, only if mapped)
@@ -316,7 +339,8 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
       });
       
       if (sortedOrgs.length === 0) {
-        return {};
+        // Even with no orgs, return skipReason if it was determined
+        return skipReason ? { skipReason } : {};
       }
       
       // Get the highest priority source
@@ -445,6 +469,11 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
         if (orgArray.length > 2) {
           assignments.additionalUnit = orgArray[2];
         }
+      }
+      
+      // Add skipReason if determined earlier
+      if (skipReason) {
+        assignments.skipReason = skipReason;
       }
       
       return assignments;

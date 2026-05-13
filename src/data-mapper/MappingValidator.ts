@@ -17,8 +17,12 @@ import { getPersonFieldSet } from "./DataMapper";
  */
 export class MappingValidator {
   private violations: string[] = [];
+  private skipReason?: string;
 
-  constructor(private fieldSet: FieldSet) {
+  constructor(private fieldSet: FieldSet, skipReason?: string) {
+    // Check for skip reason in the FieldSet first (passed via special field from DataMapper)
+    const skipReasonField = this.getFieldValue('__skipReason');
+    this.skipReason = skipReason || skipReasonField;
     this.lookForViolations();
   }
 
@@ -183,6 +187,13 @@ export class MappingValidator {
    */
   public getViolations = (): string[] => {
     return this.violations;
+  }
+
+  /**
+   * Returns the skip reason if this record should be skipped rather than failed
+   */
+  public getSkipReason = (): string | undefined => {
+    return this.skipReason;
   }
 }
 

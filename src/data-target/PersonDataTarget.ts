@@ -247,9 +247,12 @@ export class HuronPersonDataTarget implements DataTarget {
     
     const successes: SinglePushResult[] = [];
     const failures: SinglePushResult[] = [];
+    const skipped: SinglePushResult[] = [];
     
     // Process records in batches based on configuration
     const batchSize = this.config.integration.batchSize || 10;
+
+    const { CREATE, UPDATE, DELETE } = CrudOperation;
     
     timer.start();
 
@@ -264,16 +267,26 @@ export class HuronPersonDataTarget implements DataTarget {
         
         // Determine CRUD operation based on which array the record came from
         if (added.includes(record)) {
-          crud = CrudOperation.CREATE;
+          crud = CREATE;
         } else if (updated.includes(record)) {
-          crud = CrudOperation.UPDATE;
+          crud = UPDATE;
         } else {
-          crud = CrudOperation.DELETE;
+          crud = DELETE;
         }
 
         const validationFailure = this.getValidationFailure({ record, crud });
-        if (validationFailure) {
-          failures.push(validationFailure);
+        // Add to failures if validation fails. For deletes, we want to attempt the 
+        // operation even if validation fails, to allow for soft-deletion of records 
+        // that may no longer conform to the schema but still need to be deactivated 
+        // in the target system
+        if (validationFailure && crud !== DELETE) {
+          // Check if this should be skipped rather than failed
+          if (validationFailure.skipReason) {
+            console.log(`⊘ Skipped ${crud}: ${validationFailure.skipReason}`);
+            skipped.push(validationFailure);
+          } else {
+            failures.push(validationFailure);
+          }
           continue;
         }
         
@@ -301,14 +314,15 @@ export class HuronPersonDataTarget implements DataTarget {
       batchStatus = BatchStatus.PARTIAL;
     }
     
-    timer.logElapsed(`Batch push completed: ${successes.length} successes, ${failures.length} failures`);
+    timer.logElapsed(`Batch push completed: ${successes.length} successes, ${failures.length} failures, ${skipped.length} skipped`);
 
     return {
       status: batchStatus,
       successes,
       failures,
+      skipped,
       timestamp: new Date(),
-      message: `Batch push completed: ${successes.length} successes, ${failures.length} failures`
+      message: `Batch push completed: ${successes.length} successes, ${failures.length} failures, ${skipped.length} skipped`
     };
   }
 
@@ -327,6 +341,7 @@ export class HuronPersonDataTarget implements DataTarget {
       const pk = record.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv);
       const sourceIdentifier = record.fieldValues.find((fv: any) => 'sourceIdentifier' in fv)?.sourceIdentifier;
       const hrn = record.fieldValues.find((fv: any) => 'hrn' in fv)?.hrn;
+      const skipReason = mappingValidator.getSkipReason();
       
       const errMsg = `✗ ${crud} cancelled!`;
       const info = {
@@ -336,42 +351,47 @@ export class HuronPersonDataTarget implements DataTarget {
       }
       console.error(`${errMsg}: ${JSON.stringify(info)}`);
 
-      // Simulate a 400 Bad Request error structure that matches what ApiErrorTracking expects
-      const simulatedError = {
-        message: errMsg,
-        response: {
-          status: 400,
-          statusText: 'Bad Request',
-          data: {
-            errors: [
-              {
-                status: 400,
-                internalErrorMessage: mappingValidator.getViolations().join('; '),
-                incidentId: `VALIDATION-${sourceIdentifier || hrn || 'UNKNOWN'}`,
-                detail: mappingValidator.getViolations()
-              }
-            ]
+      // Only log to DynamoDB if this is a genuine error (not a skip scenario)
+      // Skip scenarios are expected/natural and shouldn't be tracked as errors
+      if (!skipReason) {
+        // Simulate a 400 Bad Request error structure that matches what ApiErrorTracking expects
+        const simulatedError = {
+          message: errMsg,
+          response: {
+            status: 400,
+            statusText: 'Bad Request',
+            data: {
+              errors: [
+                {
+                  status: 400,
+                  internalErrorMessage: mappingValidator.getViolations().join('; '),
+                  incidentId: `VALIDATION-${sourceIdentifier || hrn || 'UNKNOWN'}`,
+                  detail: mappingValidator.getViolations()
+                }
+              ]
+            }
           }
-        }
-      };
+        };
 
-      const errorDetails: ErrorEventDetails = {
-        message: `Huron ${crud.toUpperCase()} error: ${mappingValidator.getViolations().join('; ')}`,
-        object: { 
-          hrn, 
-          sourceIdentifier 
-        }
-      };
+        const errorDetails: ErrorEventDetails = {
+          message: `Huron ${crud.toUpperCase()} error: ${mappingValidator.getViolations().join('; ')}`,
+          object: { 
+            hrn, 
+            sourceIdentifier 
+          }
+        };
 
-      // Process the simulated error through errorEventProcessor (logs to console and DynamoDB)
-      this.errorEventProcessor?.process(simulatedError, errorDetails);
+        // Process the simulated error through errorEventProcessor (logs to console and DynamoDB)
+        this.errorEventProcessor?.process(simulatedError, errorDetails);
+      }
 
       return {
         status: Status.FAILURE,
         message: `Validation failed for record with primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
         timestamp: new Date(),
         primaryKey: pk,
-        crud
+        crud,
+        skipReason // Pass through skip reason if present
       };
     }
     return undefined;

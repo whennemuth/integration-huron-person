@@ -1251,4 +1251,227 @@ describe('HuronPersonDataTarget', () => {
       expect(result.message).toContain('Validation failed');
     });
   });
+
+  describe('Skip Functionality - Student with No Current Term', () => {
+    let mockErrorEventProcessor: { process: jest.Mock };
+
+    beforeEach(() => {
+      mockErrorEventProcessor = {
+        process: jest.fn().mockResolvedValue(undefined)
+      };
+    });
+
+    it('should include skipReason when validation fails for student-only with no current term', async () => {
+      const dataTargetWithProcessor = new HuronPersonDataTarget({
+        config: mockConfig,
+        errorEventProcessor: mockErrorEventProcessor
+      });
+      (dataTargetWithProcessor as any).apiClient = mockApiClient;
+
+      // Create a FieldSet with __skipReason indicating student-only with no current term
+      const fieldSetWithSkipReason: FieldSet = {
+        fieldValues: [
+          { id: 'U00173766' },
+          { sourceIdentifier: 'U00173766' },
+          { firstName: 'Test' },
+          { lastName: 'Student' },
+          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+          // Missing employer/organization - but should be skipped, not failed
+        ]
+      };
+
+      const params: PushOneParms = {
+        data: fieldSetWithSkipReason,
+        crud: CrudOperation.CREATE
+      };
+
+      const result = await dataTargetWithProcessor.pushOne(params);
+
+      // Verify the result includes skipReason
+      expect(result.status).toBe(Status.FAILURE);
+      expect(result.skipReason).toBe('Student-only with no current term enrollment (personId: U00173766)');
+    });
+
+    it('should add to skipped array in pushAll when skipReason is present', async () => {
+      mockApiClient = new MockApiClient({ hrn: 'hrn:hrs:persons:12345' });
+      (dataTarget as any).apiClient = mockApiClient;
+
+      // Valid record
+      const validRecord = createValidFieldSet({
+        id: 'person-1',
+        firstName: 'Valid',
+        lastName: 'Person'
+      });
+
+      // Record with skipReason
+      const recordWithSkipReason: FieldSet = {
+        fieldValues: [
+          { id: 'U00173766' },
+          { sourceIdentifier: 'U00173766' },
+          { firstName: 'Skip' },
+          { lastName: 'Student' },
+          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+        ]
+      };
+
+      // Invalid record (no skipReason)
+      const invalidRecord: FieldSet = {
+        fieldValues: [
+          { id: 'person-3' },
+          { sourceIdentifier: 'person-3' },
+          { lastName: 'Invalid' },
+          { employer: { hrn: 'hrn:hrs:orgs:999' } },
+          { organization: { hrn: 'hrn:hrs:orgs:888' } }
+          // Missing firstName - regular validation failure
+        ]
+      };
+
+      const params: PushAllParms = {
+        added: [validRecord, recordWithSkipReason, invalidRecord],
+        updated: [],
+        removed: []
+      };
+
+      const result = await dataTarget.pushAll(params);
+
+      // Verify counts
+      expect(result.successes?.length).toBe(1); // Valid record
+      expect(result.failures.length).toBe(1);   // Invalid record
+      expect(result.skipped?.length).toBe(1);    // Record with skipReason
+
+      // Verify skipped record has skipReason
+      const skippedRecord = result.skipped?.[0];
+      expect(skippedRecord).toBeDefined();
+      expect(skippedRecord?.skipReason).toBe('Student-only with no current term enrollment (personId: U00173766)');
+      expect(skippedRecord?.status).toBe(Status.FAILURE);
+    });
+
+    it('should include skipped count in batch result message', async () => {
+      mockApiClient = new MockApiClient({ hrn: 'hrn:hrs:persons:12345' });
+      (dataTarget as any).apiClient = mockApiClient;
+
+      const validRecord = createValidFieldSet({
+        id: 'person-1',
+        firstName: 'Valid',
+        lastName: 'Person'
+      });
+
+      const recordWithSkipReason: FieldSet = {
+        fieldValues: [
+          { id: 'U00173766' },
+          { sourceIdentifier: 'U00173766' },
+          { firstName: 'Skip' },
+          { lastName: 'Student' },
+          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+        ]
+      };
+
+      const params: PushAllParms = {
+        added: [validRecord, recordWithSkipReason],
+        updated: [],
+        removed: []
+      };
+
+      const result = await dataTarget.pushAll(params);
+
+      // Verify message includes skipped count
+      expect(result.message).toContain('1 successes');
+      expect(result.message).toContain('0 failures');
+      expect(result.message).toContain('1 skipped');
+    });
+
+    it('should not call errorEventProcessor for skipped records', async () => {
+      const dataTargetWithProcessor = new HuronPersonDataTarget({
+        config: mockConfig,
+        errorEventProcessor: mockErrorEventProcessor
+      });
+      mockApiClient = new MockApiClient({ hrn: 'hrn:hrs:persons:12345' });
+      (dataTargetWithProcessor as any).apiClient = mockApiClient;
+
+      const recordWithSkipReason: FieldSet = {
+        fieldValues: [
+          { id: 'U00173766' },
+          { sourceIdentifier: 'U00173766' },
+          { firstName: 'Skip' },
+          { lastName: 'Student' },
+          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+        ]
+      };
+
+      const params: PushAllParms = {
+        added: [recordWithSkipReason],
+        updated: [],
+        removed: []
+      };
+
+      await dataTargetWithProcessor.pushAll(params);
+
+      // errorEventProcessor should not be called for skipped records
+      // Skip scenarios are expected/natural and shouldn't be logged to DynamoDB
+      expect(mockErrorEventProcessor.process).not.toHaveBeenCalled();
+    });
+
+    it('should call errorEventProcessor for regular validation failures (not skipped)', async () => {
+      const dataTargetWithProcessor = new HuronPersonDataTarget({
+        config: mockConfig,
+        errorEventProcessor: mockErrorEventProcessor
+      });
+      mockApiClient = new MockApiClient({ hrn: 'hrn:hrs:persons:12345' });
+      (dataTargetWithProcessor as any).apiClient = mockApiClient;
+
+      // Regular validation failure - missing firstName (no skipReason)
+      const invalidRecord: FieldSet = {
+        fieldValues: [
+          { id: 'person-invalid' },
+          { sourceIdentifier: 'person-invalid' },
+          { lastName: 'InvalidPerson' },
+          { employer: { hrn: 'hrn:hrs:orgs:999' } },
+          { organization: { hrn: 'hrn:hrs:orgs:888' } }
+          // Missing firstName - regular validation failure
+        ]
+      };
+
+      const params: PushAllParms = {
+        added: [invalidRecord],
+        updated: [],
+        removed: []
+      };
+
+      await dataTargetWithProcessor.pushAll(params);
+
+      // errorEventProcessor SHOULD be called for regular validation failures
+      expect(mockErrorEventProcessor.process).toHaveBeenCalledTimes(1);
+      
+      // Verify the error details passed to errorEventProcessor
+      const callArgs = mockErrorEventProcessor.process.mock.calls[0];
+      expect(callArgs[0]).toBeDefined(); // simulatedError
+      expect(callArgs[0].message).toContain('create cancelled');
+      expect(callArgs[1]).toBeDefined(); // errorDetails
+      expect(callArgs[1].message).toContain('Huron CREATE error');
+    });
+
+    it('should handle empty skipped array when no records are skipped', async () => {
+      mockApiClient = new MockApiClient({ hrn: 'hrn:hrs:persons:12345' });
+      (dataTarget as any).apiClient = mockApiClient;
+
+      const validRecord = createValidFieldSet({
+        id: 'person-1',
+        firstName: 'Valid',
+        lastName: 'Person'
+      });
+
+      const params: PushAllParms = {
+        added: [validRecord],
+        updated: [],
+        removed: []
+      };
+
+      const result = await dataTarget.pushAll(params);
+
+      // Verify skipped array is empty
+      expect(result.skipped).toBeDefined();
+      expect(result.skipped?.length).toBe(0);
+      expect(result.message).toContain('0 skipped');
+    });
+  });
 });

@@ -12,6 +12,7 @@ import { CountryLookup, CountryMappings, CountryRow } from './DataMapperCountry'
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { BuCdmPersonDataSource } from '../data-source/PersonDataSource';
+import { TargetApiErrorEventProcessor } from '../data-target/ApiClientForJWT';
 
 /**
  * Parameters for DataMapper constructor
@@ -22,6 +23,7 @@ export interface DataMapperParams {
   stateMappings?: StateMappings;
   countryMappings?: CountryMappings;
   orgHrn?: (sourceOrgId: string) => string | undefined;
+  errorEventProcessor?: TargetApiErrorEventProcessor
   addressTypes?: Set<AddressType>;
   idpName: string;
   idpDomain?: string;
@@ -56,6 +58,7 @@ export class DataMapper implements CoreDataMapper {
   private _infoValidationFailureMessage:string | undefined;
   private _params: DataMapperParams;
   private _orgHrn: (sourceOrgId: string) => string | undefined
+  private _mappingErrorCount: number = 0;
 
   constructor(params: DataMapperParams) { 
     this._params = params;
@@ -102,6 +105,21 @@ export class DataMapper implements CoreDataMapper {
   }
 
   /**
+   * Get the count of records that failed during the mapping phase.
+   * These are filtered out of the returned Input and should be counted as failures.
+   */
+  public getMappingErrorCount(): number {
+    return this._mappingErrorCount;
+  }
+
+  /**
+   * Reset mapping error count (useful between multiple map() calls)
+   */
+  public clearMappingErrorCount(): void {
+    this._mappingErrorCount = 0;
+  }
+
+  /**
    * Convert raw person data from source system to Input format (implementing core interface)
    * @param rawData Array of person data objects from Boston University CDM API
    */
@@ -119,6 +137,7 @@ export class DataMapper implements CoreDataMapper {
     const { rawData, personHrn, crudOperation } = params;
 
     this.clearMessages();
+    this._mappingErrorCount = 0; // Reset error count for this mapping operation
 
     const fieldDefinitions = [..._fieldDefinitions];
 
@@ -127,140 +146,172 @@ export class DataMapper implements CoreDataMapper {
     }
 
     const fieldSets = rawData.map(person => {
+      try {
 
-      person = removeEmptyValues(person);
+        person = removeEmptyValues(person);
 
-      const { personid } = person;
-      const { idpName, idpDomain, addressTypes, currentTerms, } = this._params;
-      
-      const { firstName, middleName, lastName } = NameMapper({ person, removeNullValues: false }).getName() ?? {};
-      const userId = UserIdMapper({ 
-        person, idpName, idpDomain, removeNullValues: false 
-      }).getUserId(crudOperation);
-      const title = TitleMapper(person, false).getTitle();
-      const email = EmailMapper(person, false).getEmail();
-      const addressMapper = AddressMapper({
-        person,
-        stateMappings: this.stateMappings ?? { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() },
-        countryMappings: this.countryMappings ?? { forwardMap: new Map<string, CountryRow>(), reverseMap: new Map<string, string>() },
-        addressTypes
-      });
-      const addressLine1 = addressMapper.getAddressLine1();
-      const city = addressMapper.getCity();
-      const stateProvince = addressMapper.getStateProvince();
-      const postalCode = addressMapper.getPostalCode();
-      const country = addressMapper.getCountry();
-      
-      // OrgMapper determines organization assignments AND skip reason
-      const orgAssignments: OrgAssignments = OrgMapper({ 
-        person, 
-        currentTerms, 
-        removeNullValues: false,
-        orgHrn: this._orgHrn
-      }).getOrgs();
-      
-      // Extract skipReason from orgAssignments (set by OrgMapper if applicable)
-      const skipReason = orgAssignments.skipReason;
+        const { personid } = person;
+        const { idpName, idpDomain, addressTypes, currentTerms } = this._params;
+        
+        const { firstName, middleName, lastName } = NameMapper({ person, removeNullValues: false }).getName() ?? {};
+        const userId = UserIdMapper({ 
+          person, idpName, idpDomain, removeNullValues: false 
+        }).getUserId(crudOperation);
+        const title = TitleMapper(person, false).getTitle();
+        const email = EmailMapper(person, false).getEmail();
+        const addressMapper = AddressMapper({
+          person,
+          stateMappings: this.stateMappings ?? { forwardMap: new Map<string, StateRow>(), reverseMap: new Map<string, string>() },
+          countryMappings: this.countryMappings ?? { forwardMap: new Map<string, CountryRow>(), reverseMap: new Map<string, string>() },
+          addressTypes
+        });
+        const addressLine1 = addressMapper.getAddressLine1();
+        const city = addressMapper.getCity();
+        const stateProvince = addressMapper.getStateProvince();
+        const postalCode = addressMapper.getPostalCode();
+        const country = addressMapper.getCountry();
 
-      // Basic data check
-      if(isEmpty(personid)) {
-        this._criticalValidationFailureMessage = `Person record is missing required personid field: ${JSON.stringify(person)}`;
-      }
-      if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
-        this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
-      }
-      // For affiliates, organization is EXEMPTED per CSV spec (employer="AFFILIATE", organization=undefined)
-      // For employees and students, organization is required
-      if(!orgAssignments.organization && orgAssignments.employer !== 'AFFILIATE' && !this._criticalValidationFailureMessage) {
-        this._criticalValidationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
-      }
-      
-      const employerHrn = this._orgHrn(orgAssignments.employer ?? '');
-      
-      const fieldValues = [
-        { id: personid },
-        { employeeId: personid },
-        { sourceIdentifier: personid },
-        { firstName },
-        { middleName },
-        { lastName },
-        { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
-        // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
-        { __arrayFieldOperations: { append: [ 'roles' ] } },
-        // Special field to carry skip reason through the pipeline (not sent to API - will be "skipped")
-        ...(skipReason ? [{ __skipReason: skipReason }] : [])
-      ] as Field[];
-      
-      // Add userId only if it has a value (undefined for UPDATE operations)
-      if (userId !== undefined) {
-        fieldValues.push({ userId });
-      }
+        // OrgMapper determines organization assignments AND skip reason
+        const orgAssignments: OrgAssignments = OrgMapper({ 
+          person, 
+          currentTerms, 
+          removeNullValues: false,
+          orgHrn: this._orgHrn
+        }).getOrgs();
 
-      // Add employer only if it is not an empty object.
-      if(!isEmpty(employerHrn)) {
-        fieldValues.push({ employer: { hrn: employerHrn } });
-      }
+        // Extract skipReason from orgAssignments (set by OrgMapper if applicable)
+        const skipReason = orgAssignments.skipReason;
 
-      // Add contactInformation only if at least one sub-field has a value (otherwise the mapper will return an empty object which we want to avoid)
-      if (email || addressLine1 || city || stateProvince || postalCode || country) {
-        fieldValues.push({ contactInformation: { 
-          email, addressLine1, city, stateProvince, postalCode, country 
-        }});
-      }
+        // Basic data check
+        if(isEmpty(personid)) {
+          this._criticalValidationFailureMessage = `Person record is missing required personid field: ${JSON.stringify(person)}`;
+        }
+        if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
+          this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
+        }
+        // For affiliates, organization is EXEMPTED per CSV spec (employer="AFFILIATE", organization=undefined)
+        // For employees and students, organization is required
+        if(!orgAssignments.organization && orgAssignments.employer !== 'AFFILIATE' && !this._criticalValidationFailureMessage) {
+          this._criticalValidationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
+        }
+        const employerHrn = this._orgHrn(orgAssignments.employer ?? '');
+        const fieldValues = [
+          { id: personid },
+          { employeeId: personid },
+          { sourceIdentifier: personid },
+          { firstName },
+          { middleName },
+          { lastName },
+          { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
+          // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
+          { __arrayFieldOperations: { append: [ 'roles' ] } },
+          // Special field to carry skip reason through the pipeline (not sent to API - will be "skipped")
+          ...(skipReason ? [{ __skipReason: skipReason }] : [])
+        ] as Field[];
 
-      if(personHrn) {
-        fieldValues.push({ hrn: personHrn });
-      }
+        // Add userId only if it has a value (undefined for UPDATE operations)
+        if (userId !== undefined) {
+          fieldValues.push({ userId });
+        }
 
-      if(title) {
-        fieldValues.push({ title });
-      }
-      
-      // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
-      if(orgAssignments.organization) {
-        const orgHrn = this._orgHrn(orgAssignments.organization);
-        if(isEmpty(orgHrn)) {
-          if(!this._criticalValidationFailureMessage) {
-            this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+        // Add employer only if it is not an empty object.
+        if(!isEmpty(employerHrn)) {
+          fieldValues.push({ employer: { hrn: employerHrn } });
+        }
+
+        // Add contactInformation only if at least one sub-field has a value (otherwise the mapper will return an empty object which we want to avoid)
+        if (email || addressLine1 || city || stateProvince || postalCode || country) {
+          fieldValues.push({ contactInformation: { 
+            email, addressLine1, city, stateProvince, postalCode, country 
+          }});
+        }
+
+        if(personHrn) {
+          fieldValues.push({ hrn: personHrn });
+        }
+
+        if(title) {
+          fieldValues.push({ title });
+        }
+
+        // Add organization field only if it exists (not for affiliates where it's EXEMPTED)
+        if(orgAssignments.organization) {
+          const orgHrn = this._orgHrn(orgAssignments.organization);
+          if(isEmpty(orgHrn)) {
+            if(!this._criticalValidationFailureMessage) {
+              this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+            }
+          }
+          else {
+            fieldValues.push({ organization: { hrn: orgHrn } });
           }
         }
-        else {
-          fieldValues.push({ organization: { hrn: orgHrn } });
-        }
-      }
 
-      // Add secondaryUnit if present
-      if(orgAssignments.secondaryUnit) {
-        const secondaryHrn = this._orgHrn(orgAssignments.secondaryUnit);
-        if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
-          if(!this._infoValidationFailureMessage) {
-            this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
+        // Add secondaryUnit if present
+        if(orgAssignments.secondaryUnit) {
+          const secondaryHrn = this._orgHrn(orgAssignments.secondaryUnit);
+          if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
+            if(!this._infoValidationFailureMessage) {
+              this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
+            }
+          }
+          else {
+            fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
           }
         }
-        else {
-          fieldValues.push({ secondaryUnit: { hrn: secondaryHrn } });
-        }
-      }
-      
-      // Add additionalUnit if present
-      if(orgAssignments.additionalUnit) {
-        const additionalHrn = this._orgHrn(orgAssignments.additionalUnit);
-        if(isEmpty(additionalHrn) && !this._infoValidationFailureMessage) {
-          if(!this._infoValidationFailureMessage) {
-            this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+
+        // Add additionalUnit if present
+        if(orgAssignments.additionalUnit) {
+          const additionalHrn = this._orgHrn(orgAssignments.additionalUnit);
+          if(isEmpty(additionalHrn) && !this._infoValidationFailureMessage) {
+            if(!this._infoValidationFailureMessage) {
+              this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+            }
+          }
+          else {
+            fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
           }
         }
-        else {
-          fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
+        return { fieldValues };
+      } catch (error) {
+        // Handle mapping error: log to errorEventProcessor and mark for filtering
+        const { errorEventProcessor } = this._params;
+        let personid = person && person.personid ? person.personid : undefined;
+        let sourceIdentifier = person && person.sourceIdentifier ? person.sourceIdentifier : undefined;
+        let errorDetails = {
+          message: `Data mapping error: ${error instanceof Error ? error.message : String(error)}`,
+          object: {
+            personid,
+            sourceIdentifier,
+            raw: person
+          }
+        };
+        if (errorEventProcessor && typeof errorEventProcessor.process === 'function') {
+          errorEventProcessor.process(error, errorDetails);
         }
+        // Increment error count for this filtered-out record
+        this._mappingErrorCount++;
+        // Return a marker FieldSet that will be filtered out before returning
+        return {
+          fieldValues: [
+            { __mappingError: true },
+            { errorMessage: error instanceof Error ? error.message : String(error) },
+            ...(personid ? [{ personid }] : []),
+            ...(sourceIdentifier ? [{ sourceIdentifier }] : [])
+          ]
+        } as FieldSet;
       }
-
-      return { fieldValues };
     });
+
+    // Filter out any FieldSets marked with __mappingError before returning
+    // These are not sent to target, not included in delta computation
+    const cleanedFieldSets = fieldSets.filter(fs => 
+      !fs.fieldValues.some(fv => '__mappingError' in fv)
+    );
 
     return {
       fieldDefinitions,
-      fieldSets
+      fieldSets: cleanedFieldSets
     };
   }
 }

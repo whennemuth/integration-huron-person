@@ -48,6 +48,34 @@ describe('DataMapper', () => {
   };
 
   describe('map', () => {
+        it('should expose mapping error count via getter', async () => {
+          const mockCurrentTerms: Term[] = [];
+          const mapper = new DataMapper({ currentTerms: mockCurrentTerms, idpName: 'test-idp' });
+          
+          // Initial mapping error count should be 0
+          expect(mapper.getMappingErrorCount()).toBe(0);
+          
+          // Map normal data
+          const person = {
+            personid: '123',
+            personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] },
+            employeeInfo: { address: [] },
+            studentInfo: { address: [] },
+            facultyInfo: { address: [] },
+            affiliateInfo: { address: [] },
+            constituentInfo: { address: [] }
+          };
+          
+          const result = mapper.map([person]);
+          
+          // After mapping normal data, error count should still be 0
+          expect(mapper.getMappingErrorCount()).toBe(0);
+          expect(result.fieldSets).toHaveLength(1);
+          
+          // Test clearMappingErrorCount() method
+          mapper.clearMappingErrorCount();
+          expect(mapper.getMappingErrorCount()).toBe(0);
+        });
     it('should map bugs.json source to bugs.json target', () => {
       const source = require('./source/bugs.json');
       const expectedTarget = require('./target/bugs.json');

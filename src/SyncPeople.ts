@@ -176,6 +176,14 @@ class HuronPersonIntegration {
       
       const result = await this.endToEnd.execute();
 
+      // Add mapping errors to failure count (they were filtered out by DataMapper before reaching EndToEnd)
+      const mappingErrorCount = dataMapper.getMappingErrorCount();
+      if (mappingErrorCount > 0) {
+        console.log(`Mapping errors filtered: ${mappingErrorCount} record(s) failed during mapping phase`);
+        result.failureCount += mappingErrorCount;
+        result.totalProcessed += mappingErrorCount;
+      }
+
       timer.stop();
       timer.logElapsed(`✓ ${taskName} completed`);
       

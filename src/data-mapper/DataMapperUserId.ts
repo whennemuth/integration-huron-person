@@ -46,7 +46,7 @@ export const UserIdMapper = (params: {
         if(!accountName) {
           return undefined;
         }
-        return `${idpName}_${accountName.toLowerCase()}@${idpDomain}`;
+        return `${idpName}_` + `${accountName}`.toLowerCase() + `@${idpDomain}`;
       }
     }
   }

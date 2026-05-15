@@ -155,6 +155,10 @@ async function main() {
       console.log(`Reading person by Email: ${HURON_PERSON_EMAIL}`);
       personData = await reader.readPersonByEmail(HURON_PERSON_EMAIL!);
       break;
+    case 'hail-mary':
+      console.log(`Reading person by Hail Mary with value: ${HURON_PERSON_SOURCE_ID}`);
+      personData = await reader.readPersonByHailMary(HURON_PERSON_SOURCE_ID!);
+      break;
     default:
       console.error('Please set HURON_PERSON_ID_TYPE to one of: hrn, sid, uid, id, email');
       return;

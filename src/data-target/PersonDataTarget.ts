@@ -111,6 +111,7 @@ export class HuronPersonDataTarget implements DataTarget {
       
       let response;
       let endpoint = this.config.dataTarget.personsPath;
+      let _hrn: string | undefined;
 
       if( dryRun ) {
         console.log(`[DRY RUN] Would perform ${crud} operation on endpoint ${endpoint} with data:`, personRequest.data);
@@ -129,7 +130,8 @@ export class HuronPersonDataTarget implements DataTarget {
           // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
           console.log(`Pushing single person record with PATCH operation:`, getPersonIdentifierInfo(personRequest.data));
           if (personRequest.data?.hrn) {
-            endpoint = `${endpoint}/${personRequest.data.hrn}`;
+            _hrn = personRequest.data.hrn;
+            endpoint = `${endpoint}/${_hrn}`;
             // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
             this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
               hrn: personRequest.data?.hrn, 
@@ -140,8 +142,8 @@ export class HuronPersonDataTarget implements DataTarget {
             // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
             const reader = new ReadPerson(this.config);
             const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
-            const hrn = result?.[0]?.hrn;
-            if( ! hrn) {
+            _hrn = result?.[0]?.hrn;
+            if( ! _hrn) {
               return {
                 status: Status.FAILURE,
                 message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
@@ -152,10 +154,10 @@ export class HuronPersonDataTarget implements DataTarget {
             }
 
             // Perform the patch now that the hrn is known
-            personRequest.data.hrn = hrn;
-            endpoint = `${endpoint}/${hrn}`;
+            personRequest.data.hrn = _hrn;
+            endpoint = `${endpoint}/${_hrn}`;
             this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
-              hrn, 
+              hrn: _hrn, 
               sourceIdentifier: personRequest.data?.sourceIdentifier 
             }});
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
@@ -164,17 +166,18 @@ export class HuronPersonDataTarget implements DataTarget {
           console.log(`Soft deleting single person record with PATCH operation:`, getPersonIdentifierInfo(data));
           // DELETE: Implement as soft delete by setting active: false
           // Extract HRN from the original fieldSet data
-          const hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn;
-          if (hrn) {
+          _hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn as string | undefined;
+          if (_hrn) {
             const { SOFT, HARD, LOG, NONE } = TargetPersonDeleteType;
             const deleteType = personRequest.deleteType || SOFT; // Default to SOFT delete if not specified
+            
             let patch = true;
             switch (deleteType) {
               case HARD:
-                console.warn(`HARD delete requested for HRN ${hrn}. But only SOFT delete (deactivation) is allowed - deactivating instead.`);
+                console.warn(`HARD delete requested for HRN ${_hrn}. But only SOFT delete (deactivation) is allowed - deactivating instead.`);
                 break;
               case LOG:
-                console.log(`${hrn} not present anymore in source system. Logging this event but not deactivating in Huron as per configuration.`);
+                console.log(`${_hrn} not present anymore in source system. Logging this event but not deactivating in Huron as per configuration.`);
                 patch = false;
                 break;
               case NONE:
@@ -182,11 +185,11 @@ export class HuronPersonDataTarget implements DataTarget {
                 break;
             }
             if(patch) {
-              endpoint = `${endpoint}/${hrn}`;
+              endpoint = `${endpoint}/${_hrn}`;
               // For soft delete, we only need to set active: false
-              const softDeleteData = { hrn, active: false };
+              const softDeleteData = { hrn: _hrn, active: false };
               this.apiClient.setErrorEventDetails({ message: 'Huron deletion error', object: { 
-                hrn, 
+                hrn: _hrn, 
                 sourceIdentifier: data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier 
               }});
               response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
@@ -213,17 +216,19 @@ export class HuronPersonDataTarget implements DataTarget {
         }
       }
       
-      const result = response?.data || { hrn: 'dryrun' };
+      const { data:rspData, status, statusText } = response || {};
+      const result = { status, statusText, hrn: _hrn, data: rspData }; 
       
       // API returns {hrn: string} on success
       return {
         status: Status.SUCCESS,
         message: `Successfully pushed person record: ${this.getResponseData(result)}`,
         timestamp: new Date(),
-        primaryKey: [{ hrn: result.hrn }],
+        primaryKey: [{ hrn: _hrn }],
         crud
       };
-    } catch (error) {
+    } 
+    catch (error) {
       const { response } = error as any || {};      
       return {
         status: Status.FAILURE,

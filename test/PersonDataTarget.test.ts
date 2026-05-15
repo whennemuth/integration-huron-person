@@ -827,7 +827,7 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.primaryKey).toBeDefined();
-      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.primaryKey[0].hrn).toBeUndefined(); // In dry run, HRN should not be set
       expect(result.crud).toBe(CrudOperation.CREATE);
       expect(postSpy).not.toHaveBeenCalled();
     });
@@ -857,7 +857,7 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.primaryKey).toBeDefined();
-      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.primaryKey[0].hrn).toBeUndefined();
       expect(result.crud).toBe(CrudOperation.UPDATE);
       expect(patchSpy).not.toHaveBeenCalled();
     });
@@ -885,7 +885,7 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.primaryKey).toBeDefined();
-      expect(result.primaryKey[0].hrn).toBe('dryrun');
+      expect(result.primaryKey[0].hrn).toBeUndefined();
       expect(result.crud).toBe(CrudOperation.DELETE);
       expect(patchSpy).not.toHaveBeenCalled();
     });
@@ -926,9 +926,9 @@ describe('HuronPersonDataTarget', () => {
       expect(result.failures).toHaveLength(0);
       expect(result.successes).toHaveLength(4);
       
-      // Verify all successes have dryrun hrn
+      // Verify all successes have undefined hrn
       result.successes?.forEach(success => {
-        expect(success.primaryKey[0].hrn).toBe('dryrun');
+        expect(success.primaryKey[0].hrn).toBeUndefined();
       });
 
       // Verify no API calls were made

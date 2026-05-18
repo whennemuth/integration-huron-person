@@ -1,4 +1,4 @@
-
+import { getBugs } from './data-mapper/source/bugs';
 export interface CharacterDetails {
   name: string;
   firstName: string;
@@ -203,8 +203,8 @@ export class LooneyTunes {
       throw new Error(`Character ${this.character} not found in character data`);
     }
 
-    // Load the base data from bugs.json
-    const baseData = require('./data-mapper/source/bugs.json');
+    // Load bugs bunny as base data
+    const baseData = getBugs();
 
     // Create a deep copy to avoid modifying the original
     const randomData = JSON.parse(JSON.stringify(baseData));

@@ -1,5 +1,7 @@
 import { JsonFieldFilter } from '../src/stream/JsonFieldFilter';
-import testPersonData from './data-mapper/source/bugs.json';
+import { getBugs } from '../src/miscellaneous/data-mapper/source/bugs';
+
+const testPersonData = getBugs();
 
 describe('JsonFieldFilter', () => {
   let filter: JsonFieldFilter;

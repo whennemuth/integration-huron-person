@@ -80,8 +80,7 @@ abstract class BuCdmPeopleDataSourceBatch {
 
       // If a limit is set and we've processed enough records, stop processing
       if (limit > 0 && iterations >= limit) {
-        this._hasMoreRecords = false;
-        console.log(`Processed ${this._recordsProcessed} records, which meets or exceeds the limit of ${limit}. Stopping processing.`);
+        console.log(`Processed ${iterations} iterations, which meets or exceeds the limit of ${limit}. Stopping processing.`);
         break;
       }
     } while (true);

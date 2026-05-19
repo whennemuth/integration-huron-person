@@ -4,6 +4,13 @@ import { AxiosResponseStreamFilter, ResponseProcessor } from "../stream/AxiosRes
 import { BuCdmPeopleDataSource } from "./PeopleCdmDataSource";
 import { getLocalConfig } from "../Utils";
 
+export type BuCdmPeopleDataSourceBatchConfig = {
+  dataSource: BuCdmPeopleDataSource, 
+  batchSize?: number
+  offset?: number; // Optional starting offset for pagination (default is 0)
+  limit?: number; // Optional limit on total records to process (useful for testing or partial processing)
+};
+
 /**
  * Abstract batch processor for BuCdmPeopleDataSource. Handles pagination logic and batch 
  * processing flow, allowing subclasses to "inject" custom processing logic to be applied to each
@@ -31,19 +38,18 @@ abstract class BuCdmPeopleDataSourceBatch {
   // Primary fix: ApiClientForApiKey now uses streaming to prevent buffering responses in memory
   private response: any[] = [];
   private _recordsProcessed = 0;
+  private _hasMoreRecords: boolean = true;
 
-  constructor(private dataSource: BuCdmPeopleDataSource, private batchSize: number = 100) {
-    dataSource.setQueryParam('recordCount', batchSize);
-  }
-
-  // NOTE: hasMoreRecords method removed - now using inline check in processBatch to avoid stale reference
+  constructor(private config: BuCdmPeopleDataSourceBatchConfig) { }
 
   protected abstract process: (response: any[]) => Promise<void>
 
   public processBatch = async (): Promise<void> => {
-    const { dataSource } = this;
+    let { dataSource, batchSize = 100, offset = 0, limit = 0 } = this.config;
+    let iterations: number = 0;
 
-    let offset = 0;
+    dataSource.setQueryParam('recordCount', batchSize);
+
     do {
       dataSource.setQueryParam('offset', offset);
       this.response = await dataSource.fetchRaw();
@@ -63,9 +69,18 @@ abstract class BuCdmPeopleDataSourceBatch {
       }
       
       offset++;
+      iterations++;
       
       // Use cached responseLength instead of this.response.length for hasMoreRecords check
-      if (responseLength < this.batchSize) {
+      if (responseLength < batchSize) {
+        this._hasMoreRecords = false;
+        console.log(`Batch ${offset} returned ${responseLength} records, which is less than the batch size of ${batchSize}. Assuming no more records to process.`);
+        break;
+      }
+
+      // If a limit is set and we've processed enough records, stop processing
+      if (limit > 0 && iterations >= limit) {
+        console.log(`Processed ${iterations} iterations, which meets or exceeds the limit of ${limit}. Stopping processing.`);
         break;
       }
     } while (true);
@@ -73,6 +88,14 @@ abstract class BuCdmPeopleDataSourceBatch {
 
   public recordsProcessed(): number {
     return this._recordsProcessed;
+  }
+
+  public hasMoreRecords(): boolean {
+    return this._hasMoreRecords;
+  }
+
+  public reachedTheEndOfRecords(): boolean {
+    return !this._hasMoreRecords;
   }
 }
 
@@ -112,7 +135,7 @@ if(require.main === module) {
         console.log(`Procesing batch of ${response.length} records [{ personid: ${response[0]?.personid} }...]`);
         // Your implementation here
       };
-    }(dataSource, 100);
+    }({ dataSource, batchSize: 100, offset: 7, limit: 10 });
 
     const timer = new Timer();
     timer.start();   

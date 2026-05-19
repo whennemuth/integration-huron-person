@@ -1,5 +1,4 @@
 import { CrudOperation, DataSource, DataTarget, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status } from 'integration-core';
-import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -14,6 +13,7 @@ import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater'
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { getLocalConfig, isEmpty } from './Utils';
+import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 
 /**
  * Base parameters shared by both single and batch person sync operations.
@@ -380,7 +380,7 @@ async function main() {
       if( crudOperation === CrudOperation.CREATE || crudOperation === undefined ) {
         crudOperation = CrudOperation.CREATE;
         rawData = new LooneyTunes(Character.DaffyDuck).getRandomCdmPersonData();
-        buid = rawData[0].personid;
+        buid = rawData![0].personid;      
       }
       else {
         // Exit only if both command line and environment variable are missing

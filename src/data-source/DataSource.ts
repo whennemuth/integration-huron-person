@@ -69,7 +69,7 @@ export abstract class BuCdmDataSource implements DataSource {
   async fetchRaw(): Promise<any[]> {
     try {
       const timer = new Timer();
-      console.log(`Fetching data from ${this.name}...`);     
+      console.log(`Fetching data from: ${JSON.stringify({ sourceName: this.name, fetchUrl: this.getFetchUrl() })}`);
 
       timer.start();
       const response = await this.apiClient.get<{ response: any[] }>({

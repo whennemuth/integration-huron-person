@@ -39,8 +39,15 @@ abstract class BuCdmPeopleDataSourceBatch {
   private response: any[] = [];
   private _recordsProcessed = 0;
   private _hasMoreRecords: boolean = true;
+  private _batchable: boolean = true;
 
-  constructor(private config: BuCdmPeopleDataSourceBatchConfig) { }
+  constructor(private config: BuCdmPeopleDataSourceBatchConfig) {
+    if (config.limit !== undefined && config.limit === -1) {
+      this._batchable = false;
+      console.log('Batching disabled via limit=-1; recordCount/offset query params will not be sent and only one request will be made.');
+      config.limit = 0;
+    }
+  }
 
   protected abstract process: (response: any[]) => Promise<void>
 
@@ -48,10 +55,10 @@ abstract class BuCdmPeopleDataSourceBatch {
     let { dataSource, batchSize = 100, offset = 0, limit = 0 } = this.config;
     let iterations: number = 0;
 
-    dataSource.setQueryParam('recordCount', batchSize);
+    this.setQueryParam(dataSource, 'recordCount', batchSize);
 
     do {
-      dataSource.setQueryParam('offset', offset);
+      this.setQueryParam(dataSource, 'offset', offset);
       this.response = await dataSource.fetchRaw();
       await this.process(this.response);
       this._recordsProcessed += this.response.length;
@@ -70,6 +77,13 @@ abstract class BuCdmPeopleDataSourceBatch {
       
       offset++;
       iterations++;
+
+      // Non-batchable mode is a deliberate single-request flow (for strict single-record endpoints).
+      if (!this._batchable) {
+        this._hasMoreRecords = false;
+        console.log('Non-batchable mode completed one request; stopping batch loop.');
+        break;
+      }
       
       // Use cached responseLength instead of this.response.length for hasMoreRecords check
       if (responseLength < batchSize) {
@@ -84,6 +98,23 @@ abstract class BuCdmPeopleDataSourceBatch {
         break;
       }
     } while (true);
+  }
+
+  /**
+   * Set a batch-specific query parameter on the data source. NOTE: This will be cancelled
+   * if the data source is not batchable (e.g. if limit = -1 was set in the constructor), 
+   * since in that case we want to fetch all records in one batch and not apply any 
+   * batch-specific parameters (probably a test run against the API that returns only one person).
+   * @param dataSource 
+   * @param key 
+   * @param value 
+   * @returns 
+   */
+  private setQueryParam = (dataSource: BuCdmPeopleDataSource, key: string, value: any): void => {
+    if(!this._batchable) {
+      return;
+    }
+    dataSource.setQueryParam(key, value);
   }
 
   public recordsProcessed(): number {

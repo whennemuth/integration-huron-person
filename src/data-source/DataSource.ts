@@ -86,9 +86,9 @@ export abstract class BuCdmDataSource implements DataSource {
       (response as any).data = null;
       
       return rawData;
-    } catch (error) {
-      console.error(`Failed to fetch data from ${this.name}:`, error);
-      throw new Error(`Failed to fetch data from ${this.name}: ${error}`);
+    } catch (e) {
+      error({ msg: `Failed to fetch data from ${this.name}`, o:e, flat: true });
+      throw new Error(`Failed to fetch data from ${this.name}: ${e}`);
     }
   }
 }
@@ -96,6 +96,7 @@ export abstract class BuCdmDataSource implements DataSource {
 // Import child classes AFTER the base class is defined to avoid circular dependency issues
 import { BuCdmPeopleDataSource } from './PeopleCdmDataSource';
 import { BuS3PeopleDataSource } from './PeopleS3DataSource';
+import { error } from '../Utils';
 
 export const getEndpointConfig = (config:Config): EndpointConfigForApiKey | undefined => {
   const { executionMode, dataSource: { 

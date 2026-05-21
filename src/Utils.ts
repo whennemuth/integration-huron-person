@@ -195,8 +195,10 @@ const toConsole = (parms: { o:any, out:Function, msg?:string, flat?:boolean }) =
   }
   if(o instanceof Error) {
     console.error(msg);
-    console.error(o);
-    return;
+    if( !flat) {
+      console.error(o);
+      return;
+    }
   }
   if(o instanceof Object) {
     if(flat) {

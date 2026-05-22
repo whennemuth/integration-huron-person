@@ -37,6 +37,10 @@ class MockApiClient implements IApiClient {
     // No-op for mock
   }
 
+  getUserId(): string | undefined {
+    return undefined;
+  }
+
   async get<T = any>(params: { url: string, params?: any, axiosInstance?: any }): Promise<{ data: T; status: number; statusText: string; headers: {}; config: any; }> {
     throw new Error('GET method not used in DataTarget tests');
   }
@@ -344,6 +348,15 @@ describe('HuronPersonDataTarget', () => {
           employeeId: 'EMP001',
           status: 'active',
           hireDate: '2023-01-15'
+        },
+        fullData: {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com',
+          department: 'Engineering',
+          employeeId: 'EMP001',
+          status: 'active',
+          hireDate: '2023-01-15'
         }
       });
     });
@@ -365,6 +378,12 @@ describe('HuronPersonDataTarget', () => {
           firstName: 'John',
           lastName: 'Smith',
           department: 'Marketing'
+        },
+        fullData: {
+          id: 'person-1',
+          firstName: 'John',
+          lastName: 'Smith',
+          department: 'Marketing'
         }
       });
     });
@@ -380,6 +399,9 @@ describe('HuronPersonDataTarget', () => {
         operation: 'delete',
         data: {
           active: false
+        },
+        fullData: {
+          id: 'person-1'
         }
       });
     });
@@ -391,7 +413,8 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result).toEqual({
         operation: 'create',
-        data: {}
+        data: {},
+        fullData: {}
       });
     });
   });
@@ -678,6 +701,9 @@ describe('HuronPersonDataTarget', () => {
       const customMockApiClient = {
         setErrorEventDetails(details: any): void {
           // No-op for mock
+        },
+        getUserId(): string | undefined {
+          return undefined;
         },
         async post<T = any>(url: string, data?: any): Promise<{ data: T; status: number; statusText: string; headers: {}; config: any; }> {
           callCount++;

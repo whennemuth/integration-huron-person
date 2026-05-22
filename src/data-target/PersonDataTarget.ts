@@ -17,6 +17,7 @@ import { ApiClientForJWT, EndpointConfigForJWT, ErrorEventDetails, TargetApiErro
 import { HuronPerson } from './crud/Person';
 import { ReadPerson } from './crud/ReadPerson';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
+import { deepClone } from '../Utils';
 
 /**
  * Request format for pushing person data to Huron API
@@ -24,6 +25,7 @@ import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 export interface PersonPushRequest {
   operation: 'create' | 'update' | 'delete';
   deleteType?: TargetPersonDeleteType;
+  fullData?: any; // The complete data payload for the person record, used for validation and logging
   data: any;
 }
 
@@ -42,6 +44,7 @@ export class HuronPersonDataTarget implements DataTarget {
   public readonly description = 'Pushes person data to Huron API endpoint';
 
   private apiClient: ApiClientForJWT;
+  private apiUserLookup: { lookupResult: HuronPerson | undefined };
   private config: Config;
   private hrn: string | undefined;
   private errorEventProcessor
@@ -70,7 +73,32 @@ export class HuronPersonDataTarget implements DataTarget {
       return JSON.stringify(data);
     }
     return String(data);
-  } 
+  }
+
+  /**
+   * Lookup the API user as a Person record in Huron, to get their HRN and other details. 
+   * This is used for auditing and to prevent the API user from accidentally deleting themselves.
+   * @returns The Person record of the API user, or undefined if it cannot be determined
+   */
+  private getApiUser = async (): Promise<HuronPerson | undefined> => {
+    if (this.apiUserLookup) {
+      return this.apiUserLookup.lookupResult;
+    }
+    const userId = this.apiClient.getUserId();
+    if (!userId) {
+      console.warn('Unable to determine API user ID from token. API user-specific operations will not be possible.');
+      return undefined;
+    } 
+    const reader = new ReadPerson(this.config);
+    const retval = await reader.readPersonByUserId(userId);
+    if(retval.length === 0) {
+      console.warn(`API user with ID ${userId} not found in Huron. API user-specific operations will not be possible.`);
+      this.apiUserLookup = { lookupResult: undefined };
+      return undefined;
+    }
+    this.apiUserLookup = { lookupResult: retval[0] };
+    return this.apiUserLookup.lookupResult;
+  }
 
   /**
    * Push a single person record to Huron API
@@ -98,7 +126,8 @@ export class HuronPersonDataTarget implements DataTarget {
         id: id || undefined,
         userId: userId || undefined,
         sourceIdentifier: sourceIdentifier || undefined,
-        employeeId: employeeId || undefined
+        employeeId: employeeId || undefined,
+        active: 'active' in data ? data.active : undefined
       }
       return Object.values(retvalObj).find(v => v !== undefined) ?
         JSON.stringify(retvalObj) : 
@@ -163,6 +192,29 @@ export class HuronPersonDataTarget implements DataTarget {
             response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
           }
         } else if (crud === CrudOperation.DELETE) {
+          // Check first if the api user is trying to delete themselves and prevent it.
+          const apiUserId = this.apiClient.getUserId();
+          if(apiUserId) {
+            const apiUser = await this.getApiUser();
+            if(apiUser) {
+              const { id, sourceIdentifier } = apiUser || {};
+              const { 
+                fullData: { id: id2, sourceIdentifier: sourceIdentifier2 } = {},              
+              } = personRequest;
+              if ((id && id === id2) || (sourceIdentifier && sourceIdentifier === sourceIdentifier2)) {
+                const errorMsg = '⊘ API user attempted to delete/deactivate themselves. This operation is not allowed and has been prevented.';
+                console.error(errorMsg);
+                return {
+                  status: Status.FAILURE,
+                  message: errorMsg,
+                  timestamp: new Date(),
+                  primaryKey: [{ id: id2, sourceIdentifier: sourceIdentifier2 || sourceIdentifier2 }],
+                  crud
+                };  
+              }
+            }
+          }
+
           console.log(`Soft deleting single person record with PATCH operation:`, getPersonIdentifierInfo(data));
           // DELETE: Implement as soft delete by setting active: false
           // Extract HRN from the original fieldSet data
@@ -411,18 +463,21 @@ export class HuronPersonDataTarget implements DataTarget {
     let path: SchemaPath;
     let method: Method;
     let data: any;
+    let fullData: any;
     
     switch (operation) {
       case CrudOperation.CREATE:
         path = SchemaPath.PERSONS;
         method = Method.POST;
         data = new HuronSchemaBroker({ path, method }).getConvertedFieldSet(fieldSet);
+        fullData = deepClone(data);
         break;
       case CrudOperation.UPDATE:
         path = SchemaPath.PERSONS_BY_HRN;
         // method = Method.PUT;
         method = Method.PATCH;
         data = new HuronSchemaBroker({ path, method }).getConvertedFieldSet(fieldSet);
+        fullData = deepClone(data);
         // Remove userId for UPDATE operations - userId should never be changed
         if (data && 'userId' in data) {
           delete data.userId;
@@ -433,12 +488,13 @@ export class HuronPersonDataTarget implements DataTarget {
         path = SchemaPath.PERSONS_BY_HRN;
         method = Method.PATCH;
         data = { active: false };
+        fullData = new HuronSchemaBroker({ path, method }).getConvertedFieldSet(fieldSet);
         break;
       default:
         throw new Error(`Unsupported CRUD operation: ${operation}`);
     }
 
-    return { operation, data };
+    return { operation, data, fullData };
   }
 
   /**

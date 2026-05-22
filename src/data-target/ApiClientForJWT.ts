@@ -385,4 +385,18 @@ export class ApiClientForJWT implements IApiClient {
   getCurrentToken(): string | null {
     return this.jwtToken;
   }
+
+  /**
+   * Get the user ID associated with the token. ie: "bu-sso_wrh@bu.edu"
+   */
+  getUserId(): string | null {
+    const { endpointConfig } = this;
+    if( ! endpointConfig) {
+      return null;
+    }
+    if('userId' in endpointConfig) {
+      return endpointConfig.userId || null;
+    }
+    return null;
+  }
 }

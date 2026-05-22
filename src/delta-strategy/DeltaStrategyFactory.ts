@@ -23,6 +23,7 @@ export interface CreateStrategyParams {
   ignoreRemovals?: boolean;
   chunkId?: string;
   bulkReset?: boolean;
+  trustPreviousStorage?: boolean; // If false, forces UpsertDeltaStrategy even if bulkReset is false. Defaults to true (trusts previous storage).
   lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>; // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
 }
 
@@ -33,19 +34,27 @@ export class DeltaStrategyFactory {
   
   /**
    * Create delta strategy based on storage configuration
-   * @param params - Parameters object containing config, optional chunkId, and optional bulkReset flag
+   * @param params - Parameters object containing config, optional chunkId, optional bulkReset flag, and optional trustPreviousStorage flag
    */
   static createStrategy(params: CreateStrategyParams): DeltaStrategy {
     const { 
-      config, chunkId, bulkReset = false, lookupPersonInTargetSystemCache, ignoreRemovals = false 
+      config, chunkId, bulkReset = false, trustPreviousStorage = true, lookupPersonInTargetSystemCache, ignoreRemovals = false 
     } = params;
     const { storage } = config;
+
+    // Compute effective bulkReset: use UpsertDeltaStrategy if bulkReset is true OR if trustPreviousStorage is false
+    // This ensures cache-based lookups are used when:
+    // 1) bulkReset = true (explicit bulk reset requested), OR
+    // 2) trustPreviousStorage = false (previous.ndjson is not trustworthy, use cached lookups instead)
+    const effectiveBulkReset = bulkReset || !trustPreviousStorage;
 
     console.log(`Creating delta strategy: ${
       JSON.stringify({
         storageType: storage.type,
         chunkId,
         bulkReset,
+        trustPreviousStorage,
+        effectiveBulkReset,
         ignoreRemovals,
         lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided'
       })
@@ -150,8 +159,8 @@ export class DeltaStrategyFactory {
       deltaStrategy = new ChunkedDeltaStrategy(deltaStrategy, config);
     }
 
-    /** Wrap with UpsertDeltaStrategy if bulkReset is enabled */
-    if (bulkReset) {
+    /** Wrap with UpsertDeltaStrategy if effective bulkReset is enabled (bulkReset=true OR trustPreviousStorage=false) */
+    if (effectiveBulkReset) {
       console.log('🔄  Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
       deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
     }

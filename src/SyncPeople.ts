@@ -22,6 +22,12 @@ type HuronPersonIntegrationParams = {
    * lookups against the target API instead of the stored (key + hash) cache. 
    */
   bulkReset?: boolean;
+  /** 
+   * trustPreviousStorage: If false, forces use of the cache-based lookup (upsert mode) even when
+   * bulkReset is false. Useful when previous-input.ndjson cannot be trusted and cached lookups
+   * should determine create-vs-patch decisions. When true (default), existing delta storage is trusted.
+   */
+  trustPreviousStorage?: boolean;
   lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>
   errorEventProcessor?: TargetApiErrorEventProcessor;
   /**
@@ -42,6 +48,7 @@ class HuronPersonIntegration {
   private endToEnd: EndToEnd;
   private staticMapUsage?: StaticMapUsage;
   private bulkReset: boolean;
+  private trustPreviousStorage: boolean;
   private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: any;
@@ -50,7 +57,7 @@ class HuronPersonIntegration {
 
   constructor(params: HuronPersonIntegrationParams) {
     const { 
-      configPath, cache, config, staticMapUsage, bulkReset = false, errorEventProcessor, 
+      configPath, cache, config, staticMapUsage, bulkReset = false, trustPreviousStorage = true, errorEventProcessor, 
       retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false
     } = params;
 
@@ -60,6 +67,7 @@ class HuronPersonIntegration {
       config: !!config ? 'provided' : 'not provided',
       staticMapUsage,
       bulkReset,
+      trustPreviousStorage,
       lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided',
       ignoreRemovals,
       retryStrategy: !!retryStrategy ? retryStrategy : 'not provided',
@@ -68,6 +76,7 @@ class HuronPersonIntegration {
     
     this.staticMapUsage = staticMapUsage;
     this.bulkReset = bulkReset;
+    this.trustPreviousStorage = trustPreviousStorage;
     this.errorEventProcessor = errorEventProcessor;
     this.lookupPersonInTargetSystemCache = lookupPersonInTargetSystemCache;
     this.retryStrategy = retryStrategy;
@@ -131,7 +140,7 @@ class HuronPersonIntegration {
       // Create integration components with currentTerms
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
-        errorEventProcessor, cleanupPreviousData, bulkReset, ignoreRemovals,
+        errorEventProcessor, cleanupPreviousData, bulkReset, trustPreviousStorage, ignoreRemovals,
         lookupPersonInTargetSystemCache
       } = this;
       const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
@@ -149,10 +158,13 @@ class HuronPersonIntegration {
       await dataTarget.ensureValidToken();
       console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
       
+      // Calculate effective bulkReset: use upsert (cache-based lookup) if bulkReset is true OR if trustPreviousStorage is false
+      const effectiveBulkReset = bulkReset || !trustPreviousStorage;
       const deltaStrategy = DeltaStrategyFactory.createStrategy({ 
         config, 
         chunkId, 
-        bulkReset,
+        bulkReset: effectiveBulkReset,
+        trustPreviousStorage,
         lookupPersonInTargetSystemCache,
         ignoreRemovals
       });

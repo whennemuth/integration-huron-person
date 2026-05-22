@@ -30,8 +30,7 @@ export interface CreateStrategyParams {
 /**
  * Factory for creating appropriate delta strategy based on configuration
  */
-export class DeltaStrategyFactory {
-  
+export class DeltaStrategyFactory {  
   /**
    * Create delta strategy based on storage configuration
    * @param params - Parameters object containing config, optional chunkId, optional bulkReset flag, and optional trustPreviousStorage flag
@@ -163,6 +162,55 @@ export class DeltaStrategyFactory {
     if (effectiveBulkReset) {
       console.log('🔄  Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
       deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
+    }
+
+    /**
+     * Redirect baseline reads to shared integrated path in chunked processor mode.
+     * 
+     * Problem: EndToEnd.execute() performs a post-push fetchPreviousData for hash restoration,
+     * but passes config.integration.clientId (chunk-specific deltas path). In chunked mode,
+     * that path doesn't exist; the baseline lives in the shared delta-storage directory created
+     * by the merger.
+     * 
+     * Solution: Wrap the strategy's storage so fetchPreviousData is redirected to
+     * integratedDeltaClientId (delta-storage) while updatePreviousData writes remain at the
+     * original chunk-specific path. This ensures:
+     * - Delta computation reads use integrated baseline (ChunkedDeltaStrategy handles this).
+     * - Post-push hash restoration reads also use integrated baseline (wrapper handles this).
+     * - Chunk outputs continue writing to deltas/{timestamp}/chunk-{id}.ndjson.
+     * 
+     * Applied only in chunked processor mode (chunkId + integratedDeltaClientId both present).
+     */
+    const integratedDeltaClientId = (config as any).integratedDeltaClientId as string | undefined;
+    if (chunkId && integratedDeltaClientId) {
+      const originalStorage = deltaStrategy.storage;
+      const redirectedStorage = {
+        name: originalStorage.name,
+        description: originalStorage.description,
+        fetchPreviousData: async (params: { clientId: string; limitTo?: any[] }) => {
+          const redirectedParams = {
+            ...params,
+            clientId: integratedDeltaClientId
+          };
+          console.log(`Redirecting baseline read clientId from ${params.clientId} to ${integratedDeltaClientId}`);
+          return originalStorage.fetchPreviousData(redirectedParams as any);
+        },
+        updatePreviousData: async (params: {
+          clientId: string;
+          newPreviousData: any[];
+          primaryKeyFields?: Set<string>;
+          failureCount?: number;
+          cleanup?: boolean;
+        }) => {
+          // Keep chunk-specific writes unchanged.
+          return originalStorage.updatePreviousData(params as any);
+        }
+      };
+
+      Object.defineProperty(deltaStrategy, 'storage', {
+        get: () => redirectedStorage,
+        configurable: true
+      });
     }
 
     return deltaStrategy;

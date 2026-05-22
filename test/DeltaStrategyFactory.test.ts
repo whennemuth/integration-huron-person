@@ -796,4 +796,90 @@ describe('DeltaStrategyFactory', () => {
       });
     });
   });
+
+  describe('chunked baseline read redirection', () => {
+    let mockStorage: any;
+    let mockStrategy: any;
+
+    beforeEach(() => {
+      mockStorage = {
+        name: 'Mock Storage',
+        description: 'Mock Delta Storage',
+        fetchPreviousData: jest.fn().mockResolvedValue([]),
+        updatePreviousData: jest.fn().mockResolvedValue({ status: 'ok' })
+      };
+
+      mockStrategy = {
+        name: 'MockDeltaStrategy',
+        parms: { clientId: 'test', config: {} },
+        storage: mockStorage,
+        computeDelta: jest.fn()
+      };
+
+      require('integration-core').DeltaStrategyForFileSystem = jest.fn().mockReturnValue(mockStrategy);
+    });
+
+    it('should redirect fetchPreviousData clientId to integratedDeltaClientId when chunked mode is enabled', async () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        chunkId: '0001',
+        bulkReset: false
+      });
+
+      await result.storage.fetchPreviousData({
+        clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z'
+      } as any);
+
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'delta-storage' })
+      );
+    });
+
+    it('should preserve original clientId for updatePreviousData writes in chunked mode', async () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        chunkId: '0001',
+        bulkReset: false
+      });
+
+      await result.storage.updatePreviousData({
+        clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z',
+        newPreviousData: []
+      } as any);
+
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z' })
+      );
+    });
+
+    it('should not redirect fetchPreviousData when chunkId is not provided', async () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        bulkReset: false
+      });
+
+      await result.storage.fetchPreviousData({
+        clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z'
+      } as any);
+
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z' })
+      );
+    });
+  });
 });

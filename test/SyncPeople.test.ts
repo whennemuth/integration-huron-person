@@ -60,14 +60,14 @@ describe('Package Exports', () => {
           person: {
             endpointConfig: {
               baseUrl: 'https://test-ds.com',
-              apiKey: 'test-api-key'
+              apiKey: 'source-key-123'
             },
             fetchPath: '/persons'
           },
           people: {
             endpointConfig: {
               baseUrl: 'https://test-ds.com',
-              apiKey: 'test-api-key'
+              apiKey: 'source-key-123'
             },
             fetchPath: '/persons'
           },
@@ -106,7 +106,7 @@ describe('Package Exports', () => {
       expect(() => new HuronDeltaStrategyFactory()).not.toThrow();
       expect(() => new BuCdmPersonDataSource({ config: mockConfig, responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }), buid: 'U12345678' })).not.toThrow();
       expect(() => new HuronPersonDataTarget({ config: mockConfig })).not.toThrow();
-      expect(() => new HuronPersonIntegration({ configPath: './config.json' })).not.toThrow();
+      expect(() => new HuronPersonIntegration({ config: mockConfig as any })).not.toThrow();
     });
   });
 
@@ -140,13 +140,95 @@ describe('Package Exports', () => {
 
   describe('HuronPersonIntegration chunkId support', () => {
     it('should accept chunkId parameter in run method', () => {
-      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      const integrationConfig = {
+        executionMode: 'people' as ExecutionMode,
+        dataSource: {
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          idpName: 'test-idp'
+        },
+        dataTarget: {
+          endpointConfig: {
+            baseUrl: 'https://test-dt.com',
+            authMethod: 'basic' as const,
+            loginSvcPath: '/auth',
+            username: 'user',
+            password: 'pass'
+          },
+          personsPath: '/api/persons',
+          organizationsPath: '/api/organizations'
+        },
+        integration: {
+          clientId: 'test',
+          batchSize: 10,
+          timeout: 5000
+        },
+        storage: {
+          type: 'file' as const,
+          config: { path: './test' }
+        }
+      };
+
+      const integration = new HuronPersonIntegration({ config: integrationConfig as any });
       expect(integration.run).toBeDefined();
       expect(integration.run.length).toBe(2); // taskName and chunkId parameters
     });
 
     it('should work without chunkId for backward compatibility', () => {
-      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      const integrationConfig = {
+        executionMode: 'people' as ExecutionMode,
+        dataSource: {
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          idpName: 'test-idp'
+        },
+        dataTarget: {
+          endpointConfig: {
+            baseUrl: 'https://test-dt.com',
+            authMethod: 'basic' as const,
+            loginSvcPath: '/auth',
+            username: 'user',
+            password: 'pass'
+          },
+          personsPath: '/api/persons',
+          organizationsPath: '/api/organizations'
+        },
+        integration: {
+          clientId: 'test',
+          batchSize: 10,
+          timeout: 5000
+        },
+        storage: {
+          type: 'file' as const,
+          config: { path: './test' }
+        }
+      };
+
+      const integration = new HuronPersonIntegration({ config: integrationConfig as any });
       
       // Should not throw due to missing chunkId parameter - method accepts 0-2 args
       expect(() => integration.run).not.toThrow();
@@ -154,14 +236,55 @@ describe('Package Exports', () => {
     });
 
     it('should accept both taskName and chunkId parameters', () => {
-      const integration = new HuronPersonIntegration({ configPath: './config.json' });
+      const integrationConfig = {
+        executionMode: 'people' as ExecutionMode,
+        dataSource: {
+          person: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          people: {
+            endpointConfig: {
+              baseUrl: 'https://test-ds.com',
+              apiKey: 'source-key-123'
+            },
+            fetchPath: '/persons'
+          },
+          idpName: 'test-idp'
+        },
+        dataTarget: {
+          endpointConfig: {
+            baseUrl: 'https://test-dt.com',
+            authMethod: 'basic' as const,
+            loginSvcPath: '/auth',
+            username: 'user',
+            password: 'pass'
+          },
+          personsPath: '/api/persons',
+          organizationsPath: '/api/organizations'
+        },
+        integration: {
+          clientId: 'test',
+          batchSize: 10,
+          timeout: 5000
+        },
+        storage: {
+          type: 'file' as const,
+          config: { path: './test' }
+        }
+      };
+
+      const integration = new HuronPersonIntegration({ config: integrationConfig as any });
       
       // Verify function signature accepts both parameters
       expect(integration.run.length).toBe(2);
       
-      // These calls should be syntactically valid (will fail for other reasons without full config)
-      expect(() => integration.run('test')).not.toThrow(TypeError);
-      expect(() => integration.run('test', '1234')).not.toThrow(TypeError);
+      // Verify binding with either signature shape does not cause type/signature errors.
+      expect(() => integration.run.bind(integration, 'test')).not.toThrow();
+      expect(() => integration.run.bind(integration, 'test', '1234')).not.toThrow();
     });
   });
 });

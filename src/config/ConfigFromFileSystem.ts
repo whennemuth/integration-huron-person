@@ -27,6 +27,29 @@ export class ConfigFromFileSystem {
       const parsedConfig = JSON.parse(configContent) as Config;
       
       console.log(`Configuration loaded successfully from: ${absolutePath}`);
+
+      const { 
+        dataTarget: { endpointConfig: { externalToken } = {} } = {} as any, 
+        dataSource: { 
+          person: { endpointConfig: { apiKey: personApiKey } = {} } = {},
+          people: { endpointConfig: { apiKey: peopleApiKey }  = {} } = {} as any,
+          terms: { endpointConfig: { apiKey: termsApiKey } = {} } = {},
+        } = {} 
+      } = parsedConfig;
+
+      // Remove placeholder values so that they can be overridden by other config sources (env vars, secrets manager) without accidentally retaining the placeholder string
+      if (externalToken && /external/i.test(externalToken) && /token/i.test(externalToken)) {
+        delete (parsedConfig as any).dataTarget.endpointConfig.externalToken;
+      }
+      if (personApiKey && /api[-_]?key/i.test(personApiKey)) {
+        delete (parsedConfig as any).dataSource.person.endpointConfig.apiKey;
+      }
+      if (peopleApiKey && /api[-_]?key/i.test(peopleApiKey)) {
+        delete (parsedConfig as any).dataSource.people.endpointConfig.apiKey;
+      }
+      if (termsApiKey && /api[-_]?key/i.test(termsApiKey)) {
+        delete (parsedConfig as any).dataSource.terms.endpointConfig.apiKey;
+      }
       return parsedConfig;
     } catch (error) {
       if (error instanceof Error && error.message.includes('Configuration file not found')) {

@@ -1,5 +1,6 @@
 import { ConfigManager } from '../src/config/ConfigManager';
 import { Config } from '../src/config/Config';
+import { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -17,14 +18,14 @@ describe('ConfigManager', () => {
       person: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
-          apiKey: 'test-api-key'
+          apiKey: 'source-key-123'
         },
         fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
-          apiKey: 'test-api-key'
+          apiKey: 'source-key-123'
         },
         fetchPath: '/api/v1/persons'
       },
@@ -57,6 +58,11 @@ describe('ConfigManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     configManager = ConfigManager.getInstance().reset();
+
+    // Ensure process env does not leak machine-level config into these tests.
+    Object.values(ConfigFromEnvironment.ENV_VARS).forEach((envVar) => {
+      delete process.env[envVar];
+    });
   });
 
 

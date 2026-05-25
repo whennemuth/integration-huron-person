@@ -17,14 +17,14 @@ describe('ConfigFromFileSystem', () => {
       person: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
-          apiKey: 'test-api-key'
+          apiKey: 'source-key-123'
         },
         fetchPath: '/api/v1/persons'
       },
       people: {
         endpointConfig: {
           baseUrl: 'https://datasource.example.com',
-          apiKey: 'test-api-key'
+          apiKey: 'source-key-123'
         },
         fetchPath: '/api/v1/persons'
       },

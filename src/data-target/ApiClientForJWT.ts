@@ -6,6 +6,7 @@ import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { AuthBasic, BasicAuthConfig } from './AuthBasic';
 import type { TokenAuthConfig } from './AuthToken';
 import { AuthToken } from './AuthToken';
+import { error as logError } from '../Utils';
 
 export type TargetApiErrorEventProcessor = { process: (error: any, details?: ErrorEventDetails) => Promise<void> };
 
@@ -153,7 +154,11 @@ export class ApiClientForJWT implements IApiClient {
             }
           } 
           catch (refreshError) {
-            console.error('[ApiClientForJWT] Error during token refresh after 401:', refreshError);
+            logError({ 
+              o: refreshError, 
+              msg: '[ApiClientForJWT] Error during token refresh after 401:',
+              flat: true
+            });
             return Promise.reject(refreshError);
           }
         }
@@ -303,7 +308,7 @@ export class ApiClientForJWT implements IApiClient {
     }
     catch (error) {
       this.errorEventProcessor?.process(error, this.errorEventDetails);
-      throw error;
+      throw new Error('Axios request failed');
     }
 
     if(!params.responseFilter) {

@@ -304,7 +304,7 @@ describe('ApiClientForJWT', () => {
       
       mockAxiosInstance.get.mockRejectedValue(networkError);
 
-      await expect(apiClient.get({ url: '/test', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toThrow('Network Error');
+      await expect(apiClient.get({ url: '/test', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toThrow('Axios request failed');
     });
 
     it('should handle HTTP error responses', async () => {
@@ -323,7 +323,7 @@ describe('ApiClientForJWT', () => {
       
       mockAxiosInstance.get.mockRejectedValue(httpError);
 
-      await expect(apiClient.get({ url: '/nonexistent', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toEqual(httpError);
+      await expect(apiClient.get({ url: '/nonexistent', responseFilter: new AxiosResponseStreamFilter({ fieldsOfInterest: ['id'] }) })).rejects.toThrow('Axios request failed');
     });
   });
 

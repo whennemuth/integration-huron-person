@@ -24,7 +24,7 @@ export { ApiClientForApiKey as BuApiClientForApiKey, EndpointConfigForApiKey } f
 export { AuthToken, TokenAuthConfig } from '../src/data-target/AuthToken';
 export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiClient, ApiRetryStrategy, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../src/data-target/ApiClientForJWT';
 export * from '../src/data-target/crud/Person';
-export { ReadPerson } from '../src/data-target/crud/ReadPerson';
+export { PersonResponse, ReadPerson, getPersonData, HuronPersonIdType } from '../src/data-target/crud/ReadPerson';
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';
 export { ListPeople } from '../src/data-target/crud/ListPeople';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';

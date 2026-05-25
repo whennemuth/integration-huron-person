@@ -1,4 +1,4 @@
-import { DataMapper as CoreDataMapper, CrudOperation, Field, FieldSet, Input, InputParser } from 'integration-core';
+import { DataMapper as CoreDataMapper, CrudOperation, Field, FieldDefinition, FieldSet, Input, InputParser } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, getLocalConfig, isEmpty, removeEmptyValues } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
@@ -326,9 +326,17 @@ export class DataMapper implements CoreDataMapper {
  * @param rawData Array of person data objects from Huron API endpoint.
  */
 export class ReverseDataMapper implements CoreDataMapper {
-  public map(rawData: any[], crudOperation?: CrudOperation): Input {
+  private fieldDefinitions: FieldDefinition[] = [..._fieldDefinitions];
 
-    const fieldDefinitions = [..._fieldDefinitions];
+  public addFieldDefinition(fieldDef: FieldDefinition): ReverseDataMapper {
+    const found: FieldDefinition | undefined = this.fieldDefinitions.find(fd => fd.name === fieldDef.name);
+    if (!found) {
+      this.fieldDefinitions.push(fieldDef);
+    }
+    return this;
+  }
+
+  public map(rawData: any[], crudOperation?: CrudOperation): Input {
     
     const fieldSets = rawData.map(person => {
       // Convert Huron person object to FieldSet format, omitting null/undefined values
@@ -337,7 +345,7 @@ export class ReverseDataMapper implements CoreDataMapper {
       if (person && typeof person === 'object') {
         Object.keys(person).forEach(key => {
           if ( ! isEmpty(person[key]) ) {
-            if (fieldDefinitions.some(fd => fd.name === key) ) {
+            if (this.fieldDefinitions.some(fd => fd.name === key) ) {
               fieldValues.push({ [key]: removeEmptyValues(person[key]) });           
             }            
           }
@@ -348,7 +356,7 @@ export class ReverseDataMapper implements CoreDataMapper {
     });
 
     return {
-      fieldDefinitions,
+      fieldDefinitions: this.fieldDefinitions,
       fieldSets
     };
   }

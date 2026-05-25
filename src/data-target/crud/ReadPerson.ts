@@ -114,6 +114,53 @@ class ReadPerson {
   }
 }
 
+enum HuronPersonIdType {
+  HRN = 'hrn',
+  ID = 'id',
+  USER_ID = 'uid',
+  SOURCE_ID = 'sid',
+  EMAIL = 'email',
+  HAIL_MARY = 'hail-mary'
+}
+
+const getPersonData = async (params: { 
+  reader: ReadPerson, huronPersonIdType?: HuronPersonIdType, id?: string 
+}): Promise<HuronPerson | HuronPerson[]> => {
+
+  const { reader, huronPersonIdType, id } = params;
+  const { 
+    HURON_PERSON_ID_TYPE, 
+    HURON_PERSON_ID, 
+    HURON_PERSON_HRN, 
+    HURON_PERSON_SOURCE_ID, 
+    HURON_PERSON_USER_ID,
+    HURON_PERSON_EMAIL
+  } = process.env;
+
+  switch (huronPersonIdType ?? HURON_PERSON_ID_TYPE) {
+    case 'id':
+      console.log(`Reading person by ID: ${HURON_PERSON_ID ?? id}`);
+      return reader.readPersonById(HURON_PERSON_ID ?? id!);
+    case 'hrn':
+      console.log(`Reading person by HRN: ${HURON_PERSON_HRN ?? id}`);
+      return reader.readPersonByHRN(HURON_PERSON_HRN ?? id!);
+    case 'sid':
+      console.log(`Reading person by Source Identifier: ${HURON_PERSON_SOURCE_ID ?? id}`);
+      return reader.readPersonBySourceIdentifier(HURON_PERSON_SOURCE_ID ?? id!);
+    case 'uid':
+      console.log(`Reading person by User ID: ${HURON_PERSON_USER_ID ?? id}`);
+      return reader.readPersonByUserId(HURON_PERSON_USER_ID ?? id!);
+    case 'email':
+      console.log(`Reading person by Email: ${HURON_PERSON_EMAIL ?? id}`);
+      return reader.readPersonByEmail(HURON_PERSON_EMAIL ?? id!);
+    case 'hail-mary':
+      console.log(`Reading person by Hail Mary with value: ${HURON_PERSON_SOURCE_ID ?? id}`);
+      return reader.readPersonByHailMary(HURON_PERSON_SOURCE_ID ?? id!);
+    default:
+      console.error('Please set HURON_PERSON_ID_TYPE to one of: hrn, sid, uid, id, email');
+      return [];
+  }
+}
 
 async function main() {
   const config = ConfigManager.
@@ -123,46 +170,7 @@ async function main() {
     .getConfig('none');
 
   const reader = new ReadPerson(config);
-
-  const { 
-    HURON_PERSON_ID_TYPE, 
-    HURON_PERSON_ID, 
-    HURON_PERSON_HRN, 
-    HURON_PERSON_SOURCE_ID, 
-    HURON_PERSON_USER_ID,
-    HURON_PERSON_EMAIL
-  } = process.env;
-  let personData: HuronPerson | HuronPerson[];
-
-  switch (HURON_PERSON_ID_TYPE) {
-    case 'id':
-      console.log(`Reading person by ID: ${HURON_PERSON_ID}`);
-      personData = await reader.readPersonById(HURON_PERSON_ID!);
-      break;
-    case 'hrn':
-      console.log(`Reading person by HRN: ${HURON_PERSON_HRN}`);
-      personData = await reader.readPersonByHRN(HURON_PERSON_HRN!);
-      break;
-    case 'sid':
-      console.log(`Reading person by Source Identifier: ${HURON_PERSON_SOURCE_ID}`);
-      personData = await reader.readPersonBySourceIdentifier(HURON_PERSON_SOURCE_ID!);
-      break;
-    case 'uid':
-      console.log(`Reading person by User ID: ${HURON_PERSON_USER_ID}`);
-      personData = await reader.readPersonByUserId(HURON_PERSON_USER_ID!);
-      break;
-    case 'email':
-      console.log(`Reading person by Email: ${HURON_PERSON_EMAIL}`);
-      personData = await reader.readPersonByEmail(HURON_PERSON_EMAIL!);
-      break;
-    case 'hail-mary':
-      console.log(`Reading person by Hail Mary with value: ${HURON_PERSON_SOURCE_ID}`);
-      personData = await reader.readPersonByHailMary(HURON_PERSON_SOURCE_ID!);
-      break;
-    default:
-      console.error('Please set HURON_PERSON_ID_TYPE to one of: hrn, sid, uid, id, email');
-      return;
-  }
+  const personData: HuronPerson | HuronPerson[] = await getPersonData({ reader });
 
   try {
     console.log('Retrieved Person Data:', JSON.stringify(personData, null, 2));
@@ -176,5 +184,5 @@ if (require.main === module) {
   main();
 }
 
-export { PersonResponse, ReadPerson };
+export { PersonResponse, ReadPerson, getPersonData, HuronPersonIdType };
 

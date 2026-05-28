@@ -10,6 +10,7 @@ describe('HashStorageUpdater', () => {
       name: 'Mock Storage',
       description: 'Mock storage for testing',
       fetchPreviousData: jest.fn(),
+      wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
       updatePreviousData: jest.fn()
     } as any;
   });

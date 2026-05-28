@@ -124,6 +124,9 @@ export class DeltaStrategyFactory {
           // We can still fetch previous data to compute delta, but we won't update it after 
           return originalStorage.fetchPreviousData(params); 
         },
+        wouldOverwritePreviousData: async (clientId: string) => {
+          return originalStorage.wouldOverwritePreviousData(clientId);
+        },
         updatePreviousData: async (params:any) => {
           console.log(`[DRY RUN] - updatePreviousData: ${JSON.stringify(params, null, 2)}`);
           return;
@@ -194,6 +197,9 @@ export class DeltaStrategyFactory {
           };
           console.log(`Redirecting baseline read clientId from ${params.clientId} to ${integratedDeltaClientId}`);
           return originalStorage.fetchPreviousData(redirectedParams as any);
+        },
+        wouldOverwritePreviousData: async (clientId: string) => {
+          return originalStorage.wouldOverwritePreviousData(clientId);
         },
         updatePreviousData: async (params: {
           clientId: string;

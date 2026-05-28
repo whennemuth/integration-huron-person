@@ -207,7 +207,9 @@ export class DataMapper implements CoreDataMapper {
           // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
           { __arrayFieldOperations: { append: [ 'roles' ] } },
           // Special field to carry skip reason through the pipeline (not sent to API - will be "skipped")
-          ...(skipReason ? [{ __skipReason: skipReason }] : [])
+          ...(skipReason ? [{ __skipReason: `DEACTIVATE: ${skipReason}` }] : []),
+          // Special field for reactivation: set active=true for UPDATE operations (excluded from hash)
+          { __active: true }
         ] as Field[];
 
         // Add userId only if it has a value (undefined for UPDATE operations)

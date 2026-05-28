@@ -471,6 +471,7 @@ describe('SinglePersonSync', () => {
       // Create mock storage
       mockStorage = {
         fetchPreviousData: jest.fn().mockResolvedValue([]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
         updatePreviousData: jest.fn().mockResolvedValue(undefined)
       };
 
@@ -683,6 +684,7 @@ describe('SinglePersonSync', () => {
       // Create mock storage for hash storage tests
       mockStorage = {
         fetchPreviousData: jest.fn().mockResolvedValue([]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
         updatePreviousData: jest.fn().mockResolvedValue(undefined)
       };
 

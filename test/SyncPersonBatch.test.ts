@@ -340,6 +340,7 @@ describe('BatchPersonSync', () => {
       // Create mock storage
       mockStorage = {
         fetchPreviousData: jest.fn().mockResolvedValue([]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
         updatePreviousData: jest.fn().mockResolvedValue(undefined)
       };
 

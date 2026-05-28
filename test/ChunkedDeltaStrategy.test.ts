@@ -31,6 +31,7 @@ describe('ChunkedDeltaStrategy', () => {
       name: 'MockStorage',
       description: 'Mock storage for testing',
       fetchPreviousData: jest.fn(),
+      wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
       updatePreviousData: jest.fn()
     } as any;
 

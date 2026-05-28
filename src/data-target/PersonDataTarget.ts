@@ -13,11 +13,11 @@ import {
 import { Cache } from '../Cache';
 import { Config, TargetPersonDeleteType } from '../config/Config';
 import { MappingValidator } from '../data-mapper/MappingValidator';
-import { ApiClientForJWT, EndpointConfigForJWT, ErrorEventDetails, TargetApiErrorEventProcessor } from './ApiClientForJWT';
-import { HuronPerson } from './crud/Person';
-import { ReadPerson } from './crud/ReadPerson';
-import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 import { deepClone } from '../Utils';
+import { ApiClientForJWT, EndpointConfigForJWT, ErrorEventDetails, TargetApiErrorEventProcessor } from './ApiClientForJWT';
+import { DeletePersonResult, HuronPersonDataTargetDelete } from './PersonDataTargetDelete';
+import { HuronPersonDataTargetUpdate, UpdatePersonResult } from './PersonDataTargetUpdate';
+import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
 
 /**
  * Request format for pushing person data to Huron API
@@ -42,12 +42,13 @@ export interface PersonPushResponse {
 export class HuronPersonDataTarget implements DataTarget {
   public readonly name = 'Huron Person Data Target';
   public readonly description = 'Pushes person data to Huron API endpoint';
+  private static readonly PAYLOAD_INTERNAL_FIELD_ALLOWLIST = new Set(['__arrayFieldOperations']);
 
   private apiClient: ApiClientForJWT;
-  private apiUserLookup: { lookupResult: HuronPerson | undefined };
   private config: Config;
   private hrn: string | undefined;
-  private errorEventProcessor
+  private errorEventProcessor: TargetApiErrorEventProcessor | undefined;
+  private lastValidationResult: { result?: SinglePushResult | undefined, deactivate: boolean };
 
   constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string, errorEventProcessor?: TargetApiErrorEventProcessor }) {
   // constructor(config: Config, cache?: Cache<string, string>) {
@@ -76,64 +77,30 @@ export class HuronPersonDataTarget implements DataTarget {
   }
 
   /**
-   * Lookup the API user as a Person record in Huron, to get their HRN and other details. 
-   * This is used for auditing and to prevent the API user from accidentally deleting themselves.
-   * @returns The Person record of the API user, or undefined if it cannot be determined
-   */
-  private getApiUser = async (): Promise<HuronPerson | undefined> => {
-    if (this.apiUserLookup) {
-      return this.apiUserLookup.lookupResult;
-    }
-    const userId = this.apiClient.getUserId();
-    if (!userId) {
-      console.warn('Unable to determine API user ID from token. API user-specific operations will not be possible.');
-      return undefined;
-    } 
-    const reader = new ReadPerson(this.config);
-    const retval = await reader.readPersonByUserId(userId);
-    if(retval.length === 0) {
-      console.warn(`API user with ID ${userId} not found in Huron. API user-specific operations will not be possible.`);
-      this.apiUserLookup = { lookupResult: undefined };
-      return undefined;
-    }
-    this.apiUserLookup = { lookupResult: retval[0] };
-    return this.apiUserLookup.lookupResult;
-  }
-
-  /**
    * Push a single person record to Huron API
    */
   async pushOne(params: PushOneParms): Promise<SinglePushResult> {
     const { data, crud } = params;
     const { DRY_RUN='false' } = process.env;
     const dryRun = DRY_RUN.toLowerCase().trim() === 'true';
+    const { CREATE, UPDATE, DELETE } = CrudOperation;
 
     // Validate the record before attempting to push
-    const validationFailure = this.getValidationFailure({ record: data, crud });
-    if (validationFailure) {
-      return validationFailure;
+    this.lastValidationResult = this.getValidationFailure({ record: data, crud }) ?? {};
+    const { result:failure, deactivate } = this.lastValidationResult;
+    // CREATE validation failures (including skip/deactivate scenarios) must not proceed to API calls.
+    if (failure && crud === CREATE) {
+      const action = deactivate ? 'Skipped' : 'Cancelled';
+      console.log(`⊘ ${action} ${crud}: ${failure.skipReason}`);
+      return failure;
     }
 
-    /**
-     * Get all keys that could potentially identify a person record, and return those that are present.
-     * @param data 
-     * @returns 
-     */
-    const getPersonIdentifierInfo = (data: any): string => {
-      const { hrn, id, userId, sourceIdentifier, employeeId } = data || {};
-      const retvalObj = {
-        hrn: hrn || undefined,
-        id: id || undefined,
-        userId: userId || undefined,
-        sourceIdentifier: sourceIdentifier || undefined,
-        employeeId: employeeId || undefined,
-        active: 'active' in data ? data.active : undefined
-      }
-      return Object.values(retvalObj).find(v => v !== undefined) ?
-        JSON.stringify(retvalObj) : 
-        'unknown';
-    };
-    
+    // UPDATE validation failures only short-circuit when they are not deactivation scenarios.
+    if (failure && crud === UPDATE && !deactivate) {
+      console.log(`⊘ Cancelled ${crud}: ${failure.skipReason}`);
+      return failure;
+    }
+
     try {
       // Convert FieldSet to API request format
       const personRequest = HuronPersonDataTarget.convertFieldSetToRequest(data, crud);
@@ -146,8 +113,9 @@ export class HuronPersonDataTarget implements DataTarget {
         console.log(`[DRY RUN] Would perform ${crud} operation on endpoint ${endpoint} with data:`, personRequest.data);
       }
       else {
+        let retval: UpdatePersonResult | DeletePersonResult | undefined;
 
-        if (crud === CrudOperation.CREATE) {
+        const createPerson = async () => {
           console.log(`Pushing single person record with CREATE operation:`, getPersonIdentifierInfo(personRequest.data));
           // CREATE: Use POST to /api/v2/persons
           this.apiClient.setErrorEventDetails({ message: 'Huron creation error', object: { 
@@ -155,128 +123,74 @@ export class HuronPersonDataTarget implements DataTarget {
             sourceIdentifier: personRequest.data?.sourceIdentifier 
           }});
           response = await this.apiClient.post<PersonPushResponse>(endpoint, personRequest.data);
-        } else if (crud === CrudOperation.UPDATE) {
-          // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
-          console.log(`Pushing single person record with PATCH operation:`, getPersonIdentifierInfo(personRequest.data));
-          if (personRequest.data?.hrn) {
-            _hrn = personRequest.data.hrn;
-            endpoint = `${endpoint}/${_hrn}`;
-            // response = await this.apiClient.put<PersonPushResponse>(endpoint, personRequest.data);
-            this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
-              hrn: personRequest.data?.hrn, 
-              sourceIdentifier: personRequest.data?.sourceIdentifier 
-            }});
-            response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
-          } else {
-            // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
-            const reader = new ReadPerson(this.config);
-            const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
-            _hrn = result?.[0]?.hrn;
-            if( ! _hrn) {
-              return {
-                status: Status.FAILURE,
-                message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
-                timestamp: new Date(),
-                primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv || 'id' in fv),
-                crud
-              };
-            }
-
-            // Perform the patch now that the hrn is known
-            personRequest.data.hrn = _hrn;
-            endpoint = `${endpoint}/${_hrn}`;
-            this.apiClient.setErrorEventDetails({ message: 'Huron patching error', object: { 
-              hrn: _hrn, 
-              sourceIdentifier: personRequest.data?.sourceIdentifier 
-            }});
-            response = await this.apiClient.patch<PersonPushResponse>(endpoint, personRequest.data);
-          }
-        } else if (crud === CrudOperation.DELETE) {
-          // Check first if the api user is trying to delete themselves and prevent it.
-          const apiUserId = this.apiClient.getUserId();
-          if(apiUserId) {
-            const apiUser = await this.getApiUser();
-            if(apiUser) {
-              const { id, sourceIdentifier } = apiUser || {};
-              const { 
-                fullData: { id: id2, sourceIdentifier: sourceIdentifier2 } = {},              
-              } = personRequest;
-              if ((id && id === id2) || (sourceIdentifier && sourceIdentifier === sourceIdentifier2)) {
-                const errorMsg = '⊘ API user attempted to delete/deactivate themselves. This operation is not allowed and has been prevented.';
-                console.error(errorMsg);
-                return {
-                  status: Status.FAILURE,
-                  message: errorMsg,
-                  timestamp: new Date(),
-                  primaryKey: [{ id: id2, sourceIdentifier: sourceIdentifier2 || sourceIdentifier2 }],
-                  crud
-                };  
-              }
-            }
-          }
-
-          console.log(`Soft deleting single person record with PATCH operation:`, getPersonIdentifierInfo(data));
-          // DELETE: Implement as soft delete by setting active: false
-          // Extract HRN from the original fieldSet data
-          _hrn = data.fieldValues.find((fv: any) => fv.hrn)?.hrn as string | undefined;
-          if (_hrn) {
-            const { SOFT, HARD, LOG, NONE } = TargetPersonDeleteType;
-            const deleteType = personRequest.deleteType || SOFT; // Default to SOFT delete if not specified
-            
-            let patch = true;
-            switch (deleteType) {
-              case HARD:
-                console.warn(`HARD delete requested for HRN ${_hrn}. But only SOFT delete (deactivation) is allowed - deactivating instead.`);
-                break;
-              case LOG:
-                console.log(`${_hrn} not present anymore in source system. Logging this event but not deactivating in Huron as per configuration.`);
-                patch = false;
-                break;
-              case NONE:
-                patch = false;
-                break;
-            }
-            if(patch) {
-              endpoint = `${endpoint}/${_hrn}`;
-              // For soft delete, we only need to set active: false
-              const softDeleteData = { hrn: _hrn, active: false };
-              this.apiClient.setErrorEventDetails({ message: 'Huron deletion error', object: { 
-                hrn: _hrn, 
-                sourceIdentifier: data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier 
-              }});
-              response = await this.apiClient.patch<PersonPushResponse>(endpoint, softDeleteData);
-            }
-          } else {
-            const errorMsg = 'Cannot perform soft delete: no HRN available for person';
-            console.error(`${errorMsg}:`, getPersonIdentifierInfo(data));
-            return {
-              status: Status.FAILURE,
-              message: errorMsg,
-              timestamp: new Date(),
-              primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'sourceIdentifier' in fv),
-              crud
-            };
-          }
-        } else {
-          return {
-            status: Status.FAILURE,
-            message: `Unsupported CRUD operation: ${crud}`,
-            timestamp: new Date(),
-            primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
-            crud
-          };
+          retval = { response };          
         }
+
+        const updatePerson = async () => {
+          const updater = new HuronPersonDataTargetUpdate({
+            config: this.config, apiClient: this.apiClient, pushOneParms: params 
+          });
+          retval = await updater.updatePerson();
+          _hrn = updater.hrn();
+        }
+
+        const deactivatePerson = async () => {
+          const deleter = new HuronPersonDataTargetDelete({
+            config: this.config, apiClient: this.apiClient, pushOneParms: params 
+          });
+          retval = await deleter.deletePerson();
+          _hrn = deleter.hrn();
+        }
+
+        switch(crud) {
+
+          case CREATE:
+            await createPerson();
+            break;
+
+          case UPDATE:
+            if(deactivate) {
+              await deactivatePerson();
+            }
+            else {
+              await updatePerson();
+            }
+            break;
+
+          case DELETE:
+            await deactivatePerson();
+            break;
+
+          default:
+            retval = {
+              result: {
+                status: Status.FAILURE,
+                message: `Unsupported CRUD operation: ${crud}`,
+                timestamp: new Date(),
+                primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv),
+                crud
+              }
+            };
+        }
+
+        const { result, response: resp } = retval || {};
+        if(result) {
+          return result;
+        }
+        response = resp;
       }
       
       const { data:rspData, status, statusText } = response || {};
-      const result = { status, statusText, hrn: _hrn, data: rspData }; 
+      const hrn = _hrn || this.hrn;
+      const result = { status, statusText, hrn, data: rspData }; 
       
       // API returns {hrn: string} on success
       return {
         status: Status.SUCCESS,
         message: `Successfully pushed person record: ${this.getResponseData(result)}`,
         timestamp: new Date(),
-        primaryKey: [{ hrn: _hrn }],
+
+        primaryKey: [{ hrn }],
         crud
       };
     } 
@@ -331,24 +245,28 @@ export class HuronPersonDataTarget implements DataTarget {
           crud = DELETE;
         }
 
-        const validationFailure = this.getValidationFailure({ record, crud });
-        // Add to failures if validation fails. For deletes, we want to attempt the 
-        // operation even if validation fails, to allow for soft-deletion of records 
-        // that may no longer conform to the schema but still need to be deactivated 
-        // in the target system
-        if (validationFailure && crud !== DELETE) {
-          // Check if this should be skipped rather than failed
-          if (validationFailure.skipReason) {
-            console.log(`⊘ Skipped ${crud}: ${validationFailure.skipReason}`);
-            skipped.push(validationFailure);
-          } else {
-            failures.push(validationFailure);
-          }
+        const result = await this.pushOne({ data: record, crud });
+        const { result: failure, deactivate } = this.lastValidationResult || {};
+
+        /**
+         * Add to failures if validation fails. For deletes, we want to attempt the
+         * operation even if validation fails, to allow for soft-deletion of records
+         * that may no longer conform to the schema but still need to be deactivated
+         * in the target system
+         */
+        if(failure && crud === UPDATE && !deactivate) {
+          failures.push(failure);
           continue;
         }
-        
-        const result = await this.pushOne({ data: record, crud });
-        
+        if(failure && crud === CREATE && !deactivate) {
+          failures.push(failure);
+          continue;
+        }
+        if(deactivate && crud === CREATE) {
+          skipped.push(failure!);
+          continue;
+        }
+
         if (result.status === Status.SUCCESS) {
           console.log(`✓ Successfull ${crud} for: ${JSON.stringify(result)}`);
           successes.push(result);
@@ -391,10 +309,17 @@ export class HuronPersonDataTarget implements DataTarget {
    * @param params 
    * @returns 
    */
-  private getValidationFailure = (params: { record: FieldSet, crud: CrudOperation }): SinglePushResult | undefined => {
+  private getValidationFailure = (params: { record: FieldSet, crud: CrudOperation }): { result?: SinglePushResult | undefined, deactivate: boolean } => {
     const { record, crud } = params;
     const mappingValidator = new MappingValidator(record);
-    if(crud === CrudOperation.CREATE && !mappingValidator.isValidForTarget()) {
+    let deactivate: boolean = false;
+
+    if(!mappingValidator.isValidForTarget()) {
+      const shouldValidate = crud === CrudOperation.CREATE || crud === CrudOperation.UPDATE;
+      if(!shouldValidate) {
+        return { deactivate };
+      }
+
       const pk = record.fieldValues.filter((fv: any) => 'id' in fv || 'hrn' in fv);
       const sourceIdentifier = record.fieldValues.find((fv: any) => 'sourceIdentifier' in fv)?.sourceIdentifier;
       const hrn = record.fieldValues.find((fv: any) => 'hrn' in fv)?.hrn;
@@ -402,7 +327,50 @@ export class HuronPersonDataTarget implements DataTarget {
       
       // Only log to DynamoDB if this is a genuine error (not a skip scenario)
       // Skip scenarios are expected/natural and shouldn't be tracked as errors
-      if (!skipReason) {
+      if (skipReason) {
+        deactivate = skipReason.toUpperCase().startsWith('DEACTIVATE');
+
+        // UPDATE validation should only convert to deactivation for explicit DEACTIVATE reasons.
+        // For non-deactivate UPDATE violations, allow update flow to continue (partial PATCH semantics).
+        if (crud === CrudOperation.UPDATE && !deactivate) {
+          return { deactivate: false };
+        }
+      }
+      else if (crud === CrudOperation.UPDATE) {
+        // UPDATEs may legitimately be partial and fail CREATE-level validation checks.
+        // Do not block UPDATE unless there is an explicit deactivation reason.
+        return { deactivate: false };
+      }
+
+      if (crud === CrudOperation.UPDATE && deactivate) {
+        return {
+          result: {
+            status: Status.FAILURE,
+            message: `Validation indicates UPDATE should be deactivated for primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
+            timestamp: new Date(),
+            primaryKey: pk,
+            crud,
+            skipReason
+          },
+          deactivate
+        };
+      }
+
+      if (crud === CrudOperation.CREATE && skipReason) {
+        return {
+          result: {
+            status: Status.FAILURE,
+            message: `Validation skipped CREATE for record with primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
+            timestamp: new Date(),
+            primaryKey: pk,
+            crud,
+            skipReason
+          },
+          deactivate
+        };
+      }
+
+      if (crud === CrudOperation.CREATE) {
         // Log the validation error only for genuine failures (not skips)
         const errMsg = `✗ ${crud} cancelled!`;
         const info = {
@@ -441,23 +409,50 @@ export class HuronPersonDataTarget implements DataTarget {
 
         // Process the simulated error through errorEventProcessor (logs to console and DynamoDB)
         this.errorEventProcessor?.process(simulatedError, errorDetails);
+
+        return {
+          result: {
+            status: Status.FAILURE,
+            message: `Validation failed for record with primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
+            timestamp: new Date(),
+            primaryKey: pk,
+            crud,
+            skipReason
+          },
+          deactivate
+        };
       }
 
-      return {
-        status: Status.FAILURE,
-        message: `Validation failed for record with primary key ${JSON.stringify(pk)}: ${mappingValidator.getViolations().join('; ')}`,
-        timestamp: new Date(),
-        primaryKey: pk,
-        crud,
-        skipReason // Pass through skip reason if present
-      };
+      return { deactivate: false };
     }
-    return undefined;
+
+    return { deactivate };
   }
 
   /**
    * Convert FieldSet to Huron API request format
    */
+  private static stripInternalFields(payload: any): any {
+    if (Array.isArray(payload)) {
+      return payload.map(item => HuronPersonDataTarget.stripInternalFields(item));
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return payload;
+    }
+
+    return Object.entries(payload).reduce((acc: any, [key, value]) => {
+      if (
+        key.startsWith('__') &&
+        !HuronPersonDataTarget.PAYLOAD_INTERNAL_FIELD_ALLOWLIST.has(key)
+      ) {
+        return acc;
+      }
+      acc[key] = HuronPersonDataTarget.stripInternalFields(value);
+      return acc;
+    }, {});
+  }
+
   public static convertFieldSetToRequest(fieldSet: any, operation: CrudOperation): PersonPushRequest {
     // Determine the correct API path and method based on operation
     let path: SchemaPath;
@@ -482,6 +477,12 @@ export class HuronPersonDataTarget implements DataTarget {
         if (data && 'userId' in data) {
           delete data.userId;
         }
+        // For reactivation: extract __active flag and explicitly set active=true in the request
+        // This ensures that reactivating a person explicitly sets the person to active status
+        const activeField = fieldSet.fieldValues.find((fv: any) => '__active' in fv);
+        if (activeField && '__active' in activeField && activeField.__active === true) {
+          data.active = true;
+        }
         break;
       case CrudOperation.DELETE:
         // DELETE: Implement as soft delete by setting active: false
@@ -493,6 +494,8 @@ export class HuronPersonDataTarget implements DataTarget {
       default:
         throw new Error(`Unsupported CRUD operation: ${operation}`);
     }
+
+    data = HuronPersonDataTarget.stripInternalFields(data);
 
     return { operation, data, fullData };
   }
@@ -520,4 +523,23 @@ export class HuronPersonDataTarget implements DataTarget {
   }
 }
 
+/**
+ * Get all keys that could potentially identify a person record, and return those that are present.
+ * @param data 
+ * @returns 
+ */
+export const getPersonIdentifierInfo = (data: any): string => {
+  const { hrn, id, userId, sourceIdentifier, employeeId } = data || {};
+  const retvalObj = {
+    hrn: hrn || undefined,
+    id: id || undefined,
+    userId: userId || undefined,
+    sourceIdentifier: sourceIdentifier || undefined,
+    employeeId: employeeId || undefined,
+    active: 'active' in data ? data.active : undefined
+  }
+  return Object.values(retvalObj).find(v => v !== undefined) ?
+    JSON.stringify(retvalObj) : 
+    'unknown';
+};
 

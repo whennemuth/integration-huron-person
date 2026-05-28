@@ -79,6 +79,45 @@ describe('FieldFilter', () => {
       expect(result.fieldValues.some(fv => '__arrayFieldOperations' in fv)).toBe(false);
     });
 
+    it('should exclude __active so it cannot influence hashing', () => {
+      const withActive: FieldSet = {
+        fieldValues: [
+          { id: 'U12345678' },
+          { firstName: 'John' },
+          { lastName: 'Doe' },
+          { __active: true }
+        ]
+      };
+
+      const withoutActive: FieldSet = {
+        fieldValues: [
+          { id: 'U12345678' },
+          { firstName: 'John' },
+          { lastName: 'Doe' }
+        ]
+      };
+
+      const paramsWithActive: FieldFilterParams = {
+        fieldSet: withActive,
+        stateMappings: mockStateMappings,
+        countryMappings: mockCountryMappings,
+        orgMappings: mockOrgMappings
+      };
+
+      const paramsWithoutActive: FieldFilterParams = {
+        fieldSet: withoutActive,
+        stateMappings: mockStateMappings,
+        countryMappings: mockCountryMappings,
+        orgMappings: mockOrgMappings
+      };
+
+      const filteredWithActive = new FieldFilter(paramsWithActive).filter();
+      const filteredWithoutActive = new FieldFilter(paramsWithoutActive).filter();
+
+      expect(filteredWithActive.fieldValues.some(fv => '__active' in fv)).toBe(false);
+      expect(filteredWithActive.fieldValues).toEqual(filteredWithoutActive.fieldValues);
+    });
+
     it('should filter out objects with only undefined/null properties', () => {
       const fieldSet: FieldSet = {
         fieldValues: [

@@ -12,6 +12,7 @@ describe('IgnoreRemovalsDeltaStrategy', () => {
       name: 'Mock Storage',
       description: 'Mock storage for testing',
       fetchPreviousData: jest.fn(),
+      wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
       updatePreviousData: jest.fn()
     };
 

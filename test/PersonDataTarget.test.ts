@@ -388,6 +388,59 @@ describe('HuronPersonDataTarget', () => {
       });
     });
 
+    it('should include active: true in UPDATE operation when __active flag is present', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-1',
+        firstName: 'John',
+        lastName: 'Smith',
+        department: 'Marketing',
+        __active: true  // Special field for reactivation
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.UPDATE);
+
+      // The __active flag should be extracted and converted to active: true in the request payload
+      expect(result.operation).toBe('update');
+      expect(result.data.active).toBe(true);
+      expect(result.data).not.toHaveProperty('__active');
+      expect(result.data.id).toBe('person-1');
+      expect(result.data.firstName).toBe('John');
+    });
+
+    it('should strip internal __ fields from payload data but preserve fullData', () => {
+      const fieldSet = createFieldSet({
+        firstName: 'John',
+        lastName: 'Doe',
+        __active: true,
+        __mappingError: false
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.CREATE);
+
+      expect(result.operation).toBe('create');
+      expect(result.data).not.toHaveProperty('__active');
+      expect(result.data).not.toHaveProperty('__mappingError');
+
+      // fullData is intentionally preserved for downstream decision-making and diagnostics
+      expect(result.fullData).toBeDefined();
+    });
+
+    it('should preserve __arrayFieldOperations in outbound payload data', () => {
+      const fieldSet = createFieldSet({
+        id: 'person-1',
+        roles: [{ hrn: 'hrn:hrs:lists:roles/irb-general-user' }],
+        __arrayFieldOperations: { append: ['roles'] },
+        __active: true
+      });
+
+      const result = HuronPersonDataTarget.convertFieldSetToRequest(fieldSet, CrudOperation.UPDATE);
+
+      expect(result.operation).toBe('update');
+      expect(result.data).toHaveProperty('__arrayFieldOperations');
+      expect(result.data.__arrayFieldOperations).toEqual({ append: ['roles'] });
+      expect(result.data).not.toHaveProperty('__active');
+    });
+
     it('should convert DELETE operation correctly', () => {
       const fieldSet = createFieldSet({
         id: 'person-1'
@@ -469,6 +522,37 @@ describe('HuronPersonDataTarget', () => {
       expect(result.status).toBe(Status.SUCCESS);
       expect(result.crud).toBe(CrudOperation.UPDATE);
       expect(result.primaryKey).toEqual([{ hrn: 'hrn:hrs:persons:12345' }]);
+    });
+
+    it('should not send __active in PATCH payload for UPDATE operations', async () => {
+      const mockResponse: PersonPushResponse = {
+        hrn: 'hrn:hrs:persons:12345'
+      };
+      mockApiClient = new MockApiClient(mockResponse);
+      (dataTarget as any).apiClient = mockApiClient;
+
+      const patchSpy = jest.spyOn(mockApiClient, 'patch');
+
+      const fieldSet = createFieldSet({
+        hrn: 'hrn:hrs:persons:12345',
+        id: 'person-1',
+        firstName: 'Updated',
+        lastName: 'Name',
+        __active: true
+      });
+
+      const params: PushOneParms = {
+        data: fieldSet,
+        crud: CrudOperation.UPDATE
+      };
+
+      const result = await dataTarget.pushOne(params);
+
+      expect(result.status).toBe(Status.SUCCESS);
+      expect(patchSpy).toHaveBeenCalledTimes(1);
+      const payload = patchSpy.mock.calls[0][1] as any;
+      expect(payload.active).toBe(true);
+      expect(payload).not.toHaveProperty('__active');
     });
 
     it('should handle single UPDATE operation without HRN by looking up via readPersonByHailMary', async () => {
@@ -586,10 +670,9 @@ describe('HuronPersonDataTarget', () => {
     it('should return FAILURE when DELETE has no HRN available', async () => {
       const fieldSet = createFieldSet({
         id: 'person-1',
-        sourceIdentifier: 'U12345678',
         firstName: 'Test',
         lastName: 'Person'
-        // No hrn field
+        // No hrn field, no sourceIdentifier - truly no way to identify
       });
 
       const params: PushOneParms = {
@@ -601,12 +684,11 @@ describe('HuronPersonDataTarget', () => {
 
       expect(result.status).toBe(Status.FAILURE);
       expect(result.crud).toBe(CrudOperation.DELETE);
-      expect(result.message).toBe('Cannot perform soft delete: no HRN available for person');
-      // Verify primaryKey includes sourceIdentifier (updated from hrn in bug fix)
+      expect(result.message).toBe('Cannot perform soft delete: no HRN or sourceIdentifier available for person');
+      // Verify primaryKey includes id
       expect(result.primaryKey).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: 'person-1' }),
-          expect.objectContaining({ sourceIdentifier: 'U12345678' })
+          expect.objectContaining({ id: 'person-1' })
         ])
       );
     });
@@ -1301,7 +1383,7 @@ describe('HuronPersonDataTarget', () => {
           { sourceIdentifier: 'U00173766' },
           { firstName: 'Test' },
           { lastName: 'Student' },
-          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+          { __skipReason: 'DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)' }
           // Missing employer/organization - but should be skipped, not failed
         ]
       };
@@ -1315,7 +1397,7 @@ describe('HuronPersonDataTarget', () => {
 
       // Verify the result includes skipReason
       expect(result.status).toBe(Status.FAILURE);
-      expect(result.skipReason).toBe('Student-only with no current term enrollment (personId: U00173766)');
+      expect(result.skipReason).toBe('DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)');
     });
 
     it('should add to skipped array in pushAll when skipReason is present', async () => {
@@ -1336,7 +1418,7 @@ describe('HuronPersonDataTarget', () => {
           { sourceIdentifier: 'U00173766' },
           { firstName: 'Skip' },
           { lastName: 'Student' },
-          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+          { __skipReason: 'DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)' }
         ]
       };
 
@@ -1368,7 +1450,7 @@ describe('HuronPersonDataTarget', () => {
       // Verify skipped record has skipReason
       const skippedRecord = result.skipped?.[0];
       expect(skippedRecord).toBeDefined();
-      expect(skippedRecord?.skipReason).toBe('Student-only with no current term enrollment (personId: U00173766)');
+      expect(skippedRecord?.skipReason).toBe('DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)');
       expect(skippedRecord?.status).toBe(Status.FAILURE);
     });
 
@@ -1388,7 +1470,7 @@ describe('HuronPersonDataTarget', () => {
           { sourceIdentifier: 'U00173766' },
           { firstName: 'Skip' },
           { lastName: 'Student' },
-          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+          { __skipReason: 'DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)' }
         ]
       };
 
@@ -1420,7 +1502,7 @@ describe('HuronPersonDataTarget', () => {
           { sourceIdentifier: 'U00173766' },
           { firstName: 'Skip' },
           { lastName: 'Student' },
-          { __skipReason: 'Student-only with no current term enrollment (personId: U00173766)' }
+          { __skipReason: 'DEACTIVATE: Student-only with no current term enrollment (personId: U00173766)' }
         ]
       };
 

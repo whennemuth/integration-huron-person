@@ -1,6 +1,6 @@
 import { DataSource, EndToEnd, FieldSet, IntegrationResult, Timer } from 'integration-core';
 import { Cache } from './Cache';
-import { Config } from './config/Config';
+import { Config, TargetPersonDeleteType } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper, StaticMapUsage } from './data-mapper/DataMapper';
 import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
@@ -140,9 +140,20 @@ class HuronPersonIntegration {
       // Create integration components with currentTerms
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
-        errorEventProcessor, cleanupPreviousData, bulkReset, trustPreviousStorage, ignoreRemovals,
-        lookupPersonInTargetSystemCache
+        errorEventProcessor, bulkReset, trustPreviousStorage, ignoreRemovals,
+        lookupPersonInTargetSystemCache, cleanupPreviousData
       } = this;
+
+      // Ensure personDeleteType ALWAYS reflects the Huron soft-delete requirement
+      const { SOFT, HARD } = TargetPersonDeleteType;
+      let { dataTarget: { personDeleteType=SOFT } = {} } = config;
+      if (personDeleteType !== SOFT) {
+        console.warn(`⚠️  Warning: personDeleteType is configured as ${personDeleteType}, ` +
+          `but Huron requires soft deletes. Overriding to SOFT delete and enabling cleanup ` +
+          `of previous data.`);
+        personDeleteType = SOFT;
+      }
+
       const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
       let responseFilter: ResponseProcessor | undefined;
@@ -183,7 +194,8 @@ class HuronPersonIntegration {
         deltaStrategy,
         // Apply field filtering to remove non-hashable fields before hashing
         fieldFilter: fs => new FieldFilter({ ...fieldFilterParms, fieldSet: fs }).filter(),
-        cleanupPreviousData
+        // Only allow cleanup of previous data if using HARD deletes (Should be never - We never remove users from Huron).
+        cleanupPreviousData: (personDeleteType as TargetPersonDeleteType) === HARD ? cleanupPreviousData : false 
       });
       
       const result = await this.endToEnd.execute();

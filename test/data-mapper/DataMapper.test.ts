@@ -89,10 +89,12 @@ describe('DataMapper', () => {
       const expected = expectedTarget;
       
       // Filter out fields with undefined/null values from actual output
+      // Also filter out temporary reactivation flag __active that is used during mapping but removed before hashing
       const filteredActual = actual.filter((field: any) => {
         const key = Object.keys(field)[0];
         const value = field[key];
-        return value !== undefined && value !== null && value !== '';
+        // Exclude fields with undefined/null/empty values and the temporary __active field
+        return value !== undefined && value !== null && value !== '' && key !== '__active';
       });
       
       expect(filteredActual).toHaveLength(expected.length);
@@ -207,6 +209,25 @@ describe('DataMapper', () => {
       const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       expect(mapper.currentTerms).toEqual(mockCurrentTerms);
       expect(mapper.currentTerms).toHaveLength(2);
+    });
+
+    it('should include __active field for reactivation support', () => {
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
+      const person = {
+        personid: '123',
+        personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] },
+        employeeInfo: { address: [] },
+        studentInfo: { address: [] },
+        facultyInfo: { address: [] },
+        affiliateInfo: { address: [] },
+        constituentInfo: { address: [] }
+      };
+      const result = mapper.map([person]);
+      expect(result.fieldSets).toHaveLength(1);
+      const fields = result.fieldSets[0].fieldValues;
+      const activeField = fields.find((f: any) => '__active' in f);
+      expect(activeField).toBeDefined();
+      expect(activeField!.__active).toBe(true);
     });
   });
 

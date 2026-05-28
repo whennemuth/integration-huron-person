@@ -806,6 +806,7 @@ describe('DeltaStrategyFactory', () => {
         name: 'Mock Storage',
         description: 'Mock Delta Storage',
         fetchPreviousData: jest.fn().mockResolvedValue([]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
         updatePreviousData: jest.fn().mockResolvedValue({ status: 'ok' })
       };
 

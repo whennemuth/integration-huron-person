@@ -1,8 +1,8 @@
-import { Timer } from "integration-core";
+import { Timer, TestEnvironment } from 'integration-core';
 import { ConfigManager } from "../config/ConfigManager";
 import { AxiosResponseStreamFilter, ResponseProcessor } from "../stream/AxiosResponseStreamFilter";
 import { BuCdmPeopleDataSource } from "./PeopleCdmDataSource";
-import { getLocalConfig } from "../Utils";
+import { getLocalConfig } from '../Utils';
 
 export type BuCdmPeopleDataSourceBatchConfig = {
   dataSource: BuCdmPeopleDataSource, 
@@ -133,7 +133,12 @@ abstract class BuCdmPeopleDataSourceBatch {
 export { BuCdmPeopleDataSourceBatch };
 
 if(require.main === module) {
+const testEnvironment = TestEnvironment('PEOPLE_DATASOURCE_BATCH');
 
+  [
+    'HURON_PERSON_CONFIG_PATH',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   (async () => {
     // Load configuration
     const configManager = ConfigManager.getInstance();

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { DataSource, Timer } from 'integration-core';
+import { DataSource, Timer, TestEnvironment } from 'integration-core';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
@@ -103,6 +103,12 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('PEOPLE_CDM_DATASOURCE');
+
+  [
+    'HURON_PERSON_CONFIG_PATH',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }
 

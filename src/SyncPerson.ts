@@ -1,4 +1,4 @@
-import { CrudOperation, DataSource, DataTarget, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status } from 'integration-core';
+import { CrudOperation, DataSource, DataTarget, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -412,6 +412,15 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('SYNC_PERSON');
+
+  [
+    'DRY_RUN',
+    'SYNC_BUID',
+    'SYNC_CRUD',
+    'SYNC_PREVIEW',
+    'SYNC_UPDATE_HASH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }
 

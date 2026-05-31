@@ -1,8 +1,8 @@
-import { CrudOperation, FieldSet, SinglePushResult } from "integration-core";
+import { CrudOperation, FieldSet, SinglePushResult, TestEnvironment } from 'integration-core';
 import { BasicCache } from "../../Cache";
 import { Config } from "../../config/Config";
 import { ConfigManager } from "../../config/ConfigManager";
-import { getLocalConfig } from "../../Utils";
+import { getLocalConfig } from '../../Utils';
 import { HuronPersonDataTarget } from "../PersonDataTarget";
 import { HuronPerson } from "./Person";
 import { getPersonData, HuronPersonIdType, ReadPerson } from "./ReadPerson";
@@ -117,6 +117,15 @@ const main = async (): Promise<void> => {
 }
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('DEACTIVATE_PERSON');
+
+  [
+    'CACHE_ENABLED',
+    'CACHE_PATH',
+    'HURON_PERSON_ID_TYPE',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

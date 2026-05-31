@@ -1,9 +1,9 @@
-import { FieldSet } from "integration-core";
+import { FieldSet, TestEnvironment } from 'integration-core';
 import { HuronPerson } from "../data-target/crud/Person";
 import { AbstractBulkTargetPatcher } from "./BulkTargetPatcher";
 import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
-import { getLocalConfig } from "../Utils";
+import { getLocalConfig } from '../Utils';
 
 /**
  * Implementation that retrieves all people who have an id or employeeId that matches the 
@@ -71,5 +71,14 @@ async function main(): Promise<void> {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('BULK_TARGET_PATCHER_SOURCE_IDENTIFIER');
+
+  [
+    'CACHE_ENABLED',
+    'CACHE_PATH',
+    'HURON_PERSON_CONFIG_PATH',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }

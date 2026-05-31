@@ -1,3 +1,4 @@
+import { TestEnvironment } from 'integration-core';
 
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
@@ -42,7 +43,7 @@ class ReadPerson {
    * @returns Promise resolving to the Person data
    */
   public readPersonByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronPerson> => {
-    if(/^\d+$/.test(hrn)) {
+    if (/^\d+$/.test(hrn)) {
       hrn = `hrn:hrs:persons:${hrn}`;
     }
     const endpoint = SchemaPath.PERSONS_BY_HRN.replace('{hrn}', encodeURIComponent(hrn));
@@ -76,7 +77,7 @@ class ReadPerson {
   }
 
   public async readPersonByMultipleFilters(fields: string[], value: string, includeFields?: string[]): Promise<any[]> {
-    const filters = fields.map(field => ReadPeople.createFilter({ field, value, logicalOperator: 'or' }));
+    const filters = fields.map((field) => ReadPeople.createFilter({ field, value, logicalOperator: 'or' }));
     const persons: any[] = await new ReadPeople({ config: this.config }).readAllPeople({
       filters,
       includeFields
@@ -86,7 +87,7 @@ class ReadPerson {
 
   /**
    * Read a single person by email address. Assumes email is unique.
-   * @param email 
+   * @param email
    * @returns Promise resolving to an array of Person data matching the email
    * (Note: could be multiple if somehow not unique)
    */
@@ -123,16 +124,15 @@ enum HuronPersonIdType {
   HAIL_MARY = 'hail-mary'
 }
 
-const getPersonData = async (params: { 
-  reader: ReadPerson, huronPersonIdType?: HuronPersonIdType, id?: string 
+const getPersonData = async (params: {
+  reader: ReadPerson; huronPersonIdType?: HuronPersonIdType; id?: string
 }): Promise<HuronPerson | HuronPerson[]> => {
-
   const { reader, huronPersonIdType, id } = params;
-  const { 
-    HURON_PERSON_ID_TYPE, 
-    HURON_PERSON_ID, 
-    HURON_PERSON_HRN, 
-    HURON_PERSON_SOURCE_ID, 
+  const {
+    HURON_PERSON_ID_TYPE,
+    HURON_PERSON_ID,
+    HURON_PERSON_HRN,
+    HURON_PERSON_SOURCE_ID,
     HURON_PERSON_USER_ID,
     HURON_PERSON_EMAIL
   } = process.env;
@@ -160,11 +160,11 @@ const getPersonData = async (params: {
       console.error('Please set HURON_PERSON_ID_TYPE to one of: hrn, sid, uid, id, email');
       return [];
   }
-}
+};
 
 async function main() {
-  const config = ConfigManager.
-    getInstance(true)
+  const config = ConfigManager
+    .getInstance(true)
     .fromEnvironment()
     .fromFileSystem()
     .getConfig('none');
@@ -181,8 +181,18 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('READ_PERSON');
+
+  [
+    'HURON_PERSON_EMAIL',
+    'HURON_PERSON_HRN',
+    'HURON_PERSON_ID',
+    'HURON_PERSON_ID_TYPE',
+    'HURON_PERSON_SOURCE_ID',
+    'HURON_PERSON_USER_ID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 
 export { PersonResponse, ReadPerson, getPersonData, HuronPersonIdType };
-

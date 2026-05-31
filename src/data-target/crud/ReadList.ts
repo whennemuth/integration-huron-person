@@ -3,6 +3,7 @@ import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, QueryBuilder } from '../QueryBuilder';
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Interface for List Type (the list definition itself)
@@ -525,6 +526,20 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('READ_LIST');
+
+  [
+    'HURON_LIST_FILTER_ACTIVE',
+    'HURON_LIST_OUTPUT_FILE',
+    'HURON_LIST_PAGE_SIZE',
+    'HURON_LIST_SORT_DIRECTION',
+    'HURON_LIST_SORT_FIELD',
+    'HURON_LIST_TASK',
+    'HURON_LIST_TYPE_HRN',
+    'HURON_LIST_TYPE_ID',
+    'HURON_LIST_TYPE_NAME'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

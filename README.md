@@ -276,6 +276,41 @@ Used for data-target-only operations:
 - Suitable for reading data from Huron API without source synchronization
 - Used by `ReadPerson`, `ReadPeople`, `ReadOrganization`, and `ReadOrganizations` classes
 
+## Test Harnesses
+
+Test harnesses are executable modules that verify individual components using environment-based configuration via the `TestEnvironment` utility from `integration-core`. Each harness loads its own prefixed environment variables and validates component behavior in isolation.
+
+Harness configuration is documented in [example-env.md](./example-env.md). The file contains grouped environment variables for 29 test harnesses covering:
+- **Configuration Management**: `ConfigFromSecretsManager`, `ConfigManager`
+- **Data Mapping**: `DataMapper` (base, country, org, state), `FieldFilter`, `MappingValidator`
+- **Data Sources**: `CurrentTermsDataSource`, `PeopleCdmDataSource`, `PeopleDataSourceBatch`, `PeopleS3DataSource`, `PersonDataSource`
+- **Data Targets**: `AuthToken`, `DeactivatePerson`, `ListPeople`, `ReadList`, `ReadOrganization`, `ReadOrganizations`, `ReadPeople`, `ReadPerson`
+- **Delta Strategy**: `UpsertDeltaStrategy`
+- **Miscellaneous**: `BulkTargetPatcher`, `BulkTargetPatcherForSourceIdentifier`, `ChunkScanner`, `SyncEvaluator`
+- **Main Orchestrators**: `SyncPeople`, `SyncPerson`, `SyncPersonBatch`
+
+### Running Test Harnesses
+
+**Option 1: Using VS Code Launch Configuration (Recommended)**
+
+1. Open the harness file in the editor (e.g., `src/data-mapper/DataMapper.ts`)
+2. Press `F5` or go to **Run > Start Debugging**
+3. Select "Debug current file" from the launch configuration dropdown
+4. The harness will execute with your `.env` file automatically loaded
+
+**Option 2: Command Line with npx**
+
+```bash
+# Example: Run the DataMapper harness
+npx ts-node src/data-mapper/DataMapper.ts
+
+# Example: Run the ReadPerson harness
+npx ts-node src/data-target/crud/ReadPerson.ts
+
+# Example: Run the SyncPeople harness
+npx ts-node src/SyncPeople.ts
+```
+
 ## Installation & Setup
 
 ### For Development (Working on this Project)

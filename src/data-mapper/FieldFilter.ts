@@ -1,10 +1,10 @@
-import { Field, FieldSet, Input } from "integration-core";
+import { Field, FieldSet, Input, TestEnvironment } from 'integration-core';
 import { ConfigManager } from "../config/ConfigManager";
 import { _fieldDefinitions, getDataMapperMaps, ReverseDataMapper } from "./DataMapper";
 import { CountryMappings } from "./DataMapperCountry";
 import { StateMappings } from "./DataMapperState";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
-import { deepClone, getLocalConfig, removeEmptyValues } from "../Utils";
+import { deepClone, getLocalConfig, removeEmptyValues } from '../Utils';
 import { OrgMappings } from "./DataMapperOrg";
 
 
@@ -183,7 +183,9 @@ export class FieldFilter {
  * Cheap test: Query for a person from the Huron Person API and run the data through the ReverseDataMapper
  */
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('FIELD_FILTER');
   const { HURON_PERSON_HRN:hrn } = process.env;
+
   if( !hrn) {
     console.error('Please provide HURON_PERSON_HRN environment variable to run the reverse hash comparison');
     process.exit(1);

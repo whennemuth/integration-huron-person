@@ -1,4 +1,4 @@
-import { DataMapper as CoreDataMapper, CrudOperation, Field, FieldDefinition, FieldSet, Input, InputParser } from 'integration-core';
+import { DataMapper as CoreDataMapper, CrudOperation, Field, FieldDefinition, FieldSet, Input, InputParser, TestEnvironment } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../data-source/CurrentTermsDataSource';
 import { anyEmpty, getLocalConfig, isEmpty, removeEmptyValues } from '../Utils';
 import { AddressMapper, AddressType } from './DataMapperAddress';
@@ -450,6 +450,12 @@ export const getPersonFieldSet = async (): Promise<FieldSet> => {
 }
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('DATA_MAPPER');
+
+  [
+    'SYNC_BUID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   (async () => {
     const fieldSet = await getPersonFieldSet();
     const fldValues = fieldSet?.fieldValues;

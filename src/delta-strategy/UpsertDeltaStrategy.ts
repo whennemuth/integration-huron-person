@@ -1,4 +1,4 @@
-import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, Input, InputUtilsDecorator } from "integration-core";
+import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, Input, InputUtilsDecorator, TestEnvironment } from 'integration-core';
 import { Config } from "../config/Config";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
 import { HuronPerson } from "../data-target/crud/Person";
@@ -229,5 +229,11 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('UPSERT_DELTA_STRATEGY');
+
+  [
+    'SECRET_ARN',
+    'SYNC_BUID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

@@ -5,6 +5,7 @@ import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } f
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
 import { FilterFields, SortFields, HuronPerson } from './Person';
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Response structure for bulk person retrieval
@@ -318,6 +319,16 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('READ_PEOPLE');
+
+  [
+    'HURON_PEOPLE_FILTER',
+    'HURON_PERSON_FNAME',
+    'HURON_PERSON_LNAME',
+    'HURON_PERSON_NAME_FILTER',
+    'HURON_PERSON_SOURCE_IDS'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

@@ -1,4 +1,4 @@
-import { DataSource, EndToEnd, FieldSet, IntegrationResult, Timer } from 'integration-core';
+import { DataSource, EndToEnd, FieldSet, IntegrationResult, Timer, TestEnvironment } from 'integration-core';
 import { Cache } from './Cache';
 import { Config, TargetPersonDeleteType } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -276,6 +276,12 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('SYNC_PEOPLE');
+
+  [
+    'CACHE_PATH',
+    'HURON_PERSON_CONFIG_PATH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }
 

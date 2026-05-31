@@ -2,6 +2,7 @@ import { Config } from "../../config/Config";
 import { ConfigManager } from "../../config/ConfigManager";
 import { HuronPerson } from "./Person";
 import { ReadPeople, ReadPeopleOptions } from "./ReadPeople";
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Class for listing multiple people from the Huron API. Intended for retrieval of large sets
@@ -56,6 +57,11 @@ export { ListPeople };
 
 
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('LIST_PEOPLE');
+
+  [
+    'HURON_PEOPLE_LIST_STATUS'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   (async () => {
     const { 
       HURON_PEOPLE_LIST_TASK: task, 

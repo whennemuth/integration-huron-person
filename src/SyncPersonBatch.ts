@@ -1,4 +1,4 @@
-import { CrudOperation, FieldSet, InputUtilsDecorator, Status } from 'integration-core';
+import { CrudOperation, FieldSet, InputUtilsDecorator, Status, TestEnvironment } from 'integration-core';
 import { BasicCache } from './Cache';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
@@ -182,6 +182,13 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH');
+
+  [
+    'SYNC_BUIDS',
+    'SYNC_PREVIEW',
+    'SYNC_UPDATE_HASH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }
 

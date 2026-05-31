@@ -1,4 +1,4 @@
-import { FieldSet, Input, InputParser } from "integration-core";
+import { FieldSet, Input, InputParser, TestEnvironment } from 'integration-core';
 import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
 import { DataMapper, getDataMapper, ReverseDataMapper } from "../data-mapper/DataMapper";
@@ -8,7 +8,7 @@ import { FieldFilter } from "../data-mapper/FieldFilter";
 import { BuCdmPersonDataSource } from "../data-source/PersonDataSource";
 import { HuronPerson } from "../data-target/crud/Person";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
-import { getLocalConfig, isABuid } from "../Utils";
+import { getLocalConfig, isABuid } from '../Utils';
 
 export type SourcePersonParms = {
   config: Config,
@@ -171,6 +171,13 @@ export class SourcePerson {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('SYNC_EVALUATOR');
+
+  [
+    'HURON_PERSON_CONFIG_PATH',
+    'HURON_PERSON_SOURCE_ID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   const { HURON_PERSON_HRN:hrn, HURON_PERSON_SOURCE_ID:buid, HURON_PERSON_CONFIG_PATH } = process.env;
   if( !hrn && !buid) {
     console.error('Please provide either HURON_PERSON_HRN or HURON_PERSON_SOURCE_ID environment variable to run the reverse hash comparison');

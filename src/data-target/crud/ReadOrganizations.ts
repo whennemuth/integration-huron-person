@@ -2,6 +2,7 @@ import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
 import { getLocalConfig } from '../../Utils';
+import { TestEnvironment } from 'integration-core';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
@@ -266,6 +267,13 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('READ_ORGANIZATIONS');
+
+  [
+    'HURON_ORGS_TASK',
+    'HURON_PERSON_CONFIG_PATH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

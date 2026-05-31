@@ -1,6 +1,6 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import * as fs from 'fs';
-import { DataSource, Timer } from 'integration-core';
+import { DataSource, Timer, TestEnvironment } from 'integration-core';
 import * as readline from 'readline';
 import { Readable } from 'stream';
 import { Config, S3DataSourceConfig } from '../config/Config';
@@ -183,6 +183,12 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('PEOPLE_S3_DATASOURCE');
+
+  [
+    'HURON_PERSON_CONFIG_PATH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

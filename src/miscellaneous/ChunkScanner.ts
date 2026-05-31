@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { S3Client, SelectObjectContentCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { TestEnvironment } from 'integration-core';
 
 export type ChunkScannerConfig = {
   bucketName: string;
@@ -234,6 +235,15 @@ export class ChunkScanner {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('CHUNK_SCANNER');
+
+  [
+    'CHUNK_SCANNER_BUID',
+    'CHUNK_SCANNER_KEY',
+    'CHUNK_SCANNER_REGION',
+    'CHUNK_SCANNER_STOP_WHEN_FOUND'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   (async () => {
 
     const {

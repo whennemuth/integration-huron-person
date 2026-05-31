@@ -1,5 +1,6 @@
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { Config } from './Config';
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Configuration loader for reading configuration from AWS Secrets Manager
@@ -81,5 +82,11 @@ async function main() {
 
 
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('CONFIG_FROM_SECRETS_MANAGER');
+
+  [
+    'REGION',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

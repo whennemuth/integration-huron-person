@@ -3,6 +3,7 @@ import { ConfigFromEnvironment } from './ConfigFromEnvironment';
 import { ConfigFromFileSystem } from './ConfigFromFileSystem';
 import { ConfigFromSecretsManager } from './ConfigFromSecretsManager';
 import { ConfigValidator } from './ConfigValidator';
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Represents a queued configuration operation
@@ -435,5 +436,11 @@ async function main() {
 }
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('CONFIG_MANAGER');
+
+  [
+    'HURON_PERSON_CONFIG_JSON'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }

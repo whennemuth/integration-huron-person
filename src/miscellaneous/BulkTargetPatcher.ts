@@ -1,10 +1,10 @@
-import { CrudOperation, FieldSet } from "integration-core";
+import { CrudOperation, FieldSet, TestEnvironment } from 'integration-core';
 import { BasicCache } from "../Cache";
 import { Config } from "../config/Config";
 import { HuronPerson } from "../data-target/crud/Person";
 import { ReadPeople } from "../data-target/crud/ReadPeople";
 import { HuronPersonDataTarget } from "../data-target/PersonDataTarget";
-import { getLocalConfig } from "../Utils";
+import { getLocalConfig } from '../Utils';
 import { ConfigManager } from "../config/ConfigManager";
 
 export type SelectConfig = {
@@ -190,5 +190,14 @@ async function main(): Promise<void> {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('BULK_TARGET_PATCHER');
+
+  [
+    'CACHE_ENABLED',
+    'CACHE_PATH',
+    'HURON_PERSON_CONFIG_PATH',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }

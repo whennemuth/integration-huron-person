@@ -1,4 +1,4 @@
-import { FieldSet } from "integration-core";
+import { FieldSet, TestEnvironment } from 'integration-core';
 import { getPersonFieldSet } from "./DataMapper";
 
 /**
@@ -199,6 +199,8 @@ export class MappingValidator {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('MAPPING_VALIDATOR');
+
   (async () => {
     const fieldSet = await getPersonFieldSet();
     const mappingValidator = new MappingValidator(fieldSet);

@@ -4,7 +4,8 @@ import { ConfigManager } from "../config/ConfigManager";
 import { BuCdmCurrentTermsDataSource, Term } from "../data-source/CurrentTermsDataSource";
 import { HuronOrganization } from "../data-target/crud/Organization";
 import { ReadOrganizations } from "../data-target/crud/ReadOrganizations";
-import { getLocalConfig, isEmpty, isNotEmpty, removeEmptyValues, removeNullValues as removeNulls } from "../Utils";
+import { getLocalConfig, isEmpty, isNotEmpty, removeEmptyValues, removeNullValues as removeNulls } from '../Utils';
+import { TestEnvironment } from 'integration-core';
 
 export type OrgType = { priority: number; type: string; source?: string; }
 
@@ -513,6 +514,12 @@ export const loadOrgMap = async (config: Config): Promise<OrgMappings> => {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('DATA_MAPPER_ORG');
+
+  [
+    'SYNC_BUID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   (async () => {
     const { HURON_PERSON_CONFIG_PATH, SYNC_BUID:buid } = process.env;
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();

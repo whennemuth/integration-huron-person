@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { DataSource } from 'integration-core';
+import { DataSource, TestEnvironment } from 'integration-core';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
@@ -96,6 +96,11 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('PERSON_DATASOURCE');
+
+  [
+    'HURON_PERSON_CONFIG_PATH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }
 

@@ -6,6 +6,7 @@ import { ReadOrganizations } from './ReadOrganizations';
 import { HuronOrganization } from './Organization';
 import { BasicCache } from '../../Cache';
 import { getLocalConfig } from '../../Utils';
+import { TestEnvironment } from 'integration-core';
 
 /**
  * Response structure for organization retrieval
@@ -147,6 +148,18 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('READ_ORGANIZATION');
+
+  [
+    'HURON_ORG_HRN',
+    'HURON_ORG_ID',
+    'HURON_ORG_ID_TYPE',
+    'HURON_ORG_NAME',
+    'HURON_ORG_SOURCE_ID',
+    'HURON_PERSON_CONFIG_PATH',
+    'SYNC_BUID'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

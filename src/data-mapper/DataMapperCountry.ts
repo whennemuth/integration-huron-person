@@ -2,6 +2,7 @@ import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { COUNTRIES_CSV } from './csv/countries-csv';
+import { TestEnvironment } from 'integration-core';
 
 export type CountryRow = {
   huronCode: string;
@@ -115,6 +116,8 @@ export class CountryLookup {
 }
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('DATA_MAPPER_COUNTRY');
+
   // For testing purposes, load the countries and log the map
   CountryLookup.loadCountries().then(map => {
     console.log('Loaded countries map:');

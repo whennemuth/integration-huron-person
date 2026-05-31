@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { ConfigManager } from '../config/ConfigManager';
 import { EndpointConfigForJWT } from './ApiClientForJWT';
+import { TestEnvironment } from 'integration-core';
 
 type TokenAuthConfig = {
   authMethod: 'externalToken';
@@ -77,6 +78,13 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
+  const testEnvironment = TestEnvironment('AUTH_TOKEN');
+
+  [
+    'HURON_PERSON_CONFIG_PATH',
+    'SECRET_ARN'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

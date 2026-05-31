@@ -2,6 +2,7 @@ import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { STATES_CSV } from './csv/states-csv';
+import { TestEnvironment } from 'integration-core';
 
 export type StateRow = {
   huronCode: string;
@@ -119,6 +120,8 @@ export class StateLookup {
 
 
 if(require.main === module) {
+  const testEnvironment = TestEnvironment('DATA_MAPPER_STATE');
+
   // For testing purposes, load the states and log the map
   StateLookup.loadStates().then(map => {
     console.log('Loaded states map:');

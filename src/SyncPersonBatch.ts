@@ -1,4 +1,5 @@
 import { CrudOperation, FieldSet, InputUtilsDecorator, Status, TestEnvironment } from 'integration-core';
+import * as fs from 'fs';
 import { BasicCache } from './Cache';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
@@ -135,14 +136,16 @@ async function main() {
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-    const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
+    const config = configManager.reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
     const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for batch sync
-    const { SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
-    const buidsString = SYNC_BUIDS;
+    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
 
@@ -152,9 +155,41 @@ async function main() {
       deltaStrategy: DeltaStrategyFactory.createStrategy({ config })
     } : undefined;
 
-    if( buidsString === undefined || buidsString.trim() === '' ) {
-      console.error('No BUIDs provided for multiple sync. Please set the SYNC_BUIDS environment variable with a comma-separated list of BUIDs.');
-      process.exit(1);
+    const buidsFilePath = `${SYNC_BUIDS_FILE_PATH || ''}`.trim();
+    const buidsString = `${SYNC_BUIDS || ''}`.trim();
+    let buids: string[];
+
+    if (buidsFilePath !== '') {
+      if (!fs.existsSync(buidsFilePath)) {
+        console.error(`SYNC_BUIDS_FILE_PATH does not exist: ${buidsFilePath}`);
+        process.exit(1);
+      }
+
+      const fileContent = fs.readFileSync(buidsFilePath, 'utf8');
+      buids = fileContent
+        .split(/\r?\n/)
+        .map((buid) => buid.trim())
+        .filter((buid) => buid !== '');
+
+      if (buids.length === 0) {
+        console.error(`No BUIDs found in file: ${buidsFilePath}`);
+        process.exit(1);
+      }
+    } else {
+      if (buidsString === '') {
+        console.error('No BUIDs provided for multiple sync. Set SYNC_BUIDS_FILE_PATH (one BUID per line) or SYNC_BUIDS (comma-separated).');
+        process.exit(1);
+      }
+
+      buids = buidsString
+        .split(',')
+        .map((buid) => buid.trim())
+        .filter((buid) => buid !== '');
+
+      if (buids.length === 0) {
+        console.error('SYNC_BUIDS is set but does not contain any valid BUID values.');
+        process.exit(1);
+      }
     }
 
     // Disable source person lookup field filtering for this batch sync
@@ -164,9 +199,6 @@ async function main() {
 
     // Create the token cache
     const cache = BasicCache.getInstance(config);
-
-    // Turn the comma-separated BUIDs into an array
-    const buids = buidsString.split(',').map(buid => buid.trim());
 
     // Use BatchPersonSync for batch operations (composition pattern)
     const batchSync = new BatchPersonSync({ 
@@ -185,10 +217,15 @@ if (require.main === module) {
   const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH');
 
   [
-    'SYNC_BUIDS',
-    'SYNC_PREVIEW',
+    'SYNC_PREVIEW', 
     'SYNC_UPDATE_HASH'
+  ].forEach(testEnvironment.getVar);
+
+  [
+    'SYNC_BUIDS_FILE_PATH', 
+    'SYNC_BUIDS'
   ].forEach(testEnvironment.getVarOrEmptyString);
+
   main();
 }
 

@@ -167,7 +167,7 @@ async function main() {
     .getInstance(true)
     .fromEnvironment()
     .fromFileSystem()
-    .getConfig('none');
+    .getConfig('person');
 
   const reader = new ReadPerson(config);
   const personData: HuronPerson | HuronPerson[] = await getPersonData({ reader });

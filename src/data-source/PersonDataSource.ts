@@ -99,7 +99,8 @@ if (require.main === module) {
   const testEnvironment = TestEnvironment('PERSON_DATASOURCE');
 
   [
-    'HURON_PERSON_CONFIG_PATH'
+    'HURON_PERSON_CONFIG_PATH',
+    'SYNC_BUID'
   ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

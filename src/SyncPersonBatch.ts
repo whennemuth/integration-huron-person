@@ -1,13 +1,14 @@
-import { CrudOperation, FieldSet, InputUtilsDecorator, Status, TestEnvironment } from 'integration-core';
 import * as fs from 'fs';
+import { CrudOperation, FieldSet, InputUtilsDecorator, isS3Config, Status, TestEnvironment } from 'integration-core';
+import { getLocalConfig } from '../bin';
 import { BasicCache } from './Cache';
+import { ConfigManager } from './config/ConfigManager';
+import { getDataMapper } from './data-mapper/DataMapper';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
-import { ConfigManager } from './config/ConfigManager';
-import { getDataMapper } from './data-mapper/DataMapper';
-import { getLocalConfig } from '../bin';
+import { setFileLogging } from './Utils';
 
 type BatchPersonSyncParams = PersonSyncParams & {
   buids: string[];
@@ -143,12 +144,17 @@ async function main() {
       .getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    const dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
+    const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
 
     // Get environment variables for batch sync
-    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
+    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, DELTA_STORAGE_BUCKET } = process.env;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
+
+    if(DELTA_STORAGE_BUCKET && isS3Config(config.storage.config)) {
+      console.log(`Using custom delta storage bucket from environment variable: ${DELTA_STORAGE_BUCKET}`);
+      config.storage.config.bucketName = DELTA_STORAGE_BUCKET;
+    }
 
     IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
       config, 
@@ -158,7 +164,11 @@ async function main() {
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
-      deltaStrategy: DeltaStrategyFactory.createStrategy({ config })
+      deltaStrategy: DeltaStrategyFactory.createStrategy({ 
+        config,
+        ignoreRemovals: true,
+        trustPreviousStorage: false // default
+      } satisfies CreateStrategyParams)
     } : undefined;
 
     const buidsFilePath = `${SYNC_BUIDS_FILE_PATH || ''}`.trim();
@@ -226,14 +236,18 @@ if (require.main === module) {
     'SYNC_PREVIEW', 
     'SYNC_UPDATE_HASH',
     'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET',
   ].forEach(testEnvironment.getVar);
 
   [
     'SYNC_BUIDS_FILE_PATH', 
-    'SYNC_BUIDS'
+    'SYNC_BUIDS',
   ].forEach(testEnvironment.getVarOrEmptyString);
+
+  setFileLogging('data/sync_person_batch_dangling.txt');
 
   main();
 }
 
 export { BatchPersonSync, BatchPersonSyncParams };
+

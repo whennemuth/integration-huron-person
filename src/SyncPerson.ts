@@ -1,4 +1,4 @@
-import { CrudOperation, DataSource, DataTarget, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
+import { CrudOperation, DataSource, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, isS3Config, SinglePushResult, Status, TestEnvironment } from 'integration-core';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -11,10 +11,10 @@ import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
+import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { getLocalConfig, isEmpty } from './Utils';
-import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 
 /**
  * Base parameters shared by both single and batch person sync operations.
@@ -44,9 +44,11 @@ type SinglePersonSyncParams = PersonSyncParams & {
  */
 class SinglePersonSync {
   private dataSource: DataSource;
-  private dataTarget: DataTarget;
+  private dataTarget: HuronPersonDataTarget;
   private targetPerson: HuronPerson | undefined;
+  private targetPersonLookupAttempted = false;
   private pushResult: SinglePushResult;
+  private rawPersonData: any[] | undefined;
   private mappedPerson: Input | undefined;
   private logPrefix: string;
 
@@ -64,13 +66,14 @@ class SinglePersonSync {
     this.dataTarget = new HuronPersonDataTarget({ config, cache, hrn });
   }
 
-  private getHrn = (): string | undefined => {
-    const { instanceParams: { hrn }, targetPerson } = this;
-    if(targetPerson) {
-      return targetPerson.hrn;
-    }
+  private getHrn = async (): Promise<string | undefined> => {
+    const { instanceParams: { hrn }, getTargetPerson } = this;
     if(hrn) {
       return hrn;
+    }
+    const targetPerson = await getTargetPerson();
+    if(targetPerson) {
+      return targetPerson.hrn;
     }
     return undefined;
   }
@@ -107,14 +110,17 @@ class SinglePersonSync {
       }
       else {
         console.log(`Found ${buid} in source`);
+        this.rawPersonData = rawData;
       }
 
       // Convert data to integration format
-      const unparsedInput: Input = dataMapper!.getMappedData({ rawData, personHrn: getHrn(), crudOperation: crudOperation });
+      const personHrn = await getHrn();
+      const unparsedInput: Input = dataMapper!.getMappedData({ rawData, personHrn, crudOperation: crudOperation });
 
       // Bail out if there are critical validation errors
       if (dataMapper!.criticalValidationErrorMessage) {
         console.error(`Critical validation error for BUID: ${buid}: ${dataMapper!.criticalValidationErrorMessage}`);
+        // console.log(`Person data that caused the error: ${dataMapper!.personAsJson}`);
         return { } as Input;
       }
       
@@ -159,6 +165,13 @@ class SinglePersonSync {
     const { dataMapper } = this.instanceParams;
     dataMapper?.clearMessages();
   }
+  
+  private getTargetPerson = async (): Promise<HuronPerson | undefined> => {
+    if(this.targetPerson || this.targetPersonLookupAttempted) {
+      return this.targetPerson;
+    }
+
+    const { instanceParams: {buid, config } } = this;
     const reader = new ReadPerson({ config });
     console.log(`TARGET CHECK: Looking up person with BUID ${buid} in target as "sourceIdentifier"...`);
     const personData = await reader.readPersonBySourceIdentifier(buid) ?? [];
@@ -169,7 +182,71 @@ class SinglePersonSync {
     else {
       console.log(`Did not find ${buid} in target (indicates a create)`);
     }
-    return targetPerson;
+    this.targetPersonLookupAttempted = true;
+    this.targetPerson = targetPerson;
+    return this.targetPerson;
+  }
+
+  /**
+   * Deactivate the person in the target system if they exist, by setting active=false. 
+   * This is used when there is no data to push for an existing person, which we interpret 
+   * as a delete operation. Since the target system does not support hard deletes, we 
+   * perform a soft delete by deactivating the person record instead.
+   */
+  private deactivateTargetPersonIfExists = async (): Promise<void> => {
+    const targetPerson = await this.getTargetPerson();
+    const { instanceParams: { config, buid, cache }, logPrefix } = this;
+    if(targetPerson) {
+      if(targetPerson.active === false) {
+        console.log(`No-op: need to deactivate ${buid} in target system, but already inactive.`);
+        return;
+      }
+      console.log(`Deactivating ${buid} in target system...`);
+      const deactivator = new HuronPersonDataTarget({ config, cache, hrn: targetPerson.hrn });
+      const result = await deactivator.pushOne({
+        data: {
+          fieldValues: [
+            { hrn: targetPerson.hrn },
+            { sourceIdentifier: buid },
+          ]
+        },
+        crud: CrudOperation.DELETE
+      });
+      this.pushResult = result;
+      console.log(`${logPrefix}Deactivation push result for ${buid}:`, result.status, result.message);
+    }
+    else {
+      console.log(`No-op: need to deactivate ${buid} in target system, but person does not exist.`);
+    }
+  }
+
+  private activateTargetPersonIfExists = async (): Promise<void> => {
+    const targetPerson = await this.getTargetPerson();
+    const { instanceParams: { config, buid, cache }, logPrefix } = this;
+    if(targetPerson) {
+      if(targetPerson.active === true) {
+        console.log(`No-op: need to activate ${buid} in target system, but already active.`);
+        return;
+      }
+      console.log(`Activating ${buid} in target system...`);
+      const activator = new HuronPersonDataTarget({ config, cache, hrn: targetPerson.hrn });
+      const result = await activator.pushOne({
+        data: {
+          fieldValues: [
+            { hrn: targetPerson.hrn },
+            { sourceIdentifier: buid },
+            { active: true }
+          ]
+        },
+        crud: CrudOperation.UPDATE
+      });
+      this.pushResult = result;
+      console.log(`${logPrefix}Activation push result for ${buid}:`, result.status, result.message);
+    }
+    else {
+      console.log(`No-op: need to activate ${buid} in target system, but person does not exist.`);
+    }
+
   }
 
   public getPushResult = (): SinglePushResult => {
@@ -238,29 +315,43 @@ class SinglePersonSync {
       let { crudOperation, rawData, suppressHashUpdate } = params || {};
 
       if( ! crudOperation ) {
-        if( ! getHrn() ) {
-          this.targetPerson = await this.getTargetPerson(buid, config);
-        }        
-        crudOperation = getHrn() ? CrudOperation.UPDATE : CrudOperation.CREATE;
+        const hrn = await getHrn();       
+        crudOperation = hrn ? CrudOperation.UPDATE : CrudOperation.CREATE;
       }
       
-      // Get the person data mapped to integration format
-      // Apply hashing if hash storage is enabled
-      const input = await this.getMappedPerson({ rawData, crudOperation });      
+      /**
+       * Get the person data mapped to integration format and Apply hashing if hash storage 
+       * is enabled 
+       */
+      const mappedPerson: Input = await this.getMappedPerson({ rawData, crudOperation });
+      const cdmPerson = this.rawPersonData; // Set in getMappedPerson 
+
+      /**
+       * Update hash storage if enabled and sync was successful (including when push was skipped)
+       * Skip individual update if suppressHashUpdate is true (used in batch operations)
+       */
+      const processHashStorage = async () => {
+        if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate) {
+          await this.updateHashStorage(mappedPerson);
+        }
+      }
 
       // Bail out if no data to push
-      if(isEmpty(input)) {
-        console.log(`No data to push for BUID: ${buid}, exiting sync.`);
+      if(isEmpty(mappedPerson)) {
+        console.log(`No valid data to push for BUID: ${buid}.`);
+        await this.deactivateTargetPersonIfExists();
         return;
       }
 
       // Validate single person sync has exactly one field set
-      if (!input.fieldSets || input.fieldSets.length === 0) {
-        console.log(`No field sets found for BUID: ${buid}, exiting sync.`);
+      if (!mappedPerson.fieldSets || mappedPerson.fieldSets.length === 0) {
+        console.log(`No field sets found for BUID: ${buid}.`);
+        await this.deactivateTargetPersonIfExists();
         return;
       }
-      if (input.fieldSets.length > 1) {
-        console.warn(`Expected exactly 1 field set for single person sync, but found ${input.fieldSets.length} for BUID: ${buid}. Only processing the first one.`);
+
+      if (mappedPerson.fieldSets.length > 1) {
+        console.warn(`Expected exactly 1 field set for single person sync, but found ${mappedPerson.fieldSets.length} for BUID: ${buid}. Only processing the first one.`);
       }
 
       // Check if source and target are already in sync (UPDATE operations only)
@@ -271,28 +362,41 @@ class SinglePersonSync {
           const sourcePersonParams: SourcePersonParms = {
             config,
             buid,
+            cdmPerson,
             sourceDataMapper: this.instanceParams.dataMapper!
           };
+
+          const huronPerson = await this.getTargetPerson();
+
           const targetPersonParams: TargetPersonParms = {
             config,
             buid,
+            huronPerson,
             targetDataMapper: new ReverseDataMapper()
           };
+
           const sourcePerson = new SourcePerson(sourcePersonParams);
           const inSync = await sourcePerson.isInSyncWith(targetPersonParams);
-          
-          // if (inSync) {
-          //   skipPush = true;
-          //   console.log(`Source and target are already in sync for BUID: ${buid}. Skipping push to target.`);
-          //   console.log(`Hash storage will still be updated to ensure consistency.`);
-          //   // NOTE: Currently, hash storage updates will occur even when source/target are in sync.
-          //   // This handles cases where the hash storage record may be missing or out of date.
-          //   // In the future, once the system is fully mature, we expect that ANY person found in
-          //   // the target system will ALWAYS have a corresponding record in hash storage. At that point,
-          //   // this update could be optimized to only occur when the hash storage is actually missing.
-          // } else {
-          //   console.log(`Source and target are out of sync for BUID: ${buid}. Proceeding with update.`);
-          // }
+
+          if (inSync) {
+            console.log(`Source and target are already in sync for BUID: ${buid}.`);
+            if(huronPerson && !huronPerson.active) {
+              console.log(`For some reason, in-sync person is currently inactive in target. Attempting to activate...`);
+              await this.activateTargetPersonIfExists();
+            }
+            skipPush = true;
+            console.log(`Hash storage will still be updated to ensure consistency.`);
+            // NOTE: Currently, hash storage updates will occur even when source/target are in sync.
+            // This handles cases where the hash storage record may be missing or out of date.
+            // In the future, once the system is fully mature, we expect that ANY person found in
+            // the target system will ALWAYS have a corresponding record in hash storage. At that point,
+            // this update could be optimized to only occur when the hash storage is actually missing.
+          }
+          else if (!huronPerson) {
+            crudOperation = CrudOperation.CREATE;
+            console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
+          }          
+
         } catch (error) {
           console.warn(`Error checking sync status for BUID: ${buid}:`, error);
           console.log(`Proceeding with update to be safe.`);
@@ -308,27 +412,23 @@ class SinglePersonSync {
           status: Status.SUCCESS,
           message: 'Sync skipped - source and target already in sync',
           timestamp: new Date(),
-          primaryKey: input.fieldSets[0].fieldValues.filter(fv => {
+          primaryKey: mappedPerson.fieldSets[0].fieldValues.filter(fv => {
             const key = Object.keys(fv)[0];
-            return input.fieldDefinitions?.find(fd => fd.name === key && fd.isPrimaryKey);
+            return mappedPerson.fieldDefinitions?.find(fd => fd.name === key && fd.isPrimaryKey);
           }),
           crud: crudOperation!
         };
         console.log(`${this.logPrefix}Push result for ${buid}:`, this.pushResult.status, this.pushResult.message);
       } else {
         const result = await this.dataTarget.pushOne({
-          data: input.fieldSets[0],
+          data: mappedPerson.fieldSets[0],
           crud: crudOperation
         });
         this.pushResult = result;
         console.log(`${logPrefix}Push result for ${buid}:`, result.status, result.message);
       }
 
-      // Update hash storage if enabled and sync was successful (including when push was skipped)
-      // Skip individual update if suppressHashUpdate is true (used in batch operations)
-      if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate) {
-        await this.updateHashStorage(input);
-      }
+      await processHashStorage();
       
       console.log(`${logPrefix}Single Person Sync completed successfully for BUID: ${buid}`);
     } catch (error) {
@@ -358,11 +458,16 @@ async function main() {
     const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
-    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
+    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, DELTA_STORAGE_BUCKET } = process.env;
     let buid = SYNC_BUID;
     let crudOperation = SYNC_CRUD;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
+
+    if(DELTA_STORAGE_BUCKET && isS3Config(config.storage.config)) {
+      console.log(`Using custom delta storage bucket from environment variable: ${DELTA_STORAGE_BUCKET}`);
+      config.storage.config.bucketName = DELTA_STORAGE_BUCKET;
+    }
 
     IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
       config, 
@@ -372,7 +477,11 @@ async function main() {
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
-      deltaStrategy: DeltaStrategyFactory.createStrategy({ config })
+      deltaStrategy: DeltaStrategyFactory.createStrategy({ 
+        config, 
+        ignoreRemovals: true,
+        trustPreviousStorage: false // default 
+      })
     } : undefined;
 
     // Disable source person lookup field filtering for this single sync
@@ -425,6 +534,7 @@ if (require.main === module) {
     'SYNC_PREVIEW',
     'SYNC_UPDATE_HASH',
     'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET'
   ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

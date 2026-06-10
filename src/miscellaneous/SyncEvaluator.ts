@@ -26,26 +26,29 @@ export type TargetPersonParms = {
 }
 
 export class SourcePerson {
+  private sourceInput: Input | undefined;
+  private targetInput: Input | undefined;
+
   constructor(private sourcePersonParms: SourcePersonParms) {}
 
   public isInSyncWith = async (targetPersonParms: TargetPersonParms): Promise<boolean> => {
     const { sourcePersonParms, getInputFromSource, getInputFromTarget } = this;
     const noResult = (input: Input | undefined) => !input || !input.fieldSets || input.fieldSets.length === 0;
 
-    let sourceInput = await getInputFromSource(sourcePersonParms);
+    await getInputFromSource(sourcePersonParms);
 
-    let targetInput = await getInputFromTarget(targetPersonParms);
+    await getInputFromTarget(targetPersonParms);
 
-    if (noResult(sourceInput) && noResult(targetInput)) {
+    if (noResult(this.sourceInput) && noResult(this.targetInput)) {
       console.log('No data found in either source or target, considered in sync');
       return false;
     }
 
-    if (noResult(sourceInput)) {
+    if (noResult(this.sourceInput)) {
       console.log(`No data found in source, attempting to use target data for lookup`);
-      const sid = targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'sourceIdentifier')?.value
-      const id = targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'id')?.value
-      const eid = targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'employeeId')?.value
+      const sid = this.targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'sourceIdentifier')?.value
+      const id = this.targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'id')?.value
+      const eid = this.targetInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'employeeId')?.value
       let buid: string | undefined = undefined;
       for (const identifier of [sid, id, eid]) {
         if (identifier) {
@@ -65,17 +68,17 @@ export class SourcePerson {
         return false;
       }
       console.log(`Extracted BUID ${buid} from target data, attempting to fetch source data using BUID`);
-      sourceInput = await getInputFromSource({ ...sourcePersonParms, buid });
-      if( noResult(sourceInput)) {
+      this.sourceInput = await this.getInputFromSource({ ...sourcePersonParms, buid });
+      if( noResult(this.sourceInput)) {
         console.warn(`No source data found for BUID ${buid} extracted from target data`);
         return false;
       }
     }
-    else if (noResult(targetInput)) {
+    else if (noResult(this.targetInput)) {
       console.log(`No data found in target, attempting to use source data for lookup`);
       let buid = sourcePersonParms.buid ?? sourcePersonParms?.cdmPerson?.buid;
       if (!buid) {
-        buid = sourceInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'personid')?.value;
+        buid = this.sourceInput?.fieldSets[0].fieldValues.find(fv => fv.name === 'personid')?.value;
       }
       if (!buid) {
         console.warn('No valid BUID identified in source data, cannot perform target lookup');
@@ -86,15 +89,15 @@ export class SourcePerson {
         return false;
       }
       console.log(`Extracted BUID ${buid} from source data, attempting to fetch target data using BUID`);
-      targetInput = await getInputFromTarget({ ...targetPersonParms, buid });
-      if(noResult(targetInput)) {
+      this.targetInput = await this.getInputFromTarget({ ...targetPersonParms, buid });
+      if(noResult(this.targetInput)) {
         console.warn(`No target data found for BUID ${buid} extracted from source data`);
         return false;
       }
     }
 
-    const sourceHash = sourceInput?.fieldSets[0].hash;
-    const targetHash = targetInput?.fieldSets[0].hash;
+    const sourceHash = this.sourceInput?.fieldSets[0].hash;
+    const targetHash = this.targetInput?.fieldSets[0].hash;
 
     return sourceHash === targetHash;
   }
@@ -109,7 +112,11 @@ export class SourcePerson {
     return new FieldFilter({ fieldSet, stateMappings, countryMappings, orgMappings }).filter();
   }
 
-  getInputFromSource = async (sourcePersonParms: SourcePersonParms): Promise<Input | undefined> => {
+  public getInputFromSource = async (sourcePersonParms: SourcePersonParms): Promise<Input | undefined> => {
+    if(this.sourceInput) {
+      return this.sourceInput;
+    }
+    
     let { buid, cdmPerson, config, sourceDataMapper } = sourcePersonParms;
 
     if (!buid && !cdmPerson) {
@@ -124,18 +131,24 @@ export class SourcePerson {
 
     const unparsedInput = sourceDataMapper.map([cdmPerson[0]]);
 
+    console.log('Hashing source data...');
+    
     const input = new InputParser({ 
       _input: unparsedInput, 
       fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
     }).parse();
 
-    console.log('Hashing source data...');
     // console.log(`Source data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
 
-    return input;
+    this.sourceInput = input;
+    return this.sourceInput;
   }
 
-  getInputFromTarget = async (targetPersonParms: TargetPersonParms): Promise<Input | undefined> => {
+  public getInputFromTarget = async (targetPersonParms: TargetPersonParms): Promise<Input | undefined> => {
+    if(this.targetInput) {
+      return this.targetInput;
+    }
+
     let { config, hrn, buid, huronPerson, targetDataMapper } = targetPersonParms;
 
     if (!hrn && !buid && !huronPerson) {
@@ -165,7 +178,8 @@ export class SourcePerson {
     console.log('Hashing target data...');
     // console.log(`Target data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
 
-    return input;
+    this.targetInput = input;
+    return this.targetInput;
   }
 }
 

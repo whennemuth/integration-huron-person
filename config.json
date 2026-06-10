@@ -59,7 +59,7 @@
     "type": "s3",
     "config": {
       "bucketName": "huron-person-file-drop-dev",
-      "keyPrefix": "delta-storage/",
+      "_bucketName": "huron-person-chunks-dev",
       "region": "us-east-2"
     }
   }

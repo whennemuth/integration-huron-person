@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 
 export const isEmpty = (obj: any): boolean => {
   if(obj == null || obj == undefined) {
@@ -254,4 +255,35 @@ export const getLocalConfig = (params?: { projectFolder?: string, configFileName
     console.error('Error determining local config path:', error);
     return undefined;
   }
+}
+
+export function setFileLogging(filePath?: string) {
+  const logStream = fs.createWriteStream(filePath || 'data/output.txt', {
+    flags: 'w',          // 'w' = overwrite (default), 'a' = append
+    highWaterMark: 0     // Disable buffering for immediate writes
+  });
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  const writeAndFlush = (message: string) => {
+    logStream.write(message);
+    // Force immediate flush to disk
+    if (typeof (logStream as any).flush === 'function') {
+      (logStream as any).flush();
+    }
+  };
+
+  console.log = (...args) => {
+    originalLog(...args);
+    writeAndFlush(args.join(' ') + '\n');
+  };
+  console.warn = (...args) => {
+    originalWarn(...args);
+    writeAndFlush(args.join(' ') + '\n');
+  };
+  console.error = (...args) => {
+    originalError(...args);
+    writeAndFlush(args.join(' ') + '\n');
+  };
 }

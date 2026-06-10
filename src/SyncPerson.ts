@@ -159,9 +159,7 @@ class SinglePersonSync {
     const { dataMapper } = this.instanceParams;
     dataMapper?.clearMessages();
   }
-
-  private getTargetPerson = async (buid: string, config: Config): Promise<HuronPerson | undefined> => {
-    const reader = new ReadPerson(config);
+    const reader = new ReadPerson({ config });
     console.log(`TARGET CHECK: Looking up person with BUID ${buid} in target as "sourceIdentifier"...`);
     const personData = await reader.readPersonBySourceIdentifier(buid) ?? [];
     const targetPerson = personData.length > 0 ? personData[0] : undefined;

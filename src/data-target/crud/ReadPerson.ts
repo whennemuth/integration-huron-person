@@ -20,13 +20,26 @@ interface PersonResponse {
   };
 }
 
+type ReadPersonParams = {
+  config: Config;
+  errorEventProcessor?: TargetApiErrorEventProcessor;
+  includeInactive?: boolean; // New parameter to control inclusion of inactive people
+}
+
 /**
  * Class for reading individual Person records from the Huron API
  */
 class ReadPerson {
   private apiClient: ApiClientForJWT;
+  private config: Config;
+  private errorEventProcessor?: TargetApiErrorEventProcessor;
+  private includeInactive: boolean;
 
-  constructor(private config: Config, errorEventProcessor?: TargetApiErrorEventProcessor) {
+  constructor(params: ReadPersonParams) {
+    const { config, errorEventProcessor, includeInactive=true } = params;
+    this.config = config;
+    this.errorEventProcessor = errorEventProcessor;
+    this.includeInactive = includeInactive;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
@@ -40,7 +53,7 @@ class ReadPerson {
   /**
    * Read a single person by HRN (Huron Resource Name)
    * @param hrn The Huron Resource Name of the person to retrieve
-   * @returns Promise resolving to the Person data
+   * @returns Promise resolving to the Person data (NOTE will include an existing person, even if includeInactive is false)
    */
   public readPersonByHRN = async (hrn: string, includeFields?: string[]): Promise<HuronPerson> => {
     if (/^\d+$/.test(hrn)) {
@@ -67,7 +80,8 @@ class ReadPerson {
   }
 
   private async readPersonBySingleFilter(field: string, value: string, includeFields?: string[]): Promise<any[]> {
-    const persons: any[] = await new ReadPeople({ config: this.config }).readAllPeople({
+    const { config, includeInactive } = this;
+    const persons: any[] = await new ReadPeople({ config, includeInactive }).readAllPeople({
       filters: [
         ReadPeople.createFilter({ field, value })
       ],
@@ -77,8 +91,9 @@ class ReadPerson {
   }
 
   public async readPersonByMultipleFilters(fields: string[], value: string, includeFields?: string[]): Promise<any[]> {
+    const { config, includeInactive } = this;
     const filters = fields.map((field) => ReadPeople.createFilter({ field, value, logicalOperator: 'or' }));
-    const persons: any[] = await new ReadPeople({ config: this.config }).readAllPeople({
+    const persons: any[] = await new ReadPeople({ config, includeInactive }).readAllPeople({
       filters,
       includeFields
     });
@@ -169,7 +184,7 @@ async function main() {
     .fromFileSystem()
     .getConfig('person');
 
-  const reader = new ReadPerson(config);
+  const reader = new ReadPerson({ config });
   const personData: HuronPerson | HuronPerson[] = await getPersonData({ reader });
 
   try {
@@ -195,4 +210,4 @@ if (require.main === module) {
   main();
 }
 
-export { PersonResponse, ReadPerson, getPersonData, HuronPersonIdType };
+export { PersonResponse, ReadPerson, ReadPersonParams, getPersonData, HuronPersonIdType };

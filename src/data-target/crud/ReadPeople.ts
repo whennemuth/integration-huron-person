@@ -33,15 +33,24 @@ interface PeopleListResponse {
  */
 type ReadPeopleOptions = BuildQueryOptions;
 
+type ReadPeopleParams = {
+  config: Config;
+  queryBuilder?: QueryBuilder;
+  errorEventProcessor?: TargetApiErrorEventProcessor;
+  includeInactive?: boolean;
+}
+
 /**
  * Class for reading multiple Person records from the Huron API with filtering and sorting
  */
 class ReadPeople {
   private apiClient: ApiClientForJWT;
   private queryBuilder: QueryBuilder;
+  private includeInactive: boolean;
 
-  constructor(params: { config: Config, queryBuilder?: QueryBuilder, errorEventProcessor?: TargetApiErrorEventProcessor }) {
-    const { config, queryBuilder, errorEventProcessor } = params;
+  constructor(params: ReadPeopleParams) {
+    const { config, queryBuilder, errorEventProcessor, includeInactive=true } = params;
+    this.includeInactive = includeInactive;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
@@ -81,12 +90,19 @@ class ReadPeople {
   /**
    * Read all people matching the criteria, handling pagination automatically.
    * @param options Configuration options for the query
-   * @returns Promise resolving to array of all matching Organization records
+   * @returns Promise resolving to array of all matching Person records
    */
   public async readAllPeopleNonTokenized(options: ReadPeopleOptions): Promise<HuronPerson[]> {
     const allPeople: HuronPerson[] = [];
     const { pagination: { pageSize = 500 } = {}} = options;
     let offset = 0;
+
+    if (this.includeInactive) {
+      options.filters = [
+        ...(options.filters || []),
+        ReadPeople.createFilter({ field: 'includeInactive', value: 'true', priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' })
+      ];
+    }
 
     do {
       const paginationOptions: ReadPeopleOptions = {
@@ -333,6 +349,5 @@ if (require.main === module) {
 }
 
 export {
-  PeopleListResponse, ReadPeople,
-  ReadPeopleOptions
+  PeopleListResponse, ReadPeople, ReadPeopleOptions, ReadPeopleParams
 };

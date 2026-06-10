@@ -46,15 +46,16 @@ export class HuronPersonDataTargetDelete {
    * @returns The Person record of the API user, or undefined if it cannot be determined
    */
   private getApiUser = async (): Promise<HuronPerson | undefined> => {
-    if (this.apiUserLookup) {
-      return this.apiUserLookup.lookupResult;
+    const { config, apiUserLookup: { lookupResult } = {} } = this;
+    if (lookupResult) {
+      return lookupResult;
     }
     const userId = this.apiClient.getUserId();
     if (!userId) {
       console.warn('Unable to determine API user ID from token. API user-specific operations will not be possible.');
       return undefined;
     } 
-    const reader = new ReadPerson(this.config);
+    const reader = new ReadPerson({ config });
     const retval = await reader.readPersonByUserId(userId);
     if(retval.length === 0) {
       console.warn(`API user with ID ${userId} not found in Huron. API user-specific operations will not be possible.`);
@@ -133,7 +134,7 @@ export class HuronPersonDataTargetDelete {
       const sourceIdentifier = data.fieldValues.find((fv: any) => fv.sourceIdentifier)?.sourceIdentifier as string | undefined;
       if (sourceIdentifier) {
         console.log(`HRN not found in fieldSet for DELETE operation. Attempting fallback lookup by sourceIdentifier: ${sourceIdentifier}`);
-        const reader = new ReadPerson(this.config);
+        const reader = new ReadPerson({ config: this.config });
         try {
           const lookupResult: HuronPerson[] = await reader.readPersonByHailMary(sourceIdentifier);
           hrn = lookupResult?.[0]?.hrn;

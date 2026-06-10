@@ -195,7 +195,7 @@ if(require.main === module) {
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
     const config = ConfigManager.getInstance().fromEnvironment().fromFileSystem(localConfigPath).getConfig('none');
 
-    const huronPerson = await new ReadPerson(config).readPersonByHRN(hrn!);
+    const huronPerson = await new ReadPerson({ config }).readPersonByHRN(hrn!);
 
     const targetDataMapper = new ReverseDataMapper();
 

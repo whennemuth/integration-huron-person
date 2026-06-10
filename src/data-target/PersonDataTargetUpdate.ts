@@ -44,7 +44,7 @@ export class HuronPersonDataTargetUpdate {
     // UPDATE: Use PATCH to /api/v2/persons/{hrn} if hrn is available
     let response;
     let endpoint = this.config.dataTarget.personsPath;
-    const { personRequest, apiClient, data, crud } = this;
+    const { config, personRequest, apiClient, data, crud } = this;
 
     console.log(`Pushing single person record with PATCH operation:`, getPersonIdentifierInfo(personRequest.data));
     if (personRequest.data?.hrn) {
@@ -59,7 +59,7 @@ export class HuronPersonDataTargetUpdate {
     } 
     else {
       // Huron lookup feature not ready yet, so attempt to lookup HRN using sourceIdentifier or id from the fieldSet data
-      const reader = new ReadPerson(this.config);
+      const reader = new ReadPerson({ config });
       const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
       this._hrn = result?.[0]?.hrn;
       if( ! this._hrn) {

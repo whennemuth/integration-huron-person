@@ -29,7 +29,7 @@ class PersonToDeactivate {
     }
     const { config, huronPersonIdType, id } = this.params;
     const person: HuronPerson | HuronPerson[] = await getPersonData({
-      reader: new ReadPerson(config),
+      reader: new ReadPerson({ config }),
       huronPersonIdType,
       id
     });

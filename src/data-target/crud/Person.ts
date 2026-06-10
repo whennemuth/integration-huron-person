@@ -144,6 +144,7 @@ export interface HuronPerson {
  */
 export const FilterFields: Set<string> = new Set([
   'active',
+  'includeInactive',
   'allowLogin',
   'contactInformation.phone',
   'contactInformation.email',

@@ -142,11 +142,11 @@ export class SourcePerson {
       throw new Error('Either hrn, buid, or huronPerson must be provided to generate hash');
     }
     if(hrn && !huronPerson) {
-      huronPerson = await new ReadPerson(config).readPersonByHRN(hrn);
+      huronPerson = await new ReadPerson({ config }).readPersonByHRN(hrn);
     }
     if (!huronPerson) {
       if(buid) {
-        const results = await new ReadPerson(config).readPersonByHailMary(buid);
+        const results = await new ReadPerson({ config }).readPersonByHailMary(buid);
         if ( results && results.length > 0) {
           huronPerson = results[0];
         }

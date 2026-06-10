@@ -22,7 +22,7 @@ describe('ReadPerson', () => {
       .fromPartial(createMockConfig())
       .getConfig('none');
 
-    readPerson = new ReadPerson(config);
+    readPerson = new ReadPerson({ config });
 
     // Create mocks
     mockApiClient = new ApiClientForJWT({} as any) as jest.Mocked<ApiClientForJWT>;

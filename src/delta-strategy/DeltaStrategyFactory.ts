@@ -11,9 +11,10 @@ import {
   isS3Config
 } from 'integration-core';
 import { Config } from '../config/Config';
-import { UpsertDeltaStrategy } from './UpsertDeltaStrategy';
-import { ChunkedDeltaStrategy } from './ChunkedDeltaStrategy';
-import { IgnoreRemovalsDeltaStrategy } from './IgnoreRemovalsDeltaStrategy';
+import { UpsertDeltaStrategy } from './decorators/Upsert';
+import { ChunkedDeltaStrategy } from './decorators/Chunked';
+import { IgnoreRemovalsDeltaStrategy } from './decorators/IgnoreRemovals';
+import { IntegratedDeltaClientIdDeltaStrategy } from './decorators/IntegratedDeltaClientId';
 
 /**
  * Parameters for creating a delta strategy
@@ -28,7 +29,14 @@ export interface CreateStrategyParams {
 }
 
 /**
- * Factory for creating appropriate delta strategy based on configuration
+ * Factory for creating appropriate delta strategy based on configuration.
+ * The DeltaStrategy instance is built using one or more decorators depending on the configuration parameters.
+ * 
+ * Key configuration parameters that influence the strategy composition include:
+ * - storage.type (file, database, s3)
+ * - chunkId (presence indicates chunked processing)
+ * - bulkReset (forces UpsertDeltaStrategy for cache-based lookups)
+ * - integratedDeltaClientId (redirects baseline reads to shared integrated delta path)
  */
 export class DeltaStrategyFactory {  
   /**
@@ -156,7 +164,7 @@ export class DeltaStrategyFactory {
      * Wrap with ChunkedDeltaStrategy if chunkId is provided (parallel chunk processing)
      * This ensures all chunks read from the integrated previous-input.ndjson
      */
-    if (chunkId && (config as any).integratedDeltaClientId) {
+    if (chunkId && config.integratedDeltaClientId) {
       console.log('🔄  Chunked processing mode - wrapping strategy with ChunkedDeltaStrategy');
       deltaStrategy = new ChunkedDeltaStrategy(deltaStrategy, config);
     }
@@ -168,55 +176,13 @@ export class DeltaStrategyFactory {
     }
 
     /**
-     * Redirect baseline reads to shared integrated path in chunked processor mode.
-     * 
-     * Problem: EndToEnd.execute() performs a post-push fetchPreviousData for hash restoration,
-     * but passes config.integration.clientId (chunk-specific deltas path). In chunked mode,
-     * that path doesn't exist; the baseline lives in the shared delta-storage directory created
-     * by the merger.
-     * 
-     * Solution: Wrap the strategy's storage so fetchPreviousData is redirected to
-     * integratedDeltaClientId (delta-storage) while updatePreviousData writes remain at the
-     * original chunk-specific path. This ensures:
-     * - Delta computation reads use integrated baseline (ChunkedDeltaStrategy handles this).
-     * - Post-push hash restoration reads also use integrated baseline (wrapper handles this).
-     * - Chunk outputs continue writing to deltas/{timestamp}/chunk-{id}.ndjson.
-     * 
-     * Applied only in chunked processor mode (chunkId + integratedDeltaClientId both present).
+     * Wrap with IntegratedDeltaClientIdDeltaStrategy if integratedDeltaClientId is configured.
+     * This redirects baseline reads to the shared integrated delta path, while preserving original clientId for writes.
      */
-    const integratedDeltaClientId = (config as any).integratedDeltaClientId as string | undefined;
-    if (chunkId && integratedDeltaClientId) {
-      const originalStorage = deltaStrategy.storage;
-      const redirectedStorage = {
-        name: originalStorage.name,
-        description: originalStorage.description,
-        fetchPreviousData: async (params: { clientId: string; limitTo?: any[] }) => {
-          const redirectedParams = {
-            ...params,
-            clientId: integratedDeltaClientId
-          };
-          console.log(`Redirecting baseline read clientId from ${params.clientId} to ${integratedDeltaClientId}`);
-          return originalStorage.fetchPreviousData(redirectedParams as any);
-        },
-        wouldOverwritePreviousData: async (clientId: string) => {
-          return originalStorage.wouldOverwritePreviousData(clientId);
-        },
-        updatePreviousData: async (params: {
-          clientId: string;
-          newPreviousData: any[];
-          primaryKeyFields?: Set<string>;
-          failureCount?: number;
-          cleanup?: boolean;
-        }) => {
-          // Keep chunk-specific writes unchanged.
-          return originalStorage.updatePreviousData(params as any);
-        }
-      };
-
-      Object.defineProperty(deltaStrategy, 'storage', {
-        get: () => redirectedStorage,
-        configurable: true
-      });
+    const integratedDeltaClientId = config.integratedDeltaClientId;
+    if (integratedDeltaClientId) {
+      console.log('🔄  Integrated delta client ID detected - wrapping strategy with IntegratedDeltaClientIdDeltaStrategy');
+      deltaStrategy = new IntegratedDeltaClientIdDeltaStrategy(deltaStrategy, integratedDeltaClientId);
     }
 
     return deltaStrategy;

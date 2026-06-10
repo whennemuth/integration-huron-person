@@ -35,9 +35,10 @@ export { FieldFilter, FieldFilterParams } from '../src/data-mapper/FieldFilter';
 
 // Delta strategy exports
 export { DeltaStrategyFactory as HuronDeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
-export { UpsertDeltaStrategy } from '../src/delta-strategy/UpsertDeltaStrategy';
-export { ChunkedDeltaStrategy } from '../src/delta-strategy/ChunkedDeltaStrategy';
-export { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/IgnoreRemovalsDeltaStrategy';
+export { UpsertDeltaStrategy } from '../src/delta-strategy/decorators/Upsert';
+export { ChunkedDeltaStrategy } from '../src/delta-strategy/decorators/Chunked';
+export { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/decorators/IgnoreRemovals';
+export { IntegratedDeltaClientIdDeltaStrategy } from '../src/delta-strategy/decorators/IntegratedDeltaClientId';
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';

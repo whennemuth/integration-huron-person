@@ -1,12 +1,12 @@
 import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, Input, InputUtilsDecorator, TestEnvironment } from 'integration-core';
-import { Config } from "../config/Config";
-import { ReadPerson } from "../data-target/crud/ReadPerson";
-import { HuronPerson } from "../data-target/crud/Person";
-import { ConfigManager } from "../config/ConfigManager";
-import { getDataMapper } from "../data-mapper/DataMapper";
-import { BasicCache } from "../Cache";
-import { SinglePersonSync } from "../SyncPerson";
-import { DeltaStrategyFactory } from "./DeltaStrategyFactory";
+import { Config } from "../../config/Config";
+import { ReadPerson } from "../../data-target/crud/ReadPerson";
+import { HuronPerson } from "../../data-target/crud/Person";
+import { ConfigManager } from "../../config/ConfigManager";
+import { getDataMapper } from "../../data-mapper/DataMapper";
+import { BasicCache } from "../../Cache";
+import { SinglePersonSync } from "../../SyncPerson";
+import { DeltaStrategyFactory } from "../DeltaStrategyFactory";
 
 /**
  * Delta strategy implementation for upsert operations. Unlike traditional delta strategies that
@@ -35,7 +35,7 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
     private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any> // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
   ) {
     this.parms = deltaStrategy.parms;
-    this.readPerson = new ReadPerson(config);
+    this.readPerson = new ReadPerson({ config });
   }
 
   get storage(): DeltaStorage {

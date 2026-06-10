@@ -1,15 +1,17 @@
-import { DataSource, EndToEnd, FieldSet, IntegrationResult, Timer, TestEnvironment } from 'integration-core';
+import { DataSource, EndToEnd, FieldSet, IntegrationResult, isS3Config, TestEnvironment, Timer } from 'integration-core';
+import { getLocalConfig } from '../bin';
 import { Cache } from './Cache';
 import { Config, TargetPersonDeleteType } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper, StaticMapUsage } from './data-mapper/DataMapper';
 import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 import { getDataSource } from './data-source/DataSource';
+import { ApiRetryStrategy, TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
+import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
-import { ApiRetryStrategy, TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
-import { getLocalConfig } from '../bin';
+
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
 type HuronPersonIntegrationParams = {
@@ -235,7 +237,12 @@ class HuronPersonIntegration {
  * on the container or serverless function configuration.
  */
 async function main() {
-  const { CACHE_ENABLED, CACHE_PATH, HURON_PERSON_CONFIG_PATH } = process.env;
+  const { 
+    CACHE_ENABLED, 
+    CACHE_PATH, 
+    HURON_PERSON_CONFIG_PATH,
+    DELTA_STORAGE_BUCKET
+  } = process.env;
 
   if(CACHE_ENABLED !== 'true') {
     console.log('CACHE_ENABLED environment variable is not set to "true". You need to cache the access token for bulk operations.');
@@ -263,7 +270,17 @@ async function main() {
       delete (config.dataSource.people as any)?.fetchPath;
       delete (config.dataSource.people as any)?.endpointConfig;
     }
-    
+
+    if(DELTA_STORAGE_BUCKET && isS3Config(config.storage.config)) {
+      console.log(`Using custom delta storage bucket from environment variable: ${DELTA_STORAGE_BUCKET}`);
+      config.storage.config.bucketName = DELTA_STORAGE_BUCKET;
+    }
+
+    IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
+      config, 
+      'SYNC_PEOPLE_INTEGRATED_DELTA_CLIENT_ID'
+    ); 
+
     const staticMapUsage: StaticMapUsage = { countryMap: false, orgMap: true, stateMap: true };
     const integration = new HuronPersonIntegration({ config, staticMapUsage });
     await integration.run();
@@ -280,7 +297,9 @@ if (require.main === module) {
 
   [
     'CACHE_PATH',
-    'HURON_PERSON_CONFIG_PATH'
+    'HURON_PERSON_CONFIG_PATH',
+    'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET'
   ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

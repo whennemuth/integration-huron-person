@@ -612,7 +612,7 @@ describe('DeltaStrategyFactory', () => {
       require('integration-core').DeltaStrategyForFileSystem = mockCreateFileStrategy;
     });
 
-    it('should wrap with ChunkedDeltaStrategy first, then UpsertDeltaStrategy', () => {
+    it('should wrap with ChunkedDeltaStrategy first, then UpsertDeltaStrategy, then IntegratedDeltaClientIdDeltaStrategy', () => {
       const configWithIntegratedClient = {
         ...mockConfig,
         integratedDeltaClientId: 'shared-client'
@@ -624,9 +624,14 @@ describe('DeltaStrategyFactory', () => {
         bulkReset: true
       });
 
-      // Should be wrapped with UpsertDeltaStrategy (outer wrapper)
+      // Should be wrapped with IntegratedDeltaClientIdDeltaStrategy (outermost wrapper)
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+      expect(result.constructor.name).toBe('IntegratedDeltaClientIdDeltaStrategy');
+      
+      // Verify the wrapper order by checking the underlying strategy
+      const integratedWrapper = result as any;
+      expect(integratedWrapper.underlyingStrategy).toBeDefined();
+      expect(integratedWrapper.underlyingStrategy.constructor.name).toBe('UpsertDeltaStrategy');
     });
 
     it('should only wrap with UpsertDeltaStrategy when chunkId provided without integratedDeltaClientId', () => {
@@ -730,7 +735,7 @@ describe('DeltaStrategyFactory', () => {
       expect(result.constructor.name).not.toBe('UpsertDeltaStrategy');
     });
 
-    it('should handle trustPreviousStorage=false with chunkId', () => {
+    it('should handle trustPreviousStorage=false with chunkId and wrap with IntegratedDeltaClientIdDeltaStrategy as outermost', () => {
       const mockCacheLookup = jest.fn();
       const configWithIntegratedClient = {
         ...mockConfig,
@@ -745,9 +750,14 @@ describe('DeltaStrategyFactory', () => {
         lookupPersonInTargetSystemCache: mockCacheLookup
       });
 
-      // Should wrap with ChunkedDeltaStrategy first, then UpsertDeltaStrategy
+      // Should wrap with IntegratedDeltaClientIdDeltaStrategy (outermost), which wraps UpsertDeltaStrategy, which wraps ChunkedDeltaStrategy
       expect(result).toBeDefined();
-      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+      expect(result.constructor.name).toBe('IntegratedDeltaClientIdDeltaStrategy');
+      
+      // Verify UpsertDeltaStrategy is underneath
+      const integratedWrapper = result as any;
+      expect(integratedWrapper.underlyingStrategy).toBeDefined();
+      expect(integratedWrapper.underlyingStrategy.constructor.name).toBe('UpsertDeltaStrategy');
     });
 
     it('should NOT wrap with UpsertDeltaStrategy when trustPreviousStorage=false but no cache function provided', () => {
@@ -863,7 +873,7 @@ describe('DeltaStrategyFactory', () => {
       );
     });
 
-    it('should not redirect fetchPreviousData when chunkId is not provided', async () => {
+    it('should redirect fetchPreviousData to integratedDeltaClientId even when chunkId is not provided', async () => {
       const configWithIntegratedClient = {
         ...mockConfig,
         integratedDeltaClientId: 'delta-storage'
@@ -878,8 +888,123 @@ describe('DeltaStrategyFactory', () => {
         clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z'
       } as any);
 
+      // IntegratedDeltaClientIdDeltaStrategy redirects reads even without chunkId
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'delta-storage' })
+      );
+    });
+
+    it('should not redirect fetchPreviousData when integratedDeltaClientId is not provided', async () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: false
+      });
+
+      await result.storage.fetchPreviousData({
+        clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z'
+      } as any);
+
+      // Without integratedDeltaClientId, no redirection occurs
       expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(
         expect.objectContaining({ clientId: 'deltas/person-full/2026-05-22T03:17:32.565Z' })
+      );
+    });
+  });
+
+  describe('IntegratedDeltaClientIdDeltaStrategy wrapping', () => {
+    let mockStorage: any;
+    let mockStrategy: any;
+
+    beforeEach(() => {
+      mockStorage = {
+        name: 'Mock Storage',
+        description: 'Mock Delta Storage',
+        fetchPreviousData: jest.fn().mockResolvedValue([]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
+        updatePreviousData: jest.fn().mockResolvedValue({ status: 'ok' })
+      };
+
+      mockStrategy = {
+        name: 'MockDeltaStrategy',
+        parms: { clientId: 'test', config: {} },
+        storage: mockStorage,
+        computeDelta: jest.fn()
+      };
+
+      require('integration-core').DeltaStrategyForFileSystem = jest.fn().mockReturnValue(mockStrategy);
+    });
+
+    it('should wrap with IntegratedDeltaClientIdDeltaStrategy when integratedDeltaClientId is provided', () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        bulkReset: false
+      });
+
+      expect(result).toBeDefined();
+      expect(result.constructor.name).toBe('IntegratedDeltaClientIdDeltaStrategy');
+    });
+
+    it('should NOT wrap with IntegratedDeltaClientIdDeltaStrategy when integratedDeltaClientId is not provided', () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: false
+      });
+
+      expect(result).toBe(mockStrategy);
+      expect(result.constructor.name).not.toBe('IntegratedDeltaClientIdDeltaStrategy');
+    });
+
+    it('should apply IntegratedDeltaClientIdDeltaStrategy as outermost wrapper when all wrappers are enabled', () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        chunkId: 'chunk-001',
+        bulkReset: true,
+        ignoreRemovals: true
+      });
+
+      // IntegratedDeltaClientIdDeltaStrategy should be the outermost wrapper
+      // The relative order of wrappers (base → IgnoreRemovals → Chunked → Upsert → IntegratedDeltaClientId) is tested in other tests
+      expect(result.constructor.name).toBe('IntegratedDeltaClientIdDeltaStrategy');
+    });
+
+    it('should redirect reads but preserve writes with integratedDeltaClientId', async () => {
+      const configWithIntegratedClient = {
+        ...mockConfig,
+        integratedDeltaClientId: 'delta-storage'
+      } as any;
+
+      const result = DeltaStrategyFactory.createStrategy({
+        config: configWithIntegratedClient,
+        bulkReset: false
+      });
+
+      // Test read redirection
+      await result.storage.fetchPreviousData({
+        clientId: 'instance-specific-path'
+      } as any);
+
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'delta-storage' })
+      );
+
+      // Test write preservation
+      await result.storage.updatePreviousData({
+        clientId: 'instance-specific-path',
+        newPreviousData: []
+      } as any);
+
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(
+        expect.objectContaining({ clientId: 'instance-specific-path' })
       );
     });
   });

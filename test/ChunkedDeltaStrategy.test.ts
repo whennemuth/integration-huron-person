@@ -1,4 +1,4 @@
-import { ChunkedDeltaStrategy } from '../src/delta-strategy/ChunkedDeltaStrategy';
+import { ChunkedDeltaStrategy } from '../src/delta-strategy/decorators/Chunked';
 import { DeltaResult, DeltaStorage, DeltaStrategy, FieldSet } from 'integration-core';
 import { Config } from '../src/config/Config';
 

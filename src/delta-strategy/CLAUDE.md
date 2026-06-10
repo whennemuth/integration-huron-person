@@ -10,7 +10,7 @@ Implements the delta synchronization strategy—determining which records to cre
 
 **Environment Prefix**: UPSERT_DELTA_STRATEGY
 
-**Location**: `UpsertDeltaStrategy.ts`
+**Location**: `decorators/Upsert.ts`
 
 **Operations**:
 - **Create**: Record exists in source, not in target
@@ -129,7 +129,7 @@ class DeferredDeleteHandler {
 ## Testing Delta Strategy
 
 ```bash
-npx ts-node src/delta-strategy/UpsertDeltaStrategy.ts
+npx ts-node src/delta-strategy/decorators/Upsert.ts
 ```
 
 ### Validation Checklist

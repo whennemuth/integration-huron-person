@@ -1,5 +1,5 @@
 import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet } from "integration-core";
-import { Config } from "../config/Config";
+import { Config } from "../../config/Config";
 
 /**
  * Decorator strategy for chunked processing that separates:
@@ -26,7 +26,7 @@ export class ChunkedDeltaStrategy implements DeltaStrategy {
     
     // Extract integrated delta client ID from config
     // This is the path where previous-input.ndjson exists (created by merger)
-    this.integratedDeltaClientId = (config as any).integratedDeltaClientId || config.integration.clientId;
+    this.integratedDeltaClientId = config.integratedDeltaClientId || config.integration.clientId;
     
     console.log(`ChunkedDeltaStrategy: Reading integrated delta from: ${this.integratedDeltaClientId}`);
     console.log(`ChunkedDeltaStrategy: Writing chunked delta to: ${config.integration.clientId}`);

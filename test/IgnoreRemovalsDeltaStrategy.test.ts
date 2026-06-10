@@ -1,5 +1,5 @@
 import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, InputUtilsDecorator, FileConfig } from 'integration-core';
-import { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/IgnoreRemovalsDeltaStrategy';
+import { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/decorators/IgnoreRemovals';
 
 describe('IgnoreRemovalsDeltaStrategy', () => {
   let mockStorage: DeltaStorage;

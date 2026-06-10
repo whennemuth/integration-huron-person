@@ -51,6 +51,7 @@
   },
   "integration": {
     "clientId": "huron-person-integration",
+    "integratedDeltaClientId": "delta-storage",
     "batchSize": 200,
     "timeout": 30000
   },

@@ -1,4 +1,4 @@
-import { UpsertDeltaStrategy } from '../src/delta-strategy/UpsertDeltaStrategy';
+import { UpsertDeltaStrategy } from '../src/delta-strategy/decorators/Upsert';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
 import { Config } from '../src/config/Config';
 import { DeltaStrategy, DeltaStorage, FieldSet } from 'integration-core';

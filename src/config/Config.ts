@@ -104,6 +104,19 @@ export interface Config {
     /** Request timeout in milliseconds */
     timeout?: number;
   };
+
+  /**
+   * Optional integrated delta client ID for shared baseline storage.
+   * 
+   * When set, delta strategies will read previous-input.ndjson from this path
+   * instead of integration.clientId. This enables:
+   * - Chunked processors to read from shared delta-storage while writing to chunk-specific paths
+   * - Test harnesses to read from persistent delta-storage instead of transient clientId paths
+   * 
+   * Example: "delta-storage" points to s3://bucket/delta-storage/previous-input.ndjson
+   * while integration.clientId might be "deltas/person-full/2026-06-05T12:00:00.000Z"
+   */
+  integratedDeltaClientId?: string;
   
   /** Delta storage configuration */
   storage: {

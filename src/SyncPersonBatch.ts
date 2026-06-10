@@ -1,7 +1,8 @@
 import { CrudOperation, FieldSet, InputUtilsDecorator, Status, TestEnvironment } from 'integration-core';
 import * as fs from 'fs';
 import { BasicCache } from './Cache';
-import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
+import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
+import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { ConfigManager } from './config/ConfigManager';
@@ -149,6 +150,11 @@ async function main() {
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
 
+    IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
+      config, 
+      'SYNC_PERSON_BATCH_INTEGRATED_DELTA_CLIENT_ID'
+    ); 
+
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
@@ -218,7 +224,8 @@ if (require.main === module) {
 
   [
     'SYNC_PREVIEW', 
-    'SYNC_UPDATE_HASH'
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
   ].forEach(testEnvironment.getVar);
 
   [

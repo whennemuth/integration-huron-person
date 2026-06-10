@@ -8,6 +8,7 @@ import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPerson } from './data-target/crud/Person';
 import { ReadPerson } from './data-target/crud/ReadPerson';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
+import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
@@ -365,6 +366,11 @@ async function main() {
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
 
+    IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
+      config, 
+      'SYNC_PERSON_INTEGRATED_DELTA_CLIENT_ID'
+    ); 
+
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
@@ -419,7 +425,8 @@ if (require.main === module) {
     'SYNC_BUID',
     'SYNC_CRUD',
     'SYNC_PREVIEW',
-    'SYNC_UPDATE_HASH'
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
   ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

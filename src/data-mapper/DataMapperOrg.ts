@@ -109,6 +109,12 @@ const getPositionStatus = (position: any, currentDate: Date = new Date()): Posit
   return 'active';
 };
 
+const logTerminated = (pos: any, personId: string) => {
+  const { BasicData: { position } = {}, Department = {} } = pos?.positionInfo || {};
+  const json = JSON.stringify({ position, Department });
+  console.log(`⚠ Person ${personId}: Position is terminated: ${json}`);
+}
+
 /**
  * Determines if a degree program is current based on the isCurrentAcademicProgram field.
  * A degree program is considered current if isCurrentAcademicProgram === 'Y'.
@@ -197,16 +203,22 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
 
   const { 
     employeeInfo: { positions: employeePositions = []} = { positions: [] }, 
-    studentInfo: { studentSemester = [], admissionHistory = [] } = {}, 
+    studentInfo = {}, studentInfo: { studentSemester = [], admissionHistory = [] } = {}, 
     affiliateInfo
   } = person;
+
+  const studentClue = Object.keys(studentInfo).length > 0;
 
   // Load organization from employee positions into org list for priority sorting.
   // First, filter to only include active positions (active or active+)
   const currentDate = new Date();
   const activePositions = employeePositions.filter((pos: any) => {
     const status = getPositionStatus(pos, currentDate);
-    return status === 'active' || status === 'active+';
+    const active = status === 'active' || status === 'active+';
+    if (!active) {
+      logTerminated(pos, person?.personid || 'UNKNOWN');
+    }
+    return active;
   });
 
   // Sort active positions by:
@@ -258,13 +270,23 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
     // Check if this is truly student-only (no employee or affiliate)    
     if (!hasEmployee && !hasAffiliate) {
       skipReason = `Student-only with no current term enrollment (personId: ${personId})`;
-      console.warn(`⚠ Person ${personId}: Student-only with no current term enrollment - will be skipped`);
+      console.warn(`⚠ Person ${personId}: ${skipReason} - will be skipped`);
     }
   }
-  else if (!hasEmployee && !hasAffiliate && studentSemester.length === 0 && admissionHistory.length > 0) {
-    const personId = person?.personid || 'UNKNOWN';
-    skipReason = `Non-enrolled student with admission history (personId: ${personId})`;
-    console.warn(`⚠ Person ${personId}: Non-enrolled student with admission history - will be skipped`);
+  else if (!hasEmployee && !hasAffiliate && studentSemester.length === 0) {
+    if(admissionHistory.length > 0) {
+      skipReason = `Non-enrolled student with admission history (personId: ${personId})`;
+      console.warn(`⚠ Person ${personId}: ${skipReason} - will be skipped`);
+    }
+    else {
+      if(studentClue) {
+        skipReason = `Student-only with no current term enrollment or admission history (personId: ${personId})`;
+      }
+      else {
+        skipReason = `Non-student with no employee or affiliate info (personId: ${personId})`;
+      }
+      console.warn(`⚠ Person ${personId}: ${skipReason} - will be skipped`);
+    }
   }
 
   // Collect organization codes from degree programs:

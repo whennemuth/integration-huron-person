@@ -56,6 +56,7 @@ export const _fieldDefinitions = [
  */
 export class DataMapper implements CoreDataMapper {
   private _criticalValidationFailureMessage:string | undefined;
+  private _person:any; // For logging purposes in case of mapping errors
   private _infoValidationFailureMessage:string | undefined;
   private _params: DataMapperParams;
   private _orgHrn: (sourceOrgId: string) => string | undefined
@@ -105,6 +106,14 @@ export class DataMapper implements CoreDataMapper {
     return this._params.orgMappings;
   }
 
+  public get person(): any {
+    return this._person;
+  }
+
+  public get personAsJson(): string {
+    return JSON.stringify(this._person || {});
+  }
+
   /**
    * Get the count of records that failed during the mapping phase.
    * These are filtered out of the returned Input and should be counted as failures.
@@ -150,6 +159,7 @@ export class DataMapper implements CoreDataMapper {
       try {
 
         person = removeEmptyValues(person);
+        this._person = person; // Store the current person being processed for logging in case of errors
 
         const { personid } = person;
         const { idpName, idpDomain, addressTypes, currentTerms } = this._params;
@@ -185,15 +195,15 @@ export class DataMapper implements CoreDataMapper {
 
         // Basic data check
         if(isEmpty(personid)) {
-          this._criticalValidationFailureMessage = `Person record is missing required personid field: ${JSON.stringify(person)}`;
+          this._criticalValidationFailureMessage = `Person record is missing required personid field: ${personid}`;
         }
         if(anyEmpty(firstName, lastName) && !this._criticalValidationFailureMessage) {
-          this._criticalValidationFailureMessage = `Person record is missing required name fields: ${JSON.stringify(person)}`;
+          this._criticalValidationFailureMessage = `Person record is missing required name fields: ${personid}`;
         }
         // For affiliates, organization is EXEMPTED per CSV spec (employer="AFFILIATE", organization=undefined)
         // For employees and students, organization is required
         if(!orgAssignments.organization && orgAssignments.employer !== 'AFFILIATE' && !this._criticalValidationFailureMessage) {
-          this._criticalValidationFailureMessage = `Person record is missing required organization field: ${JSON.stringify(person)}`;
+          this._criticalValidationFailureMessage = `Person record is missing required organization field: ${personid}`;
         }
         const employerHrn = this._orgHrn(orgAssignments.employer ?? '');
         const fieldValues = [
@@ -242,7 +252,7 @@ export class DataMapper implements CoreDataMapper {
           const orgHrn = this._orgHrn(orgAssignments.organization);
           if(isEmpty(orgHrn)) {
             if(!this._criticalValidationFailureMessage) {
-              this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${JSON.stringify(person)}`;
+              this._criticalValidationFailureMessage = `Organization HRN could not be determined for person record with source org id ${orgAssignments.organization}: ${personid}`;
             }
           }
           else {
@@ -255,7 +265,7 @@ export class DataMapper implements CoreDataMapper {
           const secondaryHrn = this._orgHrn(orgAssignments.secondaryUnit);
           if(isEmpty(secondaryHrn) && !this._infoValidationFailureMessage) {
             if(!this._infoValidationFailureMessage) {
-              this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${JSON.stringify(person)}`;
+              this._infoValidationFailureMessage = `SecondaryUnit HRN could not be determined for person record with source org id ${orgAssignments.secondaryUnit}: ${personid}`;
             }
           }
           else {
@@ -268,7 +278,7 @@ export class DataMapper implements CoreDataMapper {
           const additionalHrn = this._orgHrn(orgAssignments.additionalUnit);
           if(isEmpty(additionalHrn) && !this._infoValidationFailureMessage) {
             if(!this._infoValidationFailureMessage) {
-              this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${JSON.stringify(person)}`;
+              this._infoValidationFailureMessage = `AdditionalUnit HRN could not be determined for person record with source org id ${orgAssignments.additionalUnit}: ${personid}`;
             }
           }
           else {

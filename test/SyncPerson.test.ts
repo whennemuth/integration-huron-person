@@ -192,7 +192,8 @@ describe('SinglePersonSync', () => {
 
     // Mock ReadPerson
     (ReadPerson as jest.Mock).mockImplementation(() => ({
-      readPersonById: jest.fn().mockResolvedValue([])
+      readPersonById: jest.fn().mockResolvedValue([]),
+      readPersonBySourceIdentifier: jest.fn().mockResolvedValue([])
     }));
 
     singlePersonSync =  new SinglePersonSync({ 

@@ -81,7 +81,7 @@ describe('OrgMapper', () => {
       const person = {};
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' });
     });
 
     it('should return empty object when all sources are empty', () => {
@@ -92,7 +92,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment or admission history (personId: UNKNOWN)' });
     });
 
     it('should assign single org to employer and organization', () => {
@@ -198,7 +198,7 @@ describe('OrgMapper', () => {
     it('should handle affiliate info with organizationalUnit', () => {
       const person = {
         affiliateInfo: {
-          organizationalUnit: 'AFF123'
+          organizationalUnit: { code: 'AFF123' }
         }
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
@@ -209,7 +209,7 @@ describe('OrgMapper', () => {
     it('should handle affiliate info with department', () => {
       const person = {
         affiliateInfo: {
-          department: 'DEPT456'
+          department: { code: 'DEPT456' }
         }
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
@@ -310,7 +310,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' });
     });
 
     it('should handle empty strings and trim whitespace', () => {

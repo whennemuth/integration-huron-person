@@ -3,7 +3,7 @@ import { CrudOperation, FieldSet, InputUtilsDecorator, isS3Config, Status, TestE
 import { getLocalConfig } from '../bin';
 import { BasicCache } from './Cache';
 import { ConfigManager } from './config/ConfigManager';
-import { getDataMapper } from './data-mapper/DataMapper';
+import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
@@ -132,7 +132,7 @@ class BatchPersonSync {
 /**
  * Main entry point for command line execution - batch person sync
  */
-async function main() {
+export async function main(dataMapper?: DataMapper) {
   const { HURON_PERSON_CONFIG_PATH } = process.env;
   try {
     // Load configuration
@@ -144,7 +144,9 @@ async function main() {
       .getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
+    if(!dataMapper) {
+      dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
+    }
 
     // Get environment variables for batch sync
     const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, DELTA_STORAGE_BUCKET } = process.env;
@@ -158,7 +160,7 @@ async function main() {
 
     IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
       config, 
-      'SYNC_PERSON_BATCH_INTEGRATED_DELTA_CLIENT_ID'
+      'INTEGRATED_DELTA_CLIENT_ID'
     ); 
 
     // Create hash storage config if enabled

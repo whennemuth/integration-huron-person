@@ -73,6 +73,10 @@ export class DataMapper implements CoreDataMapper {
     }
   }
 
+  public get params(): DataMapperParams {
+    return this._params;
+  }
+
   public clearMessages = () => {
     this._criticalValidationFailureMessage = undefined;
     this._infoValidationFailureMessage = undefined;

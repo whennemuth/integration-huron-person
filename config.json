@@ -58,8 +58,8 @@
   "storage": {
     "type": "s3",
     "config": {
-      "bucketName": "huron-person-file-drop-dev",
-      "_bucketName": "huron-person-chunks-dev",
+      "_bucketName": "huron-person-file-drop-dev",
+      "bucketName": "huron-person-chunks-dev",
       "region": "us-east-2"
     }
   }

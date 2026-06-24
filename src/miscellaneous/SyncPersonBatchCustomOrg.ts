@@ -216,7 +216,8 @@ if (require.main === module) {
     'EMPLOYER_HRN',
     'EMPLOYER_SID',
     'ORGANIZATION_HRN',
-    'ORGANIZATION_SID'
+    'ORGANIZATION_SID',
+    'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVar);
 
   [
@@ -224,7 +225,8 @@ if (require.main === module) {
     'SYNC_BUIDS',
   ].forEach(testEnvironment.getVarOrEmptyString);
 
-  setFileLogging('data/sync_person_batch_custom_org.txt');
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_org_output.json';
+  setFileLogging(logFilePath);
 
   _main();
 }

@@ -239,6 +239,7 @@ if (require.main === module) {
     'SYNC_UPDATE_HASH',
     'INTEGRATED_DELTA_CLIENT_ID',
     'DELTA_STORAGE_BUCKET',
+    'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVar);
 
   [
@@ -246,7 +247,8 @@ if (require.main === module) {
     'SYNC_BUIDS',
   ].forEach(testEnvironment.getVarOrEmptyString);
 
-  setFileLogging('data/sync_person_batch_dangling.txt');
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_output.json';
+  setFileLogging(logFilePath);
 
   main();
 }

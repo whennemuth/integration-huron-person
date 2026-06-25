@@ -125,14 +125,23 @@ describe('DataMapper', () => {
       expect(mapper.criticalValidationErrorMessage).toContain('missing required name fields');
     });
 
-    it('should set validationFailureMessage for missing organizations', () => {
+    it('should skip person without organizations and log warning', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       const invalidPerson = {
         personid: '123',
         personBasic: { names: [{ firstName: 'Test', lastName: 'User', nameType: 'PRF', effectiveDate: '03052026' }] }
       };
-      mapper.map([invalidPerson]);
-      expect(mapper.criticalValidationErrorMessage).toContain('missing required organization field');
+      const result = mapper.map([invalidPerson]);
+      
+      // Should not have critical validation error since affiliates are now a fallthrough
+      expect(mapper.criticalValidationErrorMessage).toBeUndefined();
+      
+      // Should log a warning about the person being skipped
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Person 123:'));
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('will be skipped'));
+      
+      consoleWarnSpy.mockRestore();
     });
 
     it('should handle multiple persons', () => {

@@ -20,7 +20,7 @@
       }
     } 
   },
-  { "roles": [{ "hrn": "hrn:hrs:lists:roles/irb-general-user" }] },
+  { "roles": [{ "hrn": "hrn:hrs:lists:roles/site-user" }, { "hrn": "hrn:hrs:lists:roles/irb-general-user" }] },
   { "employer": { "hrn": "lookup:sourceIdentifier:10003827" } },
   { "organization": { "hrn": "lookup:sourceIdentifier:10003827" } },
   { "__arrayFieldOperations": { "append": [ "roles" ] } },

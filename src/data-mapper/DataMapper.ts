@@ -217,7 +217,10 @@ export class DataMapper implements CoreDataMapper {
           { firstName },
           { middleName },
           { lastName },
-          { roles: [ { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] },
+          { roles: [ 
+            { hrn: 'hrn:hrs:lists:roles/site-user' }, 
+            { hrn: 'hrn:hrs:lists:roles/irb-general-user' } ] 
+          },
           // Can be included for create, but only impacts put/patch operations to indicate that roles should be appended rather than replaced
           { __arrayFieldOperations: { append: [ 'roles' ] } },
           // Special field to carry skip reason through the pipeline (not sent to API - will be "skipped")

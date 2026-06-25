@@ -344,12 +344,8 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
   }
 
   // Load organization from affiliate positions into org list for priority sorting.
-  if( isNotEmpty(affiliateInfo) ) {
-    // If either organizationalUnit or department is present, we consider AFFILIATE as orgId.
-    const { organizationalUnit, department } = affiliateInfo;
-    if( ! isEmpty(organizationalUnit) || ! isEmpty(department) ) {
-      orgIdList.push({ source: 'affiliateInfo', orgId: 'AFFILIATE' });
-    }
+  if( qualifiesAsAffiliate(affiliateInfo) ) {
+    orgIdList.push({ source: 'affiliateInfo', orgId: 'AFFILIATE' });
   }
 
   return {
@@ -503,6 +499,32 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
     }
   };
 };
+
+/**
+ * The a person is not an employee or a student, then they automatically quallify as an
+ * affiliate, EVEN IF THEIR INFO IS EMPTY! This make affiliate the default "fallthrough" 
+ * category for a person who is not an employee or a student.
+ * The reason for this is that the we would NOT receive that persons record to be performing
+ * this analysis on it if upstream logic (at the source system) had not determined that they
+ * neither of the 3. Therefore, if they are not an employee or a student, they MUST be an
+ * affiliate, regardless of whether their affiliateInfo is empty or not. This is a business 
+ * rule that we must follow. 
+ * @param affiliateInfo 
+ * @returns 
+ */
+const qualifiesAsAffiliate = (affiliateInfo: any): boolean => {
+  // Always a potential affiliate.
+  return true;
+
+  if( isNotEmpty(affiliateInfo) ) {
+    // If either organizationalUnit or department is present, we consider AFFILIATE as orgId.
+    const { organizationalUnit, department } = affiliateInfo;
+    if( ! isEmpty(organizationalUnit) || ! isEmpty(department) ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export type OrgMappings = { 
   forwardMap: Map<string, string>, 

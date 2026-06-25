@@ -81,7 +81,11 @@ describe('OrgMapper', () => {
       const person = {};
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' });
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' 
+      });
     });
 
     it('should return empty object when all sources are empty', () => {
@@ -92,7 +96,11 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment or admission history (personId: UNKNOWN)' });
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment or admission history (personId: UNKNOWN)' 
+      });
     });
 
     it('should assign single org to employer and organization', () => {
@@ -298,8 +306,12 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      // Student-only with no current term (no term/career codes in semester) should return skipReason
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
+      // Student-only with no current term (no term/career codes in semester) should return skipReason and AFFILIATE fallthrough
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+      });
     });
 
     it('should handle undefined sources', () => {
@@ -310,7 +322,11 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' });
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' 
+      });
     });
 
     it('should handle empty strings and trim whitespace', () => {
@@ -378,11 +394,11 @@ describe('OrgMapper', () => {
       };
       const mapperWithConversion = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: true });
       const resultWith = mapperWithConversion.getOrgs();
-      expect(resultWith).toEqual({});
+      expect(resultWith).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
 
       const mapperWithout = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: false });
       const resultWithout = mapperWithout.getOrgs();
-      expect(resultWithout).toEqual({}); // Since null is empty
+      expect(resultWithout).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Fallthrough to affiliate
     });
 
     it('should handle complex nested data', () => {
@@ -735,7 +751,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position with status "inactive" (employmentDate empty)', () => {
@@ -759,7 +775,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position with status "inactive" (employmentDate undefined)', () => {
@@ -783,7 +799,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position with status "inactive" (employmentDate invalid format)', () => {
@@ -807,7 +823,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position with status "inactive" (both dates empty)', () => {
@@ -831,7 +847,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position with status "inactive" (both dates undefined)', () => {
@@ -854,7 +870,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should exclude position when employment has not started yet (employmentDate > currentDate)', () => {
@@ -878,7 +894,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
     });
 
     it('should filter to only active positions when mixed with inactive', () => {
@@ -1080,7 +1096,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // Filtered out as inactive
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Filtered out as inactive, fallthrough to affiliate
     });
 
     it('should validate date format strictly (reject invalid dates)', () => {
@@ -1104,7 +1120,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // Invalid date treated as inactive
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Invalid date treated as inactive, fallthrough to affiliate
     });
   });
 
@@ -1187,8 +1203,12 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      // Student-only with no current term enrollment should return skipReason
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
+      // Student-only with no current term enrollment should return skipReason and AFFILIATE fallthrough
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+      });
     });
 
     it('should exclude semesters with missing academicCareer code', () => {
@@ -1224,8 +1244,12 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      // Student-only with no current term enrollment should return skipReason
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
+      // Student-only with no current term enrollment should return skipReason and AFFILIATE fallthrough
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+      });
     });
 
     it('should exclude all student orgs when currentTerms is empty', () => {
@@ -1238,8 +1262,12 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: [] });
       const result = mapper.getOrgs();
-      // Student-only with no current term enrollment should return skipReason
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
+      // Student-only with no current term enrollment should return skipReason and AFFILIATE fallthrough
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+      });
     });
 
     it('should exclude student orgs when no terms have currentInd=Y', () => {
@@ -1262,8 +1290,12 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: nonCurrentTerms });
       const result = mapper.getOrgs();
-      // Student-only with no current term enrollment should return skipReason
-      expect(result).toEqual({ skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' });
+      // Student-only with no current term enrollment should return skipReason and AFFILIATE fallthrough
+      expect(result).toEqual({ 
+        employer: 'AFFILIATE', 
+        organization: 'AFFILIATE', 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+      });
     });
 
     it('should handle student with multiple degree programs in current semester', () => {
@@ -1373,7 +1405,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({}); // No current programs
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // No current programs, fallthrough to affiliate
     });
 
     it('should handle multiple current academic programs (dual degree)', () => {
@@ -1648,7 +1680,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Empty academicPlan, fallthrough to affiliate
     });
 
     it('should handle missing academicOrganization in plan', () => {
@@ -1680,7 +1712,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Missing academicOrganization, fallthrough to affiliate
     });
 
     it('should handle missing academicOrganization.code', () => {
@@ -1714,7 +1746,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({});
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Missing org code, fallthrough to affiliate
     });
 
     it('should combine orgs from multiple current programs', () => {

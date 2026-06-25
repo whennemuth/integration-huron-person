@@ -1,6 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
+import { getLocalConfig } from '../../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, QueryBuilder } from '../QueryBuilder';
 import { TestEnvironment } from 'integration-core';
@@ -360,15 +361,8 @@ export class ReadList {
  * - HURON_LIST_OUTPUT_FILE: Optional file path to write output JSON data.
  */
 async function main() {
-  const config = ConfigManager
-    .getInstance()
-    .fromEnvironment()
-    .fromFileSystem()
-    .getConfig('none');
-
-  const reader = new ReadList(config);
-
   const {
+    HURON_PERSON_CONFIG_PATH: configPath,
     HURON_LIST_TASK,
     HURON_LIST_TYPE_ID,
     HURON_LIST_TYPE_NAME,
@@ -378,7 +372,17 @@ async function main() {
     HURON_LIST_SORT_FIELD,
     HURON_LIST_SORT_DIRECTION,
     HURON_LIST_OUTPUT_FILE
-  } = process.env;
+  } = process.env;  
+  
+  const localConfigPath = configPath || getLocalConfig();
+  const config = ConfigManager
+    .getInstance()
+    .fromEnvironment()
+    .fromFileSystem(localConfigPath)
+    .getConfig('none');
+
+  const reader = new ReadList(config);
+
 
   // Build options from environment variables
   const buildOptions = (): ReadListsOptions => {
@@ -500,8 +504,8 @@ async function main() {
         payloadLogger = HURON_LIST_TASK === 'all-list-items' ?
           () => console.log(JSON.stringify(resultData, null, 2)) :
           () => resultData.forEach((list: any) => {
-            const { id, name, customProperties: { country: { hrn: countryHrn } = {}, stateCode } = {} } = list;
-            console.log(JSON.stringify({ id, name, countryHrn, stateCode }));
+            const { id, name, description, customProperties: { country: { hrn: countryHrn } = {}, stateCode } = {} } = list;
+            console.log(JSON.stringify({ id, name, description, countryHrn, stateCode }));
           });
         resultData = await reader.readAllListItemsNonTokenized(HURON_LIST_TYPE_HRN, allItemsOptions);
         console.log(`Retrieved ${resultData.length} total list items`);

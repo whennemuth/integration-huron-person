@@ -8,7 +8,9 @@ export type BuCdmPeopleDataSourceBatchConfig = {
   dataSource: BuCdmPeopleDataSource, 
   batchSize?: number
   offset?: number; // Optional starting offset for pagination (default is 0)
-  limit?: number; // Optional limit on total records to process (useful for testing or partial processing)
+    // Optional limit on total number of calls that can be made to the source API for 
+    // records to process (useful for testing or partial processing)
+  iterationLimit?: number; 
 };
 
 /**
@@ -42,17 +44,17 @@ abstract class BuCdmPeopleDataSourceBatch {
   private _batchable: boolean = true;
 
   constructor(private config: BuCdmPeopleDataSourceBatchConfig) {
-    if (config.limit !== undefined && config.limit === -1) {
+    if (config.iterationLimit !== undefined && config.iterationLimit === -1) {
       this._batchable = false;
-      console.log('Batching disabled via limit=-1; recordCount/offset query params will not be sent and only one request will be made.');
-      config.limit = 0;
+      console.log('Batching disabled via iterationLimit=-1; recordCount/offset query params will not be sent and only one request will be made.');
+      config.iterationLimit = 0;
     }
   }
 
   protected abstract process: (response: any[]) => Promise<void>
 
   public processBatch = async (): Promise<void> => {
-    let { dataSource, batchSize = 100, offset = 0, limit = 0 } = this.config;
+    let { dataSource, batchSize = 100, offset = 0, iterationLimit = 0 } = this.config;
     let iterations: number = 0;
 
     this.setQueryParam(dataSource, 'recordCount', batchSize);
@@ -92,9 +94,9 @@ abstract class BuCdmPeopleDataSourceBatch {
         break;
       }
 
-      // If a limit is set and we've processed enough records, stop processing
-      if (limit > 0 && iterations >= limit) {
-        console.log(`Processed ${iterations} iterations, which meets or exceeds the limit of ${limit}. Stopping processing.`);
+      // If a call limit is set and we've processed enough records, stop processing
+      if (iterationLimit > 0 && iterations >= iterationLimit) {
+        console.log(`Processed ${iterations} iterations, which meets or exceeds the call limit of ${iterationLimit}. Stopping processing.`);
         break;
       }
     } while (true);
@@ -102,7 +104,7 @@ abstract class BuCdmPeopleDataSourceBatch {
 
   /**
    * Set a batch-specific query parameter on the data source. NOTE: This will be cancelled
-   * if the data source is not batchable (e.g. if limit = -1 was set in the constructor), 
+   * if the data source is not batchable (e.g. if iterationLimit = -1 was set in the constructor), 
    * since in that case we want to fetch all records in one batch and not apply any 
    * batch-specific parameters (probably a test run against the API that returns only one person).
    * @param dataSource 
@@ -171,7 +173,7 @@ const testEnvironment = TestEnvironment('PEOPLE_DATASOURCE_BATCH');
         console.log(`Procesing batch of ${response.length} records [{ personid: ${response[0]?.personid} }...]`);
         // Your implementation here
       };
-    }({ dataSource, batchSize: 100, offset: 7, limit: 10 });
+    }({ dataSource, batchSize: 100, offset: 7, iterationLimit: 10 });
 
     const timer = new Timer();
     timer.start();   

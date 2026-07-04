@@ -10,7 +10,7 @@ export enum EMAIL_TYPE { UNIVERSITY = 'University', PERSONAL = 'Personal', BUEMA
  * not match the spec, any assumption that what is seen in the observed data is guaranteed to be
  * consistent cannot be relied upon. Therefore, since there is enough commonality between the
  * two values (observed & spec) to base a match on the appearance of certain root terms within 
- * the larger values of both terms being compared, a heuristic approach seems reasonable.
+ * the larger values of both terms being compared, an heuristic approach seems reasonable.
  */
 export class DataMapperHeuristics {
   constructor(private _term: any) {}

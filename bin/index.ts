@@ -18,7 +18,8 @@ export { BuCdmPeopleDataSource } from '../src/data-source/PeopleCdmDataSource';
 export { BuCdmPeopleDataSourceBatch } from '../src/data-source/PeopleDataSourceBatch';
 export { getDataSource, BuCdmDataSource } from '../src/data-source/DataSource';
 export { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
-export { ApiClientForApiKey as BuApiClientForApiKey, EndpointConfigForApiKey } from '../src/data-source/ApiClientForApiKey';
+export { ApiClientForApiKey as BuApiClientForApiKey } from '../src/data-source/ApiClientForApiKey';
+export type { EndpointConfigForApiKey } from '../src/data-source/ApiClientForApiKey';
 
 // Data target exports
 export { AuthToken, TokenAuthConfig } from '../src/data-target/AuthToken';

@@ -6,7 +6,7 @@ describe('BuCdmPeopleDataSourceBatch', () => {
     jest.restoreAllMocks();
   });
 
-  it('disables pagination params and stops after one request when limit is -1', async () => {
+  it('disables pagination params and stops after one request when iterationLimit is -1', async () => {
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
 
     const setQueryParam = jest.fn();
@@ -22,7 +22,7 @@ describe('BuCdmPeopleDataSourceBatch', () => {
 
     const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
       protected process = process;
-    }({ dataSource, batchSize: 1, offset: 0, limit: -1 });
+    }({ dataSource, batchSize: 1, offset: 0, iterationLimit: -1 });
 
     await batchProcessor.processBatch();
 
@@ -54,7 +54,7 @@ describe('BuCdmPeopleDataSourceBatch', () => {
 
     const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
       protected process = process;
-    }({ dataSource, batchSize: 2, offset: 0, limit: 2 });
+    }({ dataSource, batchSize: 2, offset: 0, iterationLimit: 2 });
 
     await batchProcessor.processBatch();
 

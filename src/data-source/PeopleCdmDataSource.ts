@@ -6,6 +6,7 @@ import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosRes
 import { EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { BuCdmDataSource } from './DataSource';
 import { getLocalConfig } from '../Utils';
+import { ApiRetryStrategy } from '../ApiRetryStrategy';
 
 /**
  * DataSource implementation for fetching bulk people data from Boston University CDM API
@@ -14,7 +15,11 @@ class BuCdmPeopleDataSource extends BuCdmDataSource implements DataSource {
   public readonly name = 'Boston University CDM People Data Source';
   public readonly description = 'Fetches bulk people data from Boston University CDM API endpoint';
 
-  constructor(params: { config: Config, responseFilter?: ResponseProcessor }) {
+  constructor(params: {
+    config: Config,
+    responseFilter?: ResponseProcessor,
+    retryStrategy?: ApiRetryStrategy
+  }) {
     super(params);
   }
 

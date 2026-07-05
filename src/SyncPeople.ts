@@ -6,11 +6,12 @@ import { ConfigManager } from './config/ConfigManager';
 import { getDataMapper, StaticMapUsage } from './data-mapper/DataMapper';
 import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 import { getDataSource } from './data-source/DataSource';
-import { ApiRetryStrategy, TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
+import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
+import { ApiRetryStrategy } from './ApiRetryStrategy';
 
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
 
@@ -53,7 +54,7 @@ class HuronPersonIntegration {
   private trustPreviousStorage: boolean;
   private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
-  private retryStrategy?: any;
+  private retryStrategy?: ApiRetryStrategy;
   private cleanupPreviousData?: boolean;
   private ignoreRemovals: boolean;
 
@@ -162,7 +163,7 @@ class HuronPersonIntegration {
       if (fieldsOfInterest) {
         responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
       }
-      let dataSource: DataSource = getDataSource(config, responseFilter) as DataSource;
+      let dataSource: DataSource = getDataSource(config, responseFilter, this.retryStrategy) as DataSource;
       const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any, errorEventProcessor });
       
       // JWT Safeguard: Ensure valid token before any data operations

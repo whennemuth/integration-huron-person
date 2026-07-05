@@ -7,21 +7,13 @@ import { AuthBasic, BasicAuthConfig } from './AuthBasic';
 import type { TokenAuthConfig } from './AuthToken';
 import { AuthToken } from './AuthToken';
 import { error as logError } from '../Utils';
+import { ApiRetryStrategy } from '../ApiRetryStrategy';
 
 export type TargetApiErrorEventProcessor = { process: (error: any, details?: ErrorEventDetails) => Promise<void> };
 
 export type ErrorEventDetails = {
   message?: string;
   object: any;
-}
-
-/**
- * Type definition for retry strategy that handles transient API failures.
- * Implementations should provide logic for the strategy, such as exponential backoff 
- * with retry logic. 
- */
-export interface ApiRetryStrategy {
-  executeWithRetry: <T>(fn: () => Promise<T>, context?: string) => Promise<T>;
 }
 
 /**

@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { Readable } from 'stream';
 import { IApiClient } from '../ApiClient';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
+import { ApiRetryStrategy } from '../ApiRetryStrategy';
 
 /**
  * Configuration for API key-authenticated endpoint
@@ -10,6 +11,7 @@ export interface EndpointConfigForApiKey {
   baseUrl: string;
   apiKey: string;
   timeout?: number;
+  retryStrategy?: ApiRetryStrategy;
 }
 
 /**
@@ -19,9 +21,11 @@ export interface EndpointConfigForApiKey {
 export class ApiClientForApiKey implements IApiClient {
   private axiosInstance: AxiosInstance;
   private endpointConfig: EndpointConfigForApiKey;
+  private retryStrategy?: ApiRetryStrategy;
 
   constructor(endpointConfig: EndpointConfigForApiKey) {
     this.endpointConfig = endpointConfig;
+    this.retryStrategy = endpointConfig.retryStrategy;
     this.axiosInstance = axios.create({
       baseURL: endpointConfig.baseUrl,
       timeout: endpointConfig.timeout || 30000,
@@ -58,21 +62,32 @@ export class ApiClientForApiKey implements IApiClient {
    * This prevents OOM errors when fetching large datasets in batches.
    */
   async get<T = any>(params: { url: string, params?: any, responseFilter?: ResponseProcessor }): Promise<AxiosResponse<T>> {
-    // CRITICAL: Always use 'stream' responseType to prevent memory accumulation
-    // Without this, axios buffers the entire response body in memory before returning,
-    // causing memory to grow unbounded across multiple batch requests
-    const response = await this.axiosInstance.get(params.url, { 
-      params: params.params,
-      responseType: 'stream'  // Always stream - never buffer full response
-    });
+    const execute = async (): Promise<AxiosResponse<T>> => {
+      // CRITICAL: Always use 'stream' responseType to prevent memory accumulation
+      // Without this, axios buffers the entire response body in memory before returning,
+      // causing memory to grow unbounded across multiple batch requests
+      const response = await this.axiosInstance.get(params.url, {
+        params: params.params,
+        responseType: 'stream'  // Always stream - never buffer full response
+      });
 
-    if (params.responseFilter) {
-      // Use provided filter to process the stream
-      return params.responseFilter.processResponse(response);
+      if (params.responseFilter) {
+        // Use provided filter to process the stream
+        return params.responseFilter.processResponse(response);
+      }
+
+      // No filter provided - parse JSON stream manually to avoid buffering
+      return this.parseJsonStream<T>(response);
+    };
+
+    if (!this.retryStrategy) {
+      return execute();
     }
 
-    // No filter provided - parse JSON stream manually to avoid buffering
-    return this.parseJsonStream<T>(response);
+    return this.retryStrategy.executeWithRetry(
+      execute,
+      `ApiClientForApiKey GET ${params.url}`
+    );
   }
 
   /**
@@ -116,21 +131,33 @@ export class ApiClientForApiKey implements IApiClient {
    * Make authenticated POST request
    */
   async post<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.post(url, data);
+    const execute = () => this.axiosInstance.post<T>(url, data);
+    if (!this.retryStrategy) {
+      return execute();
+    }
+    return this.retryStrategy.executeWithRetry(execute, `ApiClientForApiKey POST ${url}`);
   }
 
   /**
    * Make authenticated PUT request
    */
   async put<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.put(url, data);
+    const execute = () => this.axiosInstance.put<T>(url, data);
+    if (!this.retryStrategy) {
+      return execute();
+    }
+    return this.retryStrategy.executeWithRetry(execute, `ApiClientForApiKey PUT ${url}`);
   }
 
   /**
    * Make authenticated DELETE request
    */
   async delete<T = any>(url: string): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.delete(url);
+    const execute = () => this.axiosInstance.delete<T>(url);
+    if (!this.retryStrategy) {
+      return execute();
+    }
+    return this.retryStrategy.executeWithRetry(execute, `ApiClientForApiKey DELETE ${url}`);
   }
 
   /**

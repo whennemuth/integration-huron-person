@@ -6,6 +6,7 @@ import { AxiosResponseStreamFilter, ResponseProcessor } from '../stream/AxiosRes
 import { EndpointConfigForApiKey } from './ApiClientForApiKey';
 import { BuCdmDataSource } from './DataSource';
 import { getLocalConfig } from '../Utils';
+import { ApiRetryStrategy } from '../ApiRetryStrategy';
 
 /**
  * DataSource implementation for fetching single person data from Boston University CDMAPI
@@ -14,7 +15,12 @@ class BuCdmPersonDataSource extends BuCdmDataSource implements DataSource {
   public readonly name = 'Boston University CDM Person Data Source';
   public readonly description = 'Fetches single person data from Boston University CDM API endpoint';
 
-  constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
+  constructor(params: {
+    config: Config,
+    responseFilter?: ResponseProcessor,
+    buid?: string,
+    retryStrategy?: ApiRetryStrategy
+  }) {
     super(params);
     if(!params.buid) {
       throw new Error('BUID is required for person data source');

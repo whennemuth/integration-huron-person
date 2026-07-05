@@ -7,6 +7,7 @@ export { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';
 
 // General/Interface/Utility exports
 export { IApiClient } from '../src/ApiClient';
+export type { ApiRetryStrategy } from '../src/ApiRetryStrategy';
 export { AxiosResponseStreamFilter, ResponseProcessor } from '../src/stream/AxiosResponseStreamFilter';
 export * from '../src/Utils';
 export { HashMapMerger } from '../src/delta-strategy/merging/HashMapMerger';
@@ -23,7 +24,7 @@ export type { EndpointConfigForApiKey } from '../src/data-source/ApiClientForApi
 
 // Data target exports
 export { AuthToken, TokenAuthConfig } from '../src/data-target/AuthToken';
-export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiClient, ApiRetryStrategy, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../src/data-target/ApiClientForJWT';
+export { ApiClientForJWT as HuronApiClientForJWT, ApiClientForJWT as HuronApiClient, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../src/data-target/ApiClientForJWT';
 export * from '../src/data-target/crud/Person';
 export { PersonResponse, ReadPerson, ReadPersonParams, getPersonData, HuronPersonIdType } from '../src/data-target/crud/ReadPerson';
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';

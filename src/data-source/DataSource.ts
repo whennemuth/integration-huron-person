@@ -2,6 +2,7 @@ import { DataSource, Timer } from 'integration-core';
 import { Config, DataSourceConfig } from '../config/Config';
 import { ResponseProcessor } from '../stream/AxiosResponseStreamFilter';
 import { ApiClientForApiKey, EndpointConfigForApiKey } from './ApiClientForApiKey';
+import { ApiRetryStrategy } from '../ApiRetryStrategy';
 
 /**
  * Common base class for CDM data sources
@@ -13,17 +14,30 @@ export abstract class BuCdmDataSource implements DataSource {
   protected apiClient: ApiClientForApiKey;
   protected config: Config;
   protected responseFilter: ResponseProcessor | undefined;
-  protected params: { config: Config, responseFilter?: ResponseProcessor, buid?: string };
+  protected params: {
+    config: Config,
+    responseFilter?: ResponseProcessor,
+    buid?: string,
+    retryStrategy?: ApiRetryStrategy
+  };
   protected queryParams: Record<string, any> = {};
 
-  constructor(params: { config: Config, responseFilter?: ResponseProcessor, buid?: string }) {
+  constructor(params: {
+    config: Config,
+    responseFilter?: ResponseProcessor,
+    buid?: string,
+    retryStrategy?: ApiRetryStrategy
+  }) {
     this.params = params;
     this.config = params.config;
     this.responseFilter = params.responseFilter;
 
     // Subclasses must implement endpoint config selection
     const endpointConfig = this.getEndpointConfig();
-    this.apiClient = new ApiClientForApiKey(endpointConfig);
+    this.apiClient = new ApiClientForApiKey({
+      ...endpointConfig,
+      retryStrategy: params.retryStrategy
+    });
   }
 
   /**
@@ -127,12 +141,16 @@ export const getEndpointConfig = (config:Config): EndpointConfigForApiKey | unde
  * @param responseFilter Optional response filter for streaming
  * @returns DataSource instance (either CDM API or S3 based)
  */
-export const getDataSource = (config: Config, responseFilter?: ResponseProcessor): DataSource => {
+export const getDataSource = (
+  config: Config,
+  responseFilter?: ResponseProcessor,
+  retryStrategy?: ApiRetryStrategy
+): DataSource => {
   const endpointConfig: EndpointConfigForApiKey | undefined = getEndpointConfig(config);
   const { baseUrl } = endpointConfig || {};
   const { people: { bucketName, fetchPath } = {}} = config.dataSource as any;
   if(baseUrl || fetchPath) {
-    return new BuCdmPeopleDataSource({ config, responseFilter });
+    return new BuCdmPeopleDataSource({ config, responseFilter, retryStrategy });
   }
   if( ! bucketName) {
     throw new Error('Invalid configuration: For people data source, either fetchPath or bucketName must be provided');

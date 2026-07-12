@@ -1,6 +1,6 @@
 // Configuration exports
 export * from '../src/config/Config';
-export { Cache, BasicCache } from '../src/Cache';
+export { Cache, BasicCache, InMemoryCache } from '../src/Cache';
 export { Config, ExecutionMode } from '../src/config/Config';
 export { ConfigManager } from '../src/config/ConfigManager';
 export { ConfigFromEnvironment } from '../src/config/ConfigFromEnvironment';

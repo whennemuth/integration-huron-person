@@ -1,5 +1,5 @@
 import { JsonFieldFilter } from '../src/stream/JsonFieldFilter';
-import { getBugs } from '../src/miscellaneous/data-mapper/source/bugs';
+import { getBugs } from '../src/miscellaneous/LooneyTunes';
 
 const testPersonData = getBugs();
 

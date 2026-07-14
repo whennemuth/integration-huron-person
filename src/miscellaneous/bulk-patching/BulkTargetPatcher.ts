@@ -1,11 +1,11 @@
 import { CrudOperation, FieldSet, TestEnvironment } from 'integration-core';
-import { BasicCache } from "../Cache";
-import { Config } from "../config/Config";
-import { HuronPerson } from "../data-target/crud/Person";
-import { ReadPeople } from "../data-target/crud/ReadPeople";
-import { HuronPersonDataTarget } from "../data-target/PersonDataTarget";
-import { getLocalConfig } from '../Utils';
-import { ConfigManager } from "../config/ConfigManager";
+import { BasicCache } from "../../Cache";
+import { Config } from "../../config/Config";
+import { HuronPerson } from "../../data-target/crud/Person";
+import { ReadPeople } from "../../data-target/crud/ReadPeople";
+import { HuronPersonDataTarget } from "../../data-target/PersonDataTarget";
+import { getLocalConfig } from '../../Utils';
+import { ConfigManager } from "../../config/ConfigManager";
 
 export type SelectConfig = {
   filter?: {
@@ -53,8 +53,7 @@ export abstract class AbstractBulkTargetPatcher {
   public abstract getPatchFieldset: (person: HuronPerson) => Promise<FieldSet>;
 
   /**
-   * Implement a custom patchPerson method that capitalizes the first and last name of the 
-   * person.
+   * Patch the person using the custom field set obtained from getPatchFieldset() method.
    * @param person 
    */
   private patchPerson = async (hrn: string, patchFieldSet: FieldSet): Promise<void> => {

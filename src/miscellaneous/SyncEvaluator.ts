@@ -25,6 +25,13 @@ export type TargetPersonParms = {
   targetDataMapper: ReverseDataMapper
 }
 
+/**
+ * Evaluates whether a source person and a target person are in sync based on their respective 
+ * data inputs. The raw data for a single person is obtained from the source API, and the raw
+ * data for that same person is obtained from the target API, and both are converted into the
+ * hashable Input format, hashed, and if the hashes are equal, the source and target are 
+ * considered in sync.
+ */
 export class SourcePerson {
   private sourceInput: Input | undefined;
   private targetInput: Input | undefined;

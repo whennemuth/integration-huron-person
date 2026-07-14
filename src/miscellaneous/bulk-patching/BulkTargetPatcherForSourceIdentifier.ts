@@ -1,9 +1,9 @@
 import { FieldSet, TestEnvironment } from 'integration-core';
-import { HuronPerson } from "../data-target/crud/Person";
+import { HuronPerson } from "../../data-target/crud/Person";
 import { AbstractBulkTargetPatcher } from "./BulkTargetPatcher";
-import { Config } from "../config/Config";
-import { ConfigManager } from "../config/ConfigManager";
-import { getLocalConfig } from '../Utils';
+import { Config } from "../../config/Config";
+import { ConfigManager } from "../../config/ConfigManager";
+import { getLocalConfig } from '../../Utils';
 
 /**
  * Implementation that retrieves all people who have an id or employeeId that matches the 

@@ -1,11 +1,9 @@
 import * as fs from 'fs';
 import { S3Client, SelectObjectContentCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { TestEnvironment } from 'integration-core';
+import { AbstractChunkProcessor, ChunkProcessorConfig } from './AbstractChunkProcessor';
 
-export type ChunkScannerConfig = {
-  bucketName: string;
-  key: string;
-  region: string;
+export type ChunkScannerConfig = ChunkProcessorConfig & {
   stopWhenFound?: boolean; // Optional flag to stop scanning after finding the first match (default: true)
 }
 
@@ -14,6 +12,10 @@ export type ChunkScannerConfig = {
  * specific person records by BUID. It can scan either a single file or all files within 
  * a specified directory in S3. It returns the file(s) that contain the BUID, and can also 
  * retrieve and save the full person record if needed.
+ * 
+ * This class extends AbstractChunkProcessor to inherit S3 client management and shared 
+ * utilities, but implements its own scanning logic due to the need to stop early when 
+ * a match is found (unlike other processors that scan all files).
  * 
  * Usage:
  * 1. Configure the environment variables for bucket, key, region, and BUID to find.
@@ -28,12 +30,25 @@ export type ChunkScannerConfig = {
  * - CHUNK_SCANNER_BUID: The person ID (BUID) to search for in the chunk files
  * - CHUNK_SCANNER_STOP_WHEN_FOUND: Optional flag ('true' or 'false') to stop scanning after finding the first match (default: 'true')
  */
-export class ChunkScanner {
-  private s3Client: S3Client;
+export class ChunkScanner extends AbstractChunkProcessor {
   private foundFileKeys: string[] = [];
+  private stopWhenFound: boolean;
 
-  constructor(private config: ChunkScannerConfig) {
-    this.s3Client = new S3Client({ region: config.region });
+  constructor(config: ChunkScannerConfig) {
+    super(config);
+    this.stopWhenFound = config.stopWhenFound ?? true;
+  }
+
+  // ChunkScanner doesn't use the template method pattern for its main logic
+  // because it needs to stop early when found, so we override these as no-ops
+  protected getSqlExpression(): string {
+    return '';
+  }
+  protected async processFileResult(fileKey: string, data: string): Promise<void> {
+    // Not used - ChunkScanner uses its own scanning logic
+  }
+  protected async finalizeResults(): Promise<void> {
+    // Not used - ChunkScanner returns results directly
   }
 
   /**
@@ -113,7 +128,7 @@ export class ChunkScanner {
               if (found) {
                 foundFiles.push(obj.Key);
                 // Stop if we're configured to stop after finding the first match
-                if (this.config.stopWhenFound !== false) {
+                if (this.stopWhenFound) {
                   return foundFiles;
                 }
               }
@@ -159,7 +174,7 @@ export class ChunkScanner {
    * @param buid 
    */
   public getPerson = async (buid: string): Promise<any | undefined> => {
-    this.config.stopWhenFound = true; // Ensure we stop after finding the first match
+    this.stopWhenFound = true; // Ensure we stop after finding the first match
     const foundFile = await this.scanForBuid(buid);
     if (foundFile.length === 0) {
       return undefined;

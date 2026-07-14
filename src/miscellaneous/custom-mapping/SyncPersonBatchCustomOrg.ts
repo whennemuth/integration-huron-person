@@ -1,10 +1,10 @@
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
-import { main } from "../SyncPersonBatch";
-import { getLocalConfig, setFileLogging } from "../Utils";
-import { DataMapper, getDataMapper } from "../data-mapper/DataMapper";
-import { ConfigManager } from "../config/ConfigManager";
-import { Config } from "../config/Config";
-import { ReadOrganization } from "../data-target/crud/ReadOrganization";
+import { main } from "../../SyncPersonBatch";
+import { getLocalConfig, setFileLogging } from "../../Utils";
+import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
+import { ConfigManager } from "../../config/ConfigManager";
+import { Config } from "../../config/Config";
+import { ReadOrganization } from "../../data-target/crud/ReadOrganization";
 
 type OrgFields = {
   hrn?: string, sourceIdentifier?: string

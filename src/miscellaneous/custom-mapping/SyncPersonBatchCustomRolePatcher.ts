@@ -1,9 +1,9 @@
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
-import { main } from "../SyncPersonBatch";
-import { getLocalConfig, setFileLogging } from "../Utils";
-import { DataMapper, getDataMapper } from "../data-mapper/DataMapper";
-import { ConfigManager } from "../config/ConfigManager";
-import { Config } from "../config/Config";
+import { main } from "../../SyncPersonBatch";
+import { getLocalConfig, setFileLogging } from "../../Utils";
+import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
+import { ConfigManager } from "../../config/ConfigManager";
+import { Config } from "../../config/Config";
 
 type CustomRoleDataMapperParams = {
   params: ConstructorParameters<typeof DataMapper>[0];

@@ -1,9 +1,9 @@
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
-import { main } from "../SyncPersonBatch";
-import { getLocalConfig, setFileLogging } from "../Utils";
-import { DataMapper, getDataMapper } from "../data-mapper/DataMapper";
-import { ConfigManager } from "../config/ConfigManager";
-import { Config } from "../config/Config";
+import { main } from "../../SyncPersonBatch";
+import { getLocalConfig, setFileLogging } from "../../Utils";
+import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
+import { ConfigManager } from "../../config/ConfigManager";
+import { Config } from "../../config/Config";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -204,7 +204,7 @@ if (require.main === module) {
     'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVar);
 
-  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_role_assign_output.json';
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_role_assignments.json';
   setFileLogging(logFilePath);
 
   _main();

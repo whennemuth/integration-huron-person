@@ -84,7 +84,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' 
+        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -99,7 +100,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment or admission history (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment or admission history (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -113,7 +115,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should assign two orgs to employer, organization, and secondaryUnit', () => {
@@ -130,7 +132,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: '10003827', 
         organization: '10003827',
-        secondaryUnit: '20003827'
+        secondaryUnit: '20003827',
+        personType: 'Employee',
       });
     });
 
@@ -145,7 +148,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should assign student org to employer and organization', () => {
@@ -158,7 +161,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' });
     });
 
     it('should assign multiple student orgs across employer, organization, and secondaryUnit', () => {
@@ -199,7 +202,8 @@ describe('OrgMapper', () => {
         employer: 'CAS',
         organization: 'CAS',
         secondaryUnit: 'ENG',
-        additionalUnit: 'SED'
+        additionalUnit: 'SED',
+        personType: 'Student',
       });
     });
 
@@ -211,7 +215,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should handle affiliate info with department', () => {
@@ -222,7 +226,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should prioritize employee over student', () => {
@@ -250,7 +254,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should prioritize employee over affiliate', () => {
@@ -266,7 +270,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should prioritize student over affiliate', () => {
@@ -282,7 +286,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' });
     });
 
     it('should handle null values in person data', () => {
@@ -310,7 +314,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -325,7 +330,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)' 
+        skipReason: 'Non-student with no employee or affiliate info (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -350,7 +356,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should skip invalid or empty orgIds', () => {
@@ -375,7 +381,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should handle removeNullValues parameter', () => {
@@ -394,11 +400,11 @@ describe('OrgMapper', () => {
       };
       const mapperWithConversion = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: true });
       const resultWith = mapperWithConversion.getOrgs();
-      expect(resultWith).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(resultWith).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
 
       const mapperWithout = OrgMapper({ person, currentTerms: mockCurrentTerms, removeNullValues: false });
       const resultWithout = mapperWithout.getOrgs();
-      expect(resultWithout).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Fallthrough to affiliate
+      expect(resultWithout).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Fallthrough to affiliate
     });
 
     it('should handle complex nested data', () => {
@@ -420,7 +426,7 @@ describe('OrgMapper', () => {
                   },
                   {
                     college: {
-                      code: 'ENG'
+                      code: 'ENG',
                     }
                   }
                 ]
@@ -434,7 +440,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' }); // Employee has highest priority
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' }); // Employee has highest priority
     });
   });
 
@@ -475,7 +481,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '10003827',
         organization: '10003827',
-        secondaryUnit: '20003827'
+        secondaryUnit: '20003827',
+        personType: 'Employee',
       });
     });
 
@@ -514,7 +521,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '10003827',
         organization: '10003827',
-        secondaryUnit: '20003827'
+        secondaryUnit: '20003827',
+        personType: 'Employee',
       });
     });
 
@@ -535,7 +543,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should maintain order for multiple secondary positions (mainPernrIndicator=N)', () => {
@@ -554,7 +562,8 @@ describe('OrgMapper', () => {
         employer: '10003827',
         organization: '10003827',
         secondaryUnit: '20003827',
-        additionalUnit: '30003827'
+        additionalUnit: '30003827',
+        personType: 'Employee',
       });
     });
 
@@ -572,7 +581,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '20003827',
         organization: '20003827',
-        secondaryUnit: '10003827'
+        secondaryUnit: '10003827',
+        personType: 'Employee',
       });
     });
 
@@ -590,7 +600,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '20003827',
         organization: '20003827',
-        secondaryUnit: '10003827'
+        secondaryUnit: '10003827',
+        personType: 'Employee',
       });
     });
 
@@ -604,7 +615,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should still deduplicate organizationalUnits across positions', () => {
@@ -618,7 +629,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' }); // Deduplicated
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' }); // Deduplicated
     });
   });
 
@@ -655,7 +666,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should include position with status "active+" (employmentDate <= currentDate, terminationDate empty)', () => {
@@ -679,7 +690,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should include position with status "active+" (employmentDate <= currentDate, terminationDate undefined)', () => {
@@ -703,7 +714,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should include position with status "active+" (employmentDate <= currentDate, terminationDate invalid format)', () => {
@@ -727,7 +738,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' });
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' });
     });
 
     it('should exclude position with status "inactive" (currentDate >= terminationDate)', () => {
@@ -751,7 +762,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position with status "inactive" (employmentDate empty)', () => {
@@ -775,7 +786,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position with status "inactive" (employmentDate undefined)', () => {
@@ -799,7 +810,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position with status "inactive" (employmentDate invalid format)', () => {
@@ -823,7 +834,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position with status "inactive" (both dates empty)', () => {
@@ -847,7 +858,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position with status "inactive" (both dates undefined)', () => {
@@ -870,7 +881,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should exclude position when employment has not started yet (employmentDate > currentDate)', () => {
@@ -894,7 +905,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' });
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' });
     });
 
     it('should filter to only active positions when mixed with inactive', () => {
@@ -930,7 +941,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '20003827', organization: '20003827' }); // Only the active secondary position
+      expect(result).toEqual({ employer: '20003827', organization: '20003827', personType: 'Employee' }); // Only the active secondary position
     });
 
     it('should prioritize active over active+ when both mainPernrIndicator=Y', () => {
@@ -969,7 +980,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '10003827',
         organization: '10003827',
-        secondaryUnit: '20003827'
+        secondaryUnit: '20003827',
+        personType: 'Employee',
       });
     });
 
@@ -1009,7 +1021,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: '10003827',
         organization: '10003827',
-        secondaryUnit: '20003827'
+        secondaryUnit: '20003827',
+        personType: 'Employee',
       });
     });
 
@@ -1074,7 +1087,8 @@ describe('OrgMapper', () => {
         employer: '10003827',
         organization: '10003827',
         secondaryUnit: '20003827',
-        additionalUnit: '30003827'
+        additionalUnit: '30003827',
+        personType: 'Employee',
       });
       // 4th org ('40003827' - N + active+) is discarded per CSV spec
     });
@@ -1096,7 +1110,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Filtered out as inactive, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Filtered out as inactive, fallthrough to affiliate
     });
 
     it('should validate date format strictly (reject invalid dates)', () => {
@@ -1120,7 +1134,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Invalid date treated as inactive, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Invalid date treated as inactive, fallthrough to affiliate
     });
   });
 
@@ -1136,7 +1150,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Only current semester org
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' }); // Only current semester org
     });
 
     it('should match both term and academicCareer for current semester', () => {
@@ -1150,7 +1164,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Only semester matching both term AND career
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' }); // Only semester matching both term AND career
     });
 
     it('should handle multiple current semesters with different careers', () => {
@@ -1167,7 +1181,7 @@ describe('OrgMapper', () => {
       const result = mapper.getOrgs();
       // Primary: CAS, MET -> employer = CAS
       // Secondary: CAS, MET (both mapped) -> skip CAS (duplicate), secondaryUnit = MET
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET', personType: 'Student' });
     });
 
     it('should exclude semesters with missing term code', () => {
@@ -1207,7 +1221,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -1248,7 +1263,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -1266,7 +1282,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -1294,7 +1311,8 @@ describe('OrgMapper', () => {
       expect(result).toEqual({ 
         employer: 'AFFILIATE', 
         organization: 'AFFILIATE', 
-        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)' 
+        skipReason: 'Student-only with no current term enrollment (personId: UNKNOWN)',
+        personType: 'Affiliate',
       });
     });
 
@@ -1336,7 +1354,7 @@ describe('OrgMapper', () => {
       const result = mapper.getOrgs();
       // Primary: CAS, ENG -> employer = CAS
       // Secondary: CAS, ENG (both mapped) -> skip CAS (duplicate), secondaryUnit = ENG
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG', personType: 'Student' });
     });
 
     it('should prioritize employee over student even with current semester filtering', () => {
@@ -1354,7 +1372,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: '10003827', organization: '10003827' }); // Employee has priority
+      expect(result).toEqual({ employer: '10003827', organization: '10003827', personType: 'Employee' }); // Employee has priority
     });
   });
 
@@ -1392,7 +1410,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Only current program (Y)
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' }); // Only current program (Y)
     });
 
     it('should exclude all degree programs when isCurrentAcademicProgram=N', () => {
@@ -1405,7 +1423,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // No current programs, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // No current programs, fallthrough to affiliate
     });
 
     it('should handle multiple current academic programs (dual degree)', () => {
@@ -1444,7 +1462,7 @@ describe('OrgMapper', () => {
       const result = mapper.getOrgs();
       // Primary: CAS, ENG (sorted) -> employer = CAS
       // Secondary: MET, QST (sorted, both mapped) -> secondaryUnit = MET, additionalUnit = QST
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET', additionalUnit: 'QST' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'MET', additionalUnit: 'QST', personType: 'Student' });
     });
 
     it('should extract organizations from degreeProgram level', () => {
@@ -1483,7 +1501,7 @@ describe('OrgMapper', () => {
       const result = mapper.getOrgs();
       // Primary: CAS, QST -> employer = CAS
       // Secondary: ENG, MET (both mapped) -> secondaryUnit = ENG, additionalUnit = MET
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG', additionalUnit: 'MET' });
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', secondaryUnit: 'ENG', additionalUnit: 'MET', personType: 'Student' });
     });
 
     it('should deduplicate organization codes from multiple degree programs', () => {
@@ -1522,7 +1540,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Deduplicated, no secondaryUnit
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' }); // Deduplicated, no secondaryUnit
     });
 
     it('should sort organizations alphabetically', () => {
@@ -1571,7 +1589,8 @@ describe('OrgMapper', () => {
         employer: 'CAS',
         organization: 'CAS',
         secondaryUnit: 'MET',
-        additionalUnit: 'QST'
+        additionalUnit: 'QST',
+        personType: 'Student',
       });
     });
 
@@ -1606,8 +1625,9 @@ describe('OrgMapper', () => {
       // employer = CDS, secondaryUnit should be omitted (duplicate)
       expect(result).toEqual({
         employer: 'CDS',
-        organization: 'CDS'
+        organization: 'CDS',
         // No secondaryUnit because CDS would duplicate employer
+        personType: 'Student',
       });
     });
 
@@ -1650,8 +1670,9 @@ describe('OrgMapper', () => {
       expect(result).toEqual({
         employer: 'CDS',
         organization: 'CDS',
-        secondaryUnit: 'MET'
+        secondaryUnit: 'MET',
         // No additionalUnit because only one non-duplicate secondary code
+        personType: 'Student',
       });
     });
 
@@ -1680,7 +1701,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Empty academicPlan, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Empty academicPlan, fallthrough to affiliate
     });
 
     it('should handle missing academicOrganization in plan', () => {
@@ -1712,7 +1733,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Missing academicOrganization, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Missing academicOrganization, fallthrough to affiliate
     });
 
     it('should handle missing academicOrganization.code', () => {
@@ -1746,7 +1767,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE' }); // Missing org code, fallthrough to affiliate
+      expect(result).toEqual({ employer: 'AFFILIATE', organization: 'AFFILIATE', personType: 'Affiliate' }); // Missing org code, fallthrough to affiliate
     });
 
     it('should combine orgs from multiple current programs', () => {
@@ -1795,7 +1816,8 @@ describe('OrgMapper', () => {
         employer: 'CAS',
         organization: 'CAS',
         secondaryUnit: 'ENG',
-        additionalUnit: 'QST'
+        additionalUnit: 'QST',
+        personType: 'Student',
       }); // Deduped and sorted
     });
 
@@ -1842,7 +1864,7 @@ describe('OrgMapper', () => {
       };
       const mapper = OrgMapper({ person, currentTerms: mockCurrentTerms });
       const result = mapper.getOrgs();
-      expect(result).toEqual({ employer: 'CAS', organization: 'CAS' }); // Only current semester with current program
+      expect(result).toEqual({ employer: 'CAS', organization: 'CAS', personType: 'Student' }); // Only current semester with current program
     });
   });
 });

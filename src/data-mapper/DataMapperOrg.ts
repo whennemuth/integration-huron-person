@@ -6,6 +6,7 @@ import { HuronOrganization } from "../data-target/crud/Organization";
 import { ReadOrganizations } from "../data-target/crud/ReadOrganizations";
 import { getLocalConfig, isEmpty, isNotEmpty, removeEmptyValues, removeNullValues as removeNulls } from '../Utils';
 import { TestEnvironment } from 'integration-core';
+import { PERSON_TYPE } from "./DataMapperTitle";
 
 export type OrgType = { priority: number; type: string; source?: string; }
 
@@ -128,6 +129,7 @@ const isCurrentAcademicProgram = (degreeProgram: any): boolean => {
 };
 
 export type OrgAssignments = {
+  personType?: PERSON_TYPE;
   employer?: string;
   organization?: string;
   secondaryUnit?: string;
@@ -494,7 +496,20 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
       if (skipReason) {
         assignments.skipReason = skipReason;
       }
-      
+
+      // Add person type based on available employer info
+      switch(highestPrioritySource) {
+        case 'employeeInfo':
+          assignments.personType = PERSON_TYPE.EMPLOYEE;
+          break;
+        case 'studentInfo':
+          assignments.personType = PERSON_TYPE.STUDENT;
+          break;
+        case 'affiliateInfo':
+          assignments.personType = PERSON_TYPE.AFFILIATE;
+          break;
+      }
+
       return assignments;
     }
   };

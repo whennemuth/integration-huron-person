@@ -172,7 +172,6 @@ export class DataMapper implements CoreDataMapper {
         const userId = UserIdMapper({ 
           person, idpName, idpDomain, removeNullValues: false 
         }).getUserId(crudOperation);
-        const title = TitleMapper(person, false).getTitle();
         const email = EmailMapper(person, false).getEmail();
         const addressMapper = AddressMapper({
           person,
@@ -196,6 +195,11 @@ export class DataMapper implements CoreDataMapper {
 
         // Extract skipReason from orgAssignments (set by OrgMapper if applicable)
         const skipReason = orgAssignments.skipReason;
+
+        // Get the title
+        const title = TitleMapper({ 
+          person, removeNullValues: false, personType: orgAssignments.personType 
+        }).getTitle();
 
         // Basic data check
         if(isEmpty(personid)) {

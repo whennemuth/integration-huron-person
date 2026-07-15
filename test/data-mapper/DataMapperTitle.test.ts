@@ -1,10 +1,10 @@
-import { TitleMapper } from '../../src/data-mapper/DataMapperTitle';
+import { TitleMapper, PERSON_TYPE } from '../../src/data-mapper/DataMapperTitle';
 
 describe('TitleMapper', () => {
   describe('getTitle', () => {
     it('should return undefined when no person info is present', () => {
       const person = {};
-      const mapper = TitleMapper(person);
+      const mapper = TitleMapper({ person });
       expect(mapper.getTitle()).toBeUndefined();
     });
 
@@ -12,11 +12,11 @@ describe('TitleMapper', () => {
       const person = {
         randomInfo: { foo: 'bar' }
       };
-      const mapper = TitleMapper(person);
+      const mapper = TitleMapper({ person });
       expect(mapper.getTitle()).toBeUndefined();
     });
 
-    describe('Employee titles', () => {
+    describe('Employee titles (fallback)', () => {
       it('should return employee position description', () => {
         const person = {
           employeeInfo: {
@@ -33,7 +33,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Professor');
       });
 
@@ -53,7 +53,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Director');
       });
 
@@ -82,7 +82,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Manager');
       });
 
@@ -100,7 +100,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -110,7 +110,7 @@ describe('TitleMapper', () => {
             positions: []
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -130,7 +130,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -151,7 +151,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Analyst');
       });
 
@@ -172,7 +172,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Coordinator');
       });
 
@@ -193,7 +193,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Senior Engineer');
       });
 
@@ -214,7 +214,7 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         const result = mapper.getTitle();
         expect(result.length).toBe(255);
         expect(result).toBe('A'.repeat(255));
@@ -238,21 +238,21 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         const result = mapper.getTitle();
         expect(result.length).toBe(255);
         expect(result).toBe('B'.repeat(255));
       });
     });
 
-    describe('Student titles', () => {
+    describe('Student titles (fallback)', () => {
       it('should return fixed value "Student" for students', () => {
         const person = {
           studentInfo: { 
             studentId: '12345' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Student');
       });
 
@@ -260,7 +260,7 @@ describe('TitleMapper', () => {
         const person = {
           studentInfo: {}
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -271,7 +271,7 @@ describe('TitleMapper', () => {
             enrollments: null
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -282,7 +282,7 @@ describe('TitleMapper', () => {
             enrollments: undefined
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -293,7 +293,7 @@ describe('TitleMapper', () => {
             major: ''
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -303,7 +303,7 @@ describe('TitleMapper', () => {
             enrollments: []
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -314,19 +314,19 @@ describe('TitleMapper', () => {
             major: 'Computer Science'
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Student');
       });
     });
 
-    describe('Affiliate titles', () => {
+    describe('Affiliate titles (fallback)', () => {
       it('should return fixed value "University Affiliate" for affiliates', () => {
         const person = {
           affiliateInfo: { 
             affiliateId: 'A123' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('University Affiliate');
       });
 
@@ -334,7 +334,7 @@ describe('TitleMapper', () => {
         const person = {
           affiliateInfo: {}
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -345,7 +345,7 @@ describe('TitleMapper', () => {
             organization: null
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -356,7 +356,7 @@ describe('TitleMapper', () => {
             organization: undefined
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -367,7 +367,7 @@ describe('TitleMapper', () => {
             organization: ''
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -378,12 +378,12 @@ describe('TitleMapper', () => {
             organization: 'Research Lab'
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('University Affiliate');
       });
     });
 
-    describe('Priority handling', () => {
+    describe('Priority handling (fallback)', () => {
       it('should prefer employee title over student title', () => {
         const person = {
           employeeInfo: {
@@ -403,7 +403,7 @@ describe('TitleMapper', () => {
             studentId: '12345' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Manager');
       });
 
@@ -426,7 +426,7 @@ describe('TitleMapper', () => {
             affiliateId: 'A123' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Engineer');
       });
 
@@ -439,7 +439,7 @@ describe('TitleMapper', () => {
             affiliateId: 'A123' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Student');
       });
 
@@ -452,7 +452,7 @@ describe('TitleMapper', () => {
             studentId: '12345' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Student');
       });
 
@@ -465,7 +465,7 @@ describe('TitleMapper', () => {
             affiliateId: 'A123' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('University Affiliate');
       });
 
@@ -479,7 +479,7 @@ describe('TitleMapper', () => {
             major: null
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -495,7 +495,7 @@ describe('TitleMapper', () => {
             affiliateId: null
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -511,7 +511,7 @@ describe('TitleMapper', () => {
             affiliateId: 'A123'
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('University Affiliate');
       });
 
@@ -524,7 +524,7 @@ describe('TitleMapper', () => {
             affiliateId: 'A123'
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('University Affiliate');
       });
     });
@@ -537,7 +537,7 @@ describe('TitleMapper', () => {
             studentId: '12345' 
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBe('Student');
       });
 
@@ -547,7 +547,7 @@ describe('TitleMapper', () => {
           studentInfo: undefined,
           affiliateInfo: undefined
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
       });
 
@@ -561,8 +561,160 @@ describe('TitleMapper', () => {
             ]
           }
         };
-        const mapper = TitleMapper(person);
+        const mapper = TitleMapper({ person });
         expect(mapper.getTitle()).toBeUndefined();
+      });
+    });
+
+    describe('Explicit personType parameter', () => {
+      describe('EMPLOYEE personType', () => {
+        it('should return employee title when personType is EMPLOYEE with valid position', () => {
+          const person = {
+            employeeInfo: {
+              positions: [
+                {
+                  positionInfo: {
+                    BasicData: {
+                      position: {
+                        description: 'Professor'
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.EMPLOYEE });
+          expect(mapper.getTitle()).toBe('Professor');
+        });
+
+        it('should return undefined when personType is EMPLOYEE but no positions', () => {
+          const person = {
+            employeeInfo: {
+              positions: []
+            }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.EMPLOYEE });
+          expect(mapper.getTitle()).toBeUndefined();
+        });
+
+        it('should ignore student/affiliate info when personType is EMPLOYEE', () => {
+          const person = {
+            employeeInfo: {
+              positions: [
+                {
+                  positionInfo: {
+                    BasicData: {
+                      position: {
+                        description: 'Director'
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            studentInfo: { studentId: '12345' },
+            affiliateInfo: { affiliateId: 'A123' }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.EMPLOYEE });
+          expect(mapper.getTitle()).toBe('Director');
+        });
+
+        it('should return shortDescription when description is empty and personType is EMPLOYEE', () => {
+          const person = {
+            employeeInfo: {
+              positions: [
+                {
+                  positionInfo: {
+                    BasicData: {
+                      position: {
+                        description: '',
+                        shortDescription: 'Manager'
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.EMPLOYEE });
+          expect(mapper.getTitle()).toBe('Manager');
+        });
+      });
+
+      describe('STUDENT personType', () => {
+        it('should return "Student" when personType is STUDENT', () => {
+          const person = {
+            studentInfo: { studentId: '12345' }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.STUDENT });
+          expect(mapper.getTitle()).toBe('Student');
+        });
+
+        it('should return "Student" even with no studentInfo when personType is STUDENT', () => {
+          const person = {};
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.STUDENT });
+          expect(mapper.getTitle()).toBe('Student');
+        });
+
+        it('should ignore employee info when personType is STUDENT', () => {
+          const person = {
+            employeeInfo: {
+              positions: [
+                {
+                  positionInfo: {
+                    BasicData: {
+                      position: {
+                        description: 'Professor'
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            studentInfo: { studentId: '12345' }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.STUDENT });
+          expect(mapper.getTitle()).toBe('Student');
+        });
+      });
+
+      describe('AFFILIATE personType', () => {
+        it('should return "University Affiliate" when personType is AFFILIATE', () => {
+          const person = {
+            affiliateInfo: { affiliateId: 'A123' }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.AFFILIATE });
+          expect(mapper.getTitle()).toBe('University Affiliate');
+        });
+
+        it('should return "University Affiliate" even with no affiliateInfo when personType is AFFILIATE', () => {
+          const person = {};
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.AFFILIATE });
+          expect(mapper.getTitle()).toBe('University Affiliate');
+        });
+
+        it('should ignore employee and student info when personType is AFFILIATE', () => {
+          const person = {
+            employeeInfo: {
+              positions: [
+                {
+                  positionInfo: {
+                    BasicData: {
+                      position: {
+                        description: 'Engineer'
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            studentInfo: { studentId: '12345' },
+            affiliateInfo: { affiliateId: 'A123' }
+          };
+          const mapper = TitleMapper({ person, personType: PERSON_TYPE.AFFILIATE });
+          expect(mapper.getTitle()).toBe('University Affiliate');
+        });
       });
     });
   });

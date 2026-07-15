@@ -13,7 +13,7 @@
       "hrn:hrs:lists:roles/suite-business-analyst",
       "hrn:hrs:lists:roles/site-user"
     ],
-    "completed": true
+    "completed": false
   },
   {
     "buid": "U99108201",

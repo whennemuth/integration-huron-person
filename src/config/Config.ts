@@ -57,6 +57,22 @@ export enum TargetPersonDeleteType {
 }
 
 /**
+ * Defines how organization deletions are handled in the target system.
+ * - SOFT: Set active: false on the organization record (default, recommended)
+ * - HARD: Request hard delete (not typically supported, falls back to soft delete)
+ * - LOG: Only log the deletion, don't actually deactivate the organization
+ * - NONE: Don't perform any operation
+ * 
+ * The choice of deletion type depends on the capabilities of the target system and the desired data retention policies.
+ */
+export enum TargetOrganizationDeleteType {
+  SOFT = 'soft',
+  HARD = 'hard',
+  LOG  = 'log',
+  NONE = 'none'
+}
+
+/**
  * Configuration interface for Huron Person Integration
  */
 export interface Config {
@@ -91,6 +107,8 @@ export interface Config {
     organizationsPath: string;
     /** Determines how person deletions are handled in the target system */
     personDeleteType?: TargetPersonDeleteType;
+    /** Determines how organization deletions are handled in the target system */
+    organizationDeleteType?: TargetOrganizationDeleteType;
     /** Optional dryrun flag. Indicates that CRUD operation to target is logged instead of executed */
     dryRun?: boolean;
   };

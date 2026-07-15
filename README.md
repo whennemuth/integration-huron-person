@@ -360,11 +360,11 @@ Used for data-target-only operations:
 
 Test harnesses are executable modules that verify individual components using environment-based configuration via the `TestEnvironment` utility from `integration-core`. Each harness loads its own prefixed environment variables and validates component behavior in isolation.
 
-Harness configuration is documented in [example-env.md](./example-env.md). The file contains grouped environment variables for 29 test harnesses covering:
+Harness configuration is documented in [example-env.md](./example-env.md). The file contains grouped environment variables for 30 test harnesses covering:
 - **Configuration Management**: `ConfigFromSecretsManager`, `ConfigManager`
 - **Data Mapping**: `DataMapper` (base, country, org, state), `FieldFilter`, `MappingValidator`
 - **Data Sources**: `CurrentTermsDataSource`, `PeopleCdmDataSource`, `PeopleDataSourceBatch`, `PeopleS3DataSource`, `PersonDataSource`
-- **Data Targets**: `AuthToken`, `DeactivatePerson`, `ListPeople`, `ReadList`, `ReadOrganization`, `ReadOrganizations`, `ReadPeople`, `ReadPerson`
+- **Data Targets**: `AuthToken`, `DeactivatePerson`, `ListPeople`, `OrganizationDataTarget`, `ReadList`, `ReadOrganization`, `ReadOrganizations`, `ReadPeople`, `ReadPerson`
 - **Delta Strategy**: `UpsertDeltaStrategy`
 - **Miscellaneous**: `BulkTargetPatcher`, `BulkTargetPatcherForSourceIdentifier`, `ChunkScanner`, `SyncEvaluator`
 - **Main Orchestrators**: `SyncPeople`, `SyncPerson`, `SyncPersonBatch`

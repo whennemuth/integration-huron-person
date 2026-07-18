@@ -12,6 +12,7 @@ describe('ConfigFromFileSystem', () => {
   const mockConfigPath = '/test/config.json';
   
   const validConfig: Config = {
+    landscape: 'test',
     executionMode: 'person',
     dataSource: {
       person: {

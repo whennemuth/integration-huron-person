@@ -76,6 +76,9 @@ export enum TargetOrganizationDeleteType {
  * Configuration interface for Huron Person Integration
  */
 export interface Config {
+  /** The landscape (environment) that applies to the configuration */
+  landscape: string
+
   /** Execution mode for the integration */
   executionMode: ExecutionMode;
   

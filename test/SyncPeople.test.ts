@@ -55,6 +55,7 @@ describe('Package Exports', () => {
 
     it('should allow instantiation of all exported classes', () => {
       const mockConfig = {
+        landscape: 'test',
         executionMode: 'people' as ExecutionMode,
         dataSource: {
           person: {

@@ -13,6 +13,7 @@ describe('ConfigManager', () => {
   const mockConfigPath = '/test/config.json';
   
   const validConfig: Config = {
+    landscape: 'test',
     executionMode: 'person',
     dataSource: {
       person: {
@@ -148,6 +149,7 @@ describe('ConfigManager', () => {
 
       it('should use environment config when file config is incomplete', () => {
         const incompleteFileConfig = {
+          landscape: 'test',
           dataSource: validConfig.dataSource,
           dataTarget: validConfig.dataTarget,
           storage: validConfig.storage,

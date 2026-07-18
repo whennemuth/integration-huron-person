@@ -1,5 +1,5 @@
 {
-  "landscape": "migration",
+  "landscape": "staging",
   "dataSource": {
     "person": {
       "endpointConfig": {
@@ -60,7 +60,7 @@
     "type": "s3",
     "config": {
       "_bucketName": "huron-person-file-drop-dev",
-      "bucketName": "huron-person-chunks-migration",
+      "bucketName": "huron-person-chunks-staging",
       "region": "us-east-2"
     }
   }

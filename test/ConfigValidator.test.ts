@@ -3,6 +3,7 @@ import { Config } from '../src/config/Config';
 
 describe('ConfigValidator', () => {
   const getValidConfig = (): Config => ({
+    landscape: 'test',
     executionMode: 'person',
     dataSource: {
       person: {

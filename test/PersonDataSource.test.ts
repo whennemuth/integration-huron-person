@@ -48,6 +48,7 @@ describe('BuCdmPersonDataSource', () => {
   let dataMapper: DataMapper;
   
   const mockConfig: Config = {
+    landscape: 'test',
     executionMode: 'person',
     dataSource: {
       person: {
@@ -245,6 +246,7 @@ describe('BuCdmPersonDataSource', () => {
   describe('Configuration and Timeout Precedence', () => {
     it('should prioritize endpointConfig timeout over integration timeout', () => {
       const configWithBothTimeouts: Config = {
+        landscape: 'test',
         executionMode: 'person',
         dataSource: {
           person: {
@@ -299,6 +301,7 @@ describe('BuCdmPersonDataSource', () => {
 
     it('should fallback to integration timeout when endpointConfig timeout is undefined', () => {
       const configWithOnlyIntegrationTimeout: Config = {
+        landscape: 'test',
         executionMode: 'person',
         dataSource: {
           person: {

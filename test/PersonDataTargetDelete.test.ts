@@ -72,6 +72,7 @@ function createFieldSet(fields: Record<string, any>): FieldSet {
 
 describe('HuronPersonDataTargetDelete', () => {
   const mockConfig: Config = {
+    landscape: 'test',
     executionMode: 'person',
     dataSource: {
       person: {

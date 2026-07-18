@@ -73,6 +73,7 @@ export class ConfigValidator {
 
     // General required fields
     const generalRequiredFields = [
+      'landscape',
       'integration.clientId',
       'storage.type',
       'storage.config'

@@ -25,7 +25,7 @@ import { ConfigManager } from './config/ConfigManager';
 const configManager = ConfigManager.getInstance();
 const config = configManager
   .reset()
-  .fromFileSystem()           // Loads from './config.json'
+  .fromFileSystem()           // Loads from './config/config.json'
   .fromEnvironment()          // Applies environment overrides
   .getConfig();               // Returns validated config
 ```
@@ -38,21 +38,21 @@ The configuration system supports execution modes to validate different data sou
 // Person mode - validates dataSource.person configuration
 const personConfig = configManager
   .reset()
-  .fromFileSystem('./config.json')
+  .fromFileSystem('./config/config.json')
   .fromEnvironment()
   .getConfig('person');
 
 // People mode - validates dataSource.people configuration  
 const peopleConfig = configManager
   .reset()
-  .fromFileSystem('./config.json')
+  .fromFileSystem('./config/config.json')
   .fromEnvironment()
   .getConfig('people');
 
 // None mode - no data source validation required
 const targetOnlyConfig = configManager
   .reset()
-  .fromFileSystem('./config.json')
+  .fromFileSystem('./config/config.json')
   .fromEnvironment()
   .getConfig('none');
 ```
@@ -149,7 +149,7 @@ sequenceDiagram
 ### File System Configuration
 
 Loads from JSON files with support for:
-- Relative paths: `'./config.json'`, `'../shared-config.json'`
+- Relative paths: `'./config/config.json'`, `'../shared-config.json'`
 - Absolute paths: `'/etc/myapp/config.json'`
 - Custom extensions: `'.config.json'`, `'.settings.json'`
 
@@ -319,7 +319,7 @@ class HuronPersonIntegration {
     const configManager = ConfigManager.getInstance();
     this.config = configManager
       .reset()
-      .fromFileSystem(configPath || './config.json')
+      .fromFileSystem(configPath || './config/config.json')
       .fromEnvironment()
       .getConfig(executionMode);
   }
@@ -345,7 +345,7 @@ const config = ConfigManager.getInstance()
 #!/usr/bin/env node
 import { ConfigManager } from './config/ConfigManager';
 
-const configPath = process.argv[2] || './config.json';
+const configPath = process.argv[2] || './config/config.json';
 const executionMode = (process.argv[3] as ExecutionMode) || 'people';
 
 const config = ConfigManager.getInstance()

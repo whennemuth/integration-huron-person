@@ -79,8 +79,8 @@ describe('ConfigFromFileSystem', () => {
       const result = configLoader.loadConfig();
 
       expect(result).toEqual(validConfig);
-      expect(mockedFs.existsSync).toHaveBeenCalledWith(path.resolve('./config.json'));
-      expect(mockedFs.readFileSync).toHaveBeenCalledWith(path.resolve('./config.json'), 'utf-8');
+      expect(mockedFs.existsSync).toHaveBeenCalledWith(path.resolve('./config/config.json'));
+      expect(mockedFs.readFileSync).toHaveBeenCalledWith(path.resolve('./config/config.json'), 'utf-8');
     });
 
     it('should throw error when config file does not exist', () => {

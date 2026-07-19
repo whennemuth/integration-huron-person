@@ -11,11 +11,11 @@ export class ConfigFromFileSystem {
 
   /**
    * Load configuration from a JSON file
-   * @param configPath - Path to the configuration file (defaults to './config.json')
+   * @param configPath - Path to the configuration file (defaults to './config/config.json')
    * @returns Parsed configuration object
    * @throws Error if file doesn't exist, can't be read, or contains invalid JSON
    */
-  loadConfig(configPath: string = './config.json'): Config {
+  loadConfig(configPath: string = './config/config.json'): Config {
     try {
       const absolutePath = path.resolve(configPath);
       

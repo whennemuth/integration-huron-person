@@ -234,14 +234,14 @@ export const isABuid = (id:string) => /^U[0-9]{8,9}$/.test(id);
  * working directory when running locally with the provided launch configuration in the 
  * integration-huron-person-fargate/.vscode/launch.json file.
  * 
- * NOTE: This function expects to find a config.json file up one directory from the current working 
- * directory, in a "integration-huron-person" folder. This is assumes a you have created a 
- * integration.code-workspace and have arranged your directories accordingly. Adjust the path as 
- * necessary if your local setup differs.
+ * NOTE: This function expects to find a config.json file in the config subdirectory of the 
+ * integration-huron-person folder. This assumes you have created a integration.code-workspace 
+ * and have arranged your directories accordingly. Adjust the path as necessary if your local 
+ * setup differs.
  * @returns The path to the local configuration file, or undefined if not found.
  */
 export const getLocalConfig = (params?: { projectFolder?: string, configFileName?: string }): string | undefined => {
-  const { configFileName='config.json' } = params || {};
+  const { configFileName='config/config.json' } = params || {};
   const args = process?.argv || [];
   try {
     const workspaceFolderArg = args.find(arg => arg.startsWith('workspaceFolder='));

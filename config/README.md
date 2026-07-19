@@ -8,9 +8,9 @@ The `swap.sh` script allows switching between landscape-specific configurations 
 
 ```
 integration-huron-person/
-├── config.json                      # Active configuration (root level)
 ├── .env                             # Active environment variables (root level)
 └── config/
+    ├── config.json                  # Active configuration
     ├── swap.sh                      # This swap script
     ├── README.md                    # This documentation
     ├── config.dev.json              # Dev landscape config
@@ -84,7 +84,7 @@ To create a new landscape configuration:
 
 1. **Copy your current config.json:**
    ```bash
-   cp ../config.json config.newlandscape.json
+   cp config.json config.newlandscape.json
    ```
 
 2. **Copy your current .env file:**
@@ -128,7 +128,7 @@ Your `config.json` is missing the top-level landscape field. Add it:
 The landscape-specific config file doesn't exist. Create it first:
 
 ```bash
-cp ../config.json config.yourlandscape.json
+cp config.json config.yourlandscape.json
 # Edit config.yourlandscape.json to set top-level landscape field to "yourlandscape"
 ```
 

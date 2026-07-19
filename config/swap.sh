@@ -52,12 +52,12 @@ fi
 TARGET_LANDSCAPE="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_FILE="$ROOT_DIR/config.json"
+CONFIG_FILE="$SCRIPT_DIR/config.json"
 ENV_FILE="$ROOT_DIR/.env"
 
-# Check if config.json exists at root
+# Check if config.json exists in config directory
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo -e "${RED}Error: config.json not found at $ROOT_DIR${NC}"
+    echo -e "${RED}Error: config.json not found at $SCRIPT_DIR${NC}"
     exit 1
 fi
 
@@ -71,10 +71,23 @@ if [ $? -ne 0 ] || [ "$CURRENT_LANDSCAPE" = "null" ] || [ -z "$CURRENT_LANDSCAPE
     exit 1
 fi
 
+# Check if .env file exists and read its LANDSCAPE variable
+CURRENT_ENV_LANDSCAPE=""
+if [ -f "$ENV_FILE" ]; then
+    CURRENT_ENV_LANDSCAPE=$(grep -E "^LANDSCAPE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+fi
+
+# Only exit early if BOTH config.json and .env are already at target landscape
 if [ "$CURRENT_LANDSCAPE" = "$TARGET_LANDSCAPE" ]; then
-    echo -e "${YELLOW}Already at landscape: $TARGET_LANDSCAPE${NC}"
-    echo "No swap needed."
-    exit 0
+    if [ -z "$CURRENT_ENV_LANDSCAPE" ] || [ "$CURRENT_ENV_LANDSCAPE" = "$TARGET_LANDSCAPE" ]; then
+        echo -e "${YELLOW}Already at landscape: $TARGET_LANDSCAPE${NC}"
+        echo "No swap needed."
+        exit 0
+    else
+        echo -e "${YELLOW}Note: config.json is already at $TARGET_LANDSCAPE, but .env has LANDSCAPE=$CURRENT_ENV_LANDSCAPE${NC}"
+        echo "Will swap .env file only."
+        echo ""
+    fi
 fi
 
 # 3. Check if target config file exists

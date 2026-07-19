@@ -180,7 +180,7 @@ dist/
 
 The configuration system provides configuration management with validation, environment overrides, and multiple storage backend support.
 
-### Configuration File (`config.json`)
+### Configuration File (`config/config.json`)
 
 Complete configuration with all available options:
 

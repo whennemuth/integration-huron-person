@@ -62,7 +62,7 @@ export interface OrganizationPushResponse {
  *  - ORGANIZATION_DATA_TARGET_JSON_VALUE='[{"name":"AFFILIATE", "id":"AFFILIATE", "sourceIdentifier":"AFFILIATE", "active":true},{"name":"UNASSIGNED", "id":"UNASSIGNED", "sourceIdentifier":"UNASSIGNED", "active":true}]'
  *  - ORGANIZATION_DATA_TARGET_JSON_FILE_PATH=./organization-data.json
  *  - ORGANIZATION_DATA_TARGET_HURON_PERSON_CONFIG_PATH=
- *  - ORGANIZATION_DATA_TARGET_SECRET_ARN=arn:aws:secretsmanager:us-east-2:770203350335:secret:huron-person-fargate-processor/integration/_config/dev-arxiNO
+ *  - ORGANIZATION_DATA_TARGET_SECRET_ARN=arn:aws:secretsmanager:us-east-2:770203350335:secret:huron-person-fargate-processor/integration/_config/staging-VNYpqv
  *  - ORGANIZATION_DATA_TARGET_CACHE_ENABLED=true
  *  - ORGANIZATION_DATA_TARGET_CACHE_PATH=.
  * 

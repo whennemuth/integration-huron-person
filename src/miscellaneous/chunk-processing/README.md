@@ -6,7 +6,7 @@ This directory contains utilities for processing NDJSON chunk files stored in AW
 
 ```mermaid
 classDiagram
-    AbstractChunkProcessor <|-- ChunkScanner
+    AbstractChunkProcessor <|-- ChunkScannerForBuid
     AbstractChunkProcessor <|-- ChunkCompiler
     
     class AbstractChunkProcessor {
@@ -22,7 +22,7 @@ classDiagram
         +initializeProcessing()
     }
     
-    class ChunkScanner {
+    class ChunkScannerForBuid {
         -foundFileKeys: string[]
         -stopWhenFound: boolean
         +scanForBuid(buid): string[]
@@ -41,9 +41,16 @@ classDiagram
         #finalizeResults(): void
     }
     
-    note for AbstractChunkProcessor "Template Method Pattern:\n1. List .ndjson files\n2. Process each file with S3 Select\n3. Aggregate results"
-    note for ChunkScanner "Searches for specific BUID\nCan stop early when found\nRetrieves and saves records"
-    note for ChunkCompiler "Collects all distinct personids\nDeduplicates across files\nOutputs one per line"
+    note for AbstractChunkProcessor "Template Method Pattern: 
+    1. List .ndjson files 
+    2. Process each file with S3 Select 
+    3. Aggregate results"
+    note for ChunkScannerForBuid "Searches for specific BUID 
+    Can stop early when found 
+    Retrieves and saves records" 
+    note for ChunkCompiler "Collects all distinct personids 
+    Deduplicates across files 
+    Outputs one per line"
 ```
 
 ## Architecture: Template Method Pattern
@@ -73,9 +80,10 @@ Base class implementing the Template Method pattern. Provides:
 
 **Not meant to be instantiated directly** - extend this class to create specific processors.
 
-### ChunkScanner.ts
+### ChunkScannerForBuid.ts
 
-Searches for specific person records by BUID in chunk files. Features:
+This class is an example of one of the implementations *(there may be others in this directory)*.<br>
+It searches for specific person records by BUID in chunk files. Features:
 - **Scan mode**: Find which file(s) contain a specific BUID
 - **Retrieve mode**: Get full person record for a BUID
 - **Save mode**: Save person record to local JSON file
@@ -84,20 +92,20 @@ Searches for specific person records by BUID in chunk files. Features:
 **Use Case**: "Find the chunk file containing person U12345678" or "Extract person U12345678's full record"
 
 **Environment Variables**:
-- `CHUNK_SCANNER_BUCKET` - S3 bucket name
-- `CHUNK_SCANNER_KEY` - S3 file or directory path (directory must end with `/`)
-- `CHUNK_SCANNER_REGION` - AWS region (default: `us-east-2`)
-- `CHUNK_SCANNER_BUID` - Person ID to search for
-- `CHUNK_SCANNER_STOP_WHEN_FOUND` - Stop after first match? (`true`/`false`, default: `true`)
-- `CHUNK_SCANNER_TASK` - Operation to perform (`scan` or `save`, default: `scan`)
+- `CHUNK_SCANNER_FOR_BUID_BUCKET` - S3 bucket name
+- `CHUNK_SCANNER_FOR_BUID_KEY` - S3 file or directory path (directory must end with `/`)
+- `CHUNK_SCANNER_FOR_BUID_REGION` - AWS region (default: `us-east-2`)
+- `CHUNK_SCANNER_FOR_BUID_BUID` - Person ID to search for
+- `CHUNK_SCANNER_FOR_BUID_STOP_WHEN_FOUND` - Stop after first match? (`true`/`false`, default: `true`)
+- `CHUNK_SCANNER_FOR_BUID_TASK` - Operation to perform (`scan` or `save`, default: `scan`)
 
 **Example**:
 ```bash
-export CHUNK_SCANNER_BUCKET="my-bucket"
-export CHUNK_SCANNER_KEY="chunks/2024-01-15/"
-export CHUNK_SCANNER_BUID="U12345678"
-export CHUNK_SCANNER_TASK="scan"
-npx ts-node src/miscellaneous/chunk-processing/ChunkScanner.ts
+export CHUNK_SCANNER_FOR_BUID_BUCKET="my-bucket"
+export CHUNK_SCANNER_FOR_BUID_KEY="chunks/2024-01-15/"
+export CHUNK_SCANNER_FOR_BUID_BUID="U12345678"
+export CHUNK_SCANNER_FOR_BUID_TASK="scan"
+npx ts-node src/miscellaneous/chunk-processing/ChunkScannerForBuid.ts
 ```
 
 ### ChunkCompiler.ts

@@ -24,11 +24,11 @@ export type ChunkScannerConfig = ChunkProcessorConfig & {
  * 4. You can also retrieve the full person record for the found BUID and save it locally in a readable JSON format.
  * 
  * Environment Variables:
- * - CHUNK_SCANNER_BUCKET: The name of the S3 bucket containing the chunk files
- * - CHUNK_SCANNER_KEY: The S3 key to scan (can be a single file or a directory prefix ending with '/')
- * - CHUNK_SCANNER_REGION: The AWS region where the bucket is located (e.g., 'us-east-2')
- * - CHUNK_SCANNER_BUID: The person ID (BUID) to search for in the chunk files
- * - CHUNK_SCANNER_STOP_WHEN_FOUND: Optional flag ('true' or 'false') to stop scanning after finding the first match (default: 'true')
+ * - CHUNK_SCANNER_FOR_BUID_BUCKET: The name of the S3 bucket containing the chunk files
+ * - CHUNK_SCANNER_FOR_BUID_KEY: The S3 key to scan (can be a single file or a directory prefix ending with '/')
+ * - CHUNK_SCANNER_FOR_BUID_REGION: The AWS region where the bucket is located (e.g., 'us-east-2')
+ * - CHUNK_SCANNER_FOR_BUID_BUID: The person ID (BUID) to search for in the chunk files
+ * - CHUNK_SCANNER_FOR_BUID_STOP_WHEN_FOUND: Optional flag ('true' or 'false') to stop scanning after finding the first match (default: 'true')
  */
 export class ChunkScanner extends AbstractChunkProcessor {
   private foundFileKeys: string[] = [];
@@ -250,40 +250,41 @@ export class ChunkScanner extends AbstractChunkProcessor {
 
 
 if(require.main === module) {
-  const testEnvironment = TestEnvironment('CHUNK_SCANNER');
+  const testEnvironment = TestEnvironment('CHUNK_SCANNER_FOR_BUID');
 
   [
-    'CHUNK_SCANNER_BUID',
-    'CHUNK_SCANNER_KEY',
-    'CHUNK_SCANNER_REGION',
-    'CHUNK_SCANNER_STOP_WHEN_FOUND'
-  ].forEach(testEnvironment.getVarOrEmptyString);
+    'BUCKET',
+    'KEY',
+    'REGION',
+    'BUID',
+    'STOP_WHEN_FOUND'
+  ].forEach(varName => testEnvironment.getVarOrEmptyString(varName));
 
   (async () => {
 
     const {
-      CHUNK_SCANNER_TASK: task = 'scan', // Default to 'scan' if not provided
-      CHUNK_SCANNER_BUCKET: bucketName, 
-      CHUNK_SCANNER_KEY: key, 
-      CHUNK_SCANNER_REGION: region = 'us-east-2', 
-      CHUNK_SCANNER_BUID: buidToFind, 
-      CHUNK_SCANNER_STOP_WHEN_FOUND: stopWhenFound = 'true'
+      CHUNK_SCANNER_FOR_BUID_TASK: task = 'scan', // Default to 'scan' if not provided
+      CHUNK_SCANNER_FOR_BUID_BUCKET: bucketName, 
+      CHUNK_SCANNER_FOR_BUID_KEY: key, 
+      CHUNK_SCANNER_FOR_BUID_REGION: region = 'us-east-2', 
+      CHUNK_SCANNER_FOR_BUID_BUID: buidToFind, 
+      CHUNK_SCANNER_FOR_BUID_STOP_WHEN_FOUND: stopWhenFound = 'true'
     } = process.env;
 
     if(task !== 'scan' && task !== 'save') {
-      console.error(`Invalid CHUNK_SCANNER_TASK value: ${task}. Must be either 'scan' or 'save'.`);
+      console.error(`Invalid CHUNK_SCANNER_FOR_BUID_TASK value: ${task}. Must be either 'scan' or 'save'.`);
       process.exit(1);
     }
     if(!bucketName) {
-      console.error("Error: CHUNK_SCANNER_BUCKET environment variable is not set.");
+      console.error("Error: CHUNK_SCANNER_FOR_BUID_BUCKET environment variable is not set.");
       process.exit(1);
     }
     if(!key) {
-      console.error("Error: CHUNK_SCANNER_KEY environment variable is not set.");
+      console.error("Error: CHUNK_SCANNER_FOR_BUID_KEY environment variable is not set.");
       process.exit(1);
     }
     if(!buidToFind) {
-      console.error("Error: CHUNK_SCANNER_BUID environment variable is not set.");
+      console.error("Error: CHUNK_SCANNER_FOR_BUID_BUID environment variable is not set.");
       process.exit(1);
     }
 

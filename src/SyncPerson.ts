@@ -29,6 +29,7 @@ type PersonSyncParams = {
     enabled: boolean;
     deltaStrategy?: DeltaStrategy;
   };
+  forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
 };
 
 type SinglePersonSyncParams = PersonSyncParams & {
@@ -302,7 +303,12 @@ class SinglePersonSync {
    * @param params.rawData - Raw data to use instead of fetching
    * @param params.suppressHashUpdate - If true, skip individual hash storage update (used in batch operations)
    */
-  public sync = async (params?: { crudOperation?: CrudOperation, rawData?: any[], suppressHashUpdate?: boolean }): Promise<void> => {
+  public sync = async (params?: { 
+    crudOperation?: CrudOperation,
+    rawData?: any[], 
+    suppressHashUpdate?: boolean,
+    forceUpdate?: boolean
+  }): Promise<void> => {
     const { instanceParams: { config, buid, hashStorage }, getHrn, instanceParams, logPrefix } = this;
     try {
 
@@ -312,7 +318,7 @@ class SinglePersonSync {
       console.log(`Client ID: ${config.integration.clientId}`);
 
       const { preview } = instanceParams;
-      let { crudOperation, rawData, suppressHashUpdate } = params || {};
+      let { crudOperation, rawData, suppressHashUpdate, forceUpdate=false } = params || {};
 
       if( ! crudOperation ) {
         const hrn = await getHrn();       
@@ -354,10 +360,35 @@ class SinglePersonSync {
         console.warn(`Expected exactly 1 field set for single person sync, but found ${mappedPerson.fieldSets.length} for BUID: ${buid}. Only processing the first one.`);
       }
 
+      /**
+       * Determines whether the sync state should be assessed for the current person.
+       * @returns true if sync state should be assessed, false otherwise.
+       */
+      const mustAssessSyncedState = (): boolean => {
+        // Only assess sync state for UPDATE operations 
+        if(crudOperation != CrudOperation.UPDATE) {
+          return false;
+        }        
+        // Only assess sync state if hash storage is enabled (to avoid unnecessary API calls)
+        if(!hashStorage?.enabled) {
+          return false;
+        }
+        // Only assess sync state if forceUpdate is not set (to allow bypassing sync check 
+        // which could cancel the update if inSync found to be true - ie: for role updates)
+        if(forceUpdate) {
+          return false;
+        }
+        if(preview) {
+          console.log(`Preview mode enabled - skipping sync state assessment for BUID: ${buid}.`);
+          return false;
+        }
+        console.log(`Checking if source and target are already in sync for BUID: ${buid}...`);
+        return true;
+      };
+
       // Check if source and target are already in sync (UPDATE operations only)
       let skipPush = false;
-      if (crudOperation === CrudOperation.UPDATE && hashStorage?.enabled && !preview) {
-        console.log(`Checking if source and target are already in sync for BUID: ${buid}...`);
+      if (mustAssessSyncedState()) {
         try {
           const sourcePersonParams: SourcePersonParms = {
             config,

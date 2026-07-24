@@ -148,9 +148,18 @@ async function _main() {
     throw new Error('Failed to create CustomRoleDataMapper instance');
   }
 
+  /**
+   * Force updates to ensure role assignments are applied even if source and target are in 
+   * sync. This is necessary because the standard sync process determines if source and target
+   * are in sync by comparing computed hashes. These hashes are generated without considering
+   * roles (see src\data-mapper\FieldFilter.ts). This in turn would prevent role assignments 
+   * from being applied because the sync process would skip the update.
+   */
+  const forceUpdate = true;
+
   // Pass the custom DataMapper to the main sync function in SyncPersonBatch, which will use it for 
   // all data mapping during the standard sync process
-  await main(customMapper);
+  await main({ dataMapper: customMapper, forceUpdate });
 }
 
 // Run if this file is executed directly

@@ -193,7 +193,7 @@ async function _main() {
 
   // Pass the enforcer DataMapper to the main sync function in SyncPersonBatch, which will use it for 
   // all data mapping during the standard sync process
-  await main(enforcerMapper);
+  await main({ dataMapper: enforcerMapper });
 }
 
 // Run if this file is executed directly

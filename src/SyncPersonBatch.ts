@@ -94,7 +94,10 @@ class BatchPersonSync {
         
         // Perform sync with suppressHashUpdate to prevent individual updates
         // (hash storage will be updated in batch at the end for efficiency)
-        await singleSync.sync({ suppressHashUpdate: true });
+        await singleSync.sync({ 
+          suppressHashUpdate: true,
+          forceUpdate: batchParams.forceUpdate 
+        });
         
         // If hash storage update is enabled and sync succeeded, collect the result
         if (hashStorage?.enabled === true && singleSync.getPushResult()?.status === Status.SUCCESS) {
@@ -129,10 +132,15 @@ class BatchPersonSync {
   }
 }
 
+export type MainParams = {
+  dataMapper?: DataMapper;
+  forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
+};
+
 /**
  * Main entry point for command line execution - batch person sync
  */
-export async function main(dataMapper?: DataMapper) {
+export async function main(params?: MainParams): Promise<void> {
   const { HURON_PERSON_CONFIG_PATH } = process.env;
   try {
     // Load configuration
@@ -144,6 +152,7 @@ export async function main(dataMapper?: DataMapper) {
       .getConfig('person');
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
+    let { dataMapper, forceUpdate } = params || {};
     if(!dataMapper) {
       dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
     }
@@ -220,7 +229,7 @@ export async function main(dataMapper?: DataMapper) {
 
     // Use BatchPersonSync for batch operations (composition pattern)
     const batchSync = new BatchPersonSync({ 
-      config, buids, cache, dataMapper, preview, hashStorage
+      config, buids, cache, dataMapper, preview, hashStorage, forceUpdate
     });
     await batchSync.syncAll();
   }

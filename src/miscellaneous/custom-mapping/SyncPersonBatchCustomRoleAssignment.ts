@@ -17,6 +17,8 @@ type RoleAssignment = {
 type CustomRoleDataMapperParams = {
   params: ConstructorParameters<typeof DataMapper>[0];
   roleAssignments: Map<string, string[]>;
+  replace: boolean;
+  override: boolean;
 };
 
 /**
@@ -32,6 +34,8 @@ type CustomRoleDataMapperParams = {
  */
 class CustomRoleDataMapper extends DataMapper {
   private roleAssignments: Map<string, string[]>;
+  private replace: boolean;
+  private override: boolean;
 
   /**
    * Create an instance with role assignments loaded from a JSON file.
@@ -50,6 +54,8 @@ class CustomRoleDataMapper extends DataMapper {
   private constructor(params: CustomRoleDataMapperParams) {
     super(params.params);
     this.roleAssignments = params.roleAssignments;
+    this.replace = params.replace;
+    this.override = params.override;
   }
 
   public map(rawData: any[], crudOperation?: CrudOperation): Input {
@@ -58,8 +64,9 @@ class CustomRoleDataMapper extends DataMapper {
 
   /**
    * Override the standard getMappedData to inject custom role assignments into the mapped data.
-   * For people with custom role assignments, the standard irb-general-user role is replaced
-   * with the custom roles from the configuration file.
+   * For people with custom role assignments, roles are either replaced or appended based on
+   * the replace flag. The override flag determines whether to use only custom roles or combine
+   * with existing roles from the source data.
    * @param params 
    * @returns 
    */
@@ -81,20 +88,38 @@ class CustomRoleDataMapper extends DataMapper {
         
         const modifiedFields = fieldSet.fieldValues.map(field => {
           if ('roles' in field) {
-            // Combine standard roles with custom roles
-            const existingRoles = Array.isArray(field.roles) ? field.roles : [];
-            const existingHrns = existingRoles.map(role => 
-              typeof role === 'object' && role !== null && 'hrn' in role ? role.hrn : null
-            ).filter((hrn): hrn is string => hrn !== null);
-            
-            // Combine and remove duplicates
-            const allHrns = [...existingHrns, ...customRoleHrns];
-            const uniqueHrns = Array.from(new Set(allHrns));
-            
-            return { 
-              roles: uniqueHrns.map(hrn => ({ hrn }))
-            };
+            if (this.override) {
+              // Use only the custom roles
+              return { 
+                roles: customRoleHrns.map(hrn => ({ hrn }))
+              };
+            } else {
+              // Combine standard roles with custom roles and remove duplicates
+              const existingRoles = Array.isArray(field.roles) ? field.roles : [];
+              const existingHrns = existingRoles.map(role => 
+                typeof role === 'object' && role !== null && 'hrn' in role ? role.hrn : null
+              ).filter((hrn): hrn is string => hrn !== null);
+              
+              // Combine and remove duplicates
+              const allHrns = [...existingHrns, ...customRoleHrns];
+              const uniqueHrns = Array.from(new Set(allHrns));
+              
+              return { 
+                roles: uniqueHrns.map(hrn => ({ hrn }))
+              };
+            }
           }
+          
+          // Update __arrayFieldOperations based on replace flag
+          if ('__arrayFieldOperations' in field && !this.replace) {
+            // Keep append behavior when not replacing
+            return field;
+          }
+          if ('__arrayFieldOperations' in field && this.replace) {
+            // Remove append instruction when replacing (use default replace behavior)
+            return { __arrayFieldOperations: {} };
+          }
+          
           return field;
         });
 
@@ -176,19 +201,38 @@ async function _main() {
     orgMap: false, stateMap: true, countryMap: true 
   });
 
+  // Parse REPLACE and OVERRIDE flags from environment
+  const { REPLACE, OVERRIDE } = process.env;
+  const replace = `${REPLACE}`.trim().toLowerCase() === 'true';
+  const override = `${OVERRIDE}`.trim().toLowerCase() === 'true';
+
+  console.log(`REPLACE mode: ${replace ? 'enabled (replace existing roles)' : 'disabled (append to existing roles)'}`);
+  console.log(`OVERRIDE mode: ${override ? 'enabled (custom roles only)' : 'disabled (combine with source roles)'}`);
+
   // Create an instance of the CustomRoleDataMapper with the same params as the standard mapper
   const customMapper = await CustomRoleDataMapper.getInstance(config, {
     params: standardMapper.params,
-    roleAssignments
+    roleAssignments,
+    replace,
+    override
   });
 
   if (!customMapper) {
     throw new Error('Failed to create CustomRoleDataMapper instance');
   }
 
+  /**
+   * Force updates to ensure role assignments are applied even if source and target are in 
+   * sync. This is necessary because the standard sync process determines if source and target
+   * are in sync by comparing computed hashes. These hashes are generated without considering
+   * roles (see src\data-mapper\FieldFilter.ts). This in turn would prevent role assignments 
+   * from being applied because the sync process would skip the update.
+   */
+  const forceUpdate = true;
+
   // Pass the custom DataMapper to the main sync function in SyncPersonBatch, which will use it for 
   // all data mapping during the standard sync process
-  await main(customMapper);
+  await main({ dataMapper: customMapper, forceUpdate });
 }
 
 // Run if this file is executed directly
@@ -201,6 +245,8 @@ if (require.main === module) {
     'INTEGRATED_DELTA_CLIENT_ID',
     'DELTA_STORAGE_BUCKET',
     'ROLES_FILE_PATH',
+    'REPLACE',
+    'OVERRIDE',
     'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVar);
 

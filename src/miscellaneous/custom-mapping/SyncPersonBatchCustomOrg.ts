@@ -201,7 +201,7 @@ async function _main() {
 
   // Pass the custom DataMapper to the main sync function in SyncPersonBatch, which will use it for 
   // all data mapping during the standard sync process
-  await main(customMapper);
+  await main({ dataMapper: customMapper });
 }
 
 // Run if this file is executed directly

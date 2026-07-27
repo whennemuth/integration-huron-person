@@ -8,6 +8,7 @@ import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
 type UnassignedOrgEnforcerParams = {
   params: ConstructorParameters<typeof DataMapper>[0];
   authorizedBuids: Set<string>;
+  innerMapper?: DataMapper; // Optional inner mapper for decorator chaining
 };
 
 /**
@@ -34,10 +35,12 @@ type UnassignedOrgEnforcerParams = {
  */
 class UnassignedOrgEnforcer extends DataMapper {
   private authorizedBuids: Set<string>;
+  private innerMapper?: DataMapper;
 
   constructor(params: UnassignedOrgEnforcerParams) {
     super(params.params);
     this.authorizedBuids = params.authorizedBuids;
+    this.innerMapper = params.innerMapper;
     
     if (!this.authorizedBuids || this.authorizedBuids.size === 0) {
       throw new Error('Authorized BUIDs set must be provided and non-empty');
@@ -66,7 +69,10 @@ class UnassignedOrgEnforcer extends DataMapper {
    */
   public getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
     const { rawData } = params;
-    const standardMappedData = super.getMappedData(params);
+    // Use innerMapper if provided, else fall back to super (standard DataMapper)
+    const standardMappedData = this.innerMapper 
+      ? this.innerMapper.getMappedData(params)
+      : super.getMappedData(params);
 
     // Extract the BUID (personid/sourceIdentifier) from the raw data
     // Try multiple possible field names
@@ -108,6 +114,9 @@ class UnassignedOrgEnforcer extends DataMapper {
         if ('active' in field) {
           return { active: false };
         }
+        if ('__active' in field) {
+          return { __active: false };
+        }
         return field;
       });
 
@@ -120,6 +129,9 @@ class UnassignedOrgEnforcer extends DataMapper {
       }
       if (!fieldNames.has('active')) {
         modifiedFields.push({ active: false });
+      }
+      if (!fieldNames.has('__active')) {
+        modifiedFields.push({ __active: false });
       }
 
       return { ...fieldSet, fieldValues: modifiedFields };
@@ -161,43 +173,52 @@ function loadAuthorizedBuids(filePath: string): Set<string> {
   return buids;
 }
 
-async function _main() {
-  const { AUTHORIZED_BUIDS_FILE_PATH } = process.env;
+/**
+ * Load sync BUIDs from a file or string.
+ * Lines starting with # are treated as comments and ignored.
+ * Empty lines are also ignored.
+ * 
+ * @param source - File path or string content with BUIDs (comma-separated or one per line)
+ * @param isFilePath - True if source is a file path, false if it's content
+ * @returns Comma-separated string of BUIDs
+ */
+function loadSyncBuids(source: string, isFilePath: boolean): string {
+  let content: string;
 
-  if (!AUTHORIZED_BUIDS_FILE_PATH) {
-    throw new Error('AUTHORIZED_BUIDS_FILE_PATH environment variable is required');
+  if (isFilePath) {
+    if (!fs.existsSync(source)) {
+      throw new Error(`Sync BUIDs file not found: ${source}`);
+    }
+    content = fs.readFileSync(source, 'utf-8');
+  } else {
+    content = source;
   }
 
-  // Load the authorized BUIDs from file
-  const authorizedBuids = loadAuthorizedBuids(AUTHORIZED_BUIDS_FILE_PATH);
+  const buids: string[] = [];
 
-  // Load configuration
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
+  // Support both line-separated and comma-separated formats
+  const lines = content.includes('\n') ? content.split('\n') : [content];
+  
+  for (const line of lines) {
+    // If line contains commas, split by comma (for comma-delimited format)
+    const entries = line.includes(',') ? line.split(',') : [line];
+    
+    for (const entry of entries) {
+      const trimmed = entry.trim();
+      // Skip empty entries and comments
+      if (trimmed && !trimmed.startsWith('#')) {
+        buids.push(trimmed);
+      }
+    }
+  }
 
-  // Get a standard DataMapper instance to extract params and mappings for the UnassignedOrgEnforcer
-  const standardMapper: DataMapper = await getDataMapper(config, { 
-    orgMap: true, stateMap: true, countryMap: true 
-  });
-
-  // Create an instance of the UnassignedOrgEnforcer with the same params as the standard mapper
-  const enforcerMapper = new UnassignedOrgEnforcer({
-    params: standardMapper.params,
-    authorizedBuids
-  });
-
-  // Pass the enforcer DataMapper to the main sync function in SyncPersonBatch, which will use it for 
-  // all data mapping during the standard sync process
-  await main({ dataMapper: enforcerMapper });
+  const result = buids.join(',');
+  console.log(`Loaded ${buids.length} sync BUIDs from ${isFilePath ? 'file' : 'string'}`);
+  return result;
 }
 
-// Run if this file is executed directly
-if (require.main === module) {
+async function _main(innerMapper?: DataMapper) {
+  // Gather environment variables
   const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER');
 
   [
@@ -210,13 +231,70 @@ if (require.main === module) {
   ].forEach(testEnvironment.getVar);
 
   [
-    'SYNC_BUIDS_FILE_PATH', 
     'SYNC_BUIDS',
+    'SYNC_BUIDS_FILE_PATH'
   ].forEach(testEnvironment.getVarOrEmptyString);
 
   const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_unassigned_org_enforcer_output.json';
   setFileLogging(logFilePath);
 
+  // Parse SYNC_BUIDS source (string takes precedence over file)
+  const { SYNC_BUIDS, SYNC_BUIDS_FILE_PATH } = process.env;
+
+  if (SYNC_BUIDS) {
+    // SYNC_BUIDS already set as string
+    console.log(`Using SYNC_BUIDS from environment: ${SYNC_BUIDS}`);
+    process.env.SYNC_BUIDS_FILE_PATH = ''; // Clear file path if string is provided
+  } else if (SYNC_BUIDS_FILE_PATH) {
+    // Load from file and set SYNC_BUIDS
+    const syncBuids = loadSyncBuids(SYNC_BUIDS_FILE_PATH, true);
+    process.env.SYNC_BUIDS = syncBuids;
+    console.log(`Set SYNC_BUIDS from file: ${syncBuids}`);
+  } else {
+    throw new Error('Either SYNC_BUIDS or SYNC_BUIDS_FILE_PATH is required');
+  }
+
+  // Load the authorized BUIDs from file
+  const { AUTHORIZED_BUIDS_FILE_PATH } = process.env;
+  
+  if (!AUTHORIZED_BUIDS_FILE_PATH) {
+    throw new Error('AUTHORIZED_BUIDS_FILE_PATH environment variable is required');
+  }
+  
+  const authorizedBuids = loadAuthorizedBuids(AUTHORIZED_BUIDS_FILE_PATH);
+
+  // Load configuration
+  const { HURON_PERSON_CONFIG_PATH } = process.env;
+  const configManager = ConfigManager.getInstance();
+  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+  const config = configManager.reset()
+    .fromEnvironment()
+    .fromFileSystem(localConfigPath)
+    .getConfig('person');
+
+  // Get mapper to decorate (either provided innerMapper or create standard mapper)
+  let mapperToDecorate: DataMapper;
+  if (innerMapper) {
+    mapperToDecorate = innerMapper;
+  } else {
+    mapperToDecorate = await getDataMapper(config, { 
+      orgMap: true, stateMap: true, countryMap: true 
+    });
+  }
+
+  // Create an instance of the UnassignedOrgEnforcer wrapping the mapper
+  const enforcerMapper = new UnassignedOrgEnforcer({
+    params: mapperToDecorate.params,
+    authorizedBuids,
+    innerMapper: mapperToDecorate
+  });
+
+  // Pass the enforcer DataMapper to the main sync function in SyncPersonBatch
+  await main({ dataMapper: enforcerMapper });
+}
+
+// Run if this file is executed directly
+if (require.main === module) {
   _main();
 }
 

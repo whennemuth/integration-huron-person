@@ -13,6 +13,7 @@ type CustomOrgDataMapperParams = {
   params: ConstructorParameters<typeof DataMapper>[0];
   organization?: OrgFields;
   employer?: OrgFields;
+  innerMapper?: DataMapper; // Optional inner mapper for decorator chaining
 };
 
 /**
@@ -25,6 +26,7 @@ type CustomOrgDataMapperParams = {
 class CustomOrgDataMapper extends DataMapper {
   private org?: OrgFields;
   private emp?: OrgFields;
+  private innerMapper?: DataMapper;
 
   /**
    * Set both organization and employer HRNs either by directly providing HRNs or by looking them up 
@@ -94,6 +96,7 @@ class CustomOrgDataMapper extends DataMapper {
     super(params.params);
     this.org = params.organization;
     this.emp = params.employer;
+    this.innerMapper = params.innerMapper;
 
     if(!this.org?.hrn) {
       throw new Error('Organization HRN must be provided in CustomOrgDataMapperParams');
@@ -114,7 +117,10 @@ class CustomOrgDataMapper extends DataMapper {
    * @returns 
    */
   public getMappedData(params: { rawData: any[], personHrn?: string, crudOperation?: CrudOperation }): Input {
-    const standardMappedData = super.getMappedData(params);
+    // Use innerMapper if provided, else fall back to super (standard DataMapper)
+    const standardMappedData = this.innerMapper 
+      ? this.innerMapper.getMappedData(params)
+      : super.getMappedData(params);
 
     // Mutate the standard mapping to add or override the organization and employer fields.
     const modifiedFieldSets = standardMappedData.fieldSets.map(fieldSet => {
@@ -167,45 +173,8 @@ class CustomOrgDataMapper extends DataMapper {
   }
 }
 
-async function _main() {
-  // Load configuration
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
-
-  // Get a standard DataMapper instance to extract params and mappings for the CustomOrgDataMapper
-  const standardMapper: DataMapper = await getDataMapper(config, { 
-    orgMap: true, stateMap: true, countryMap: true 
-  });
-
-  // Create an instance of the CustomOrgDataMapper with the same params as the standard mapper.
-  const customMapper = await CustomOrgDataMapper.getInstance(config, {
-    params: standardMapper.params,
-    organization: { 
-      hrn: process.env.ORGANIZATION_HRN,
-      sourceIdentifier: process.env.ORGANIZATION_SID 
-    },
-    employer: { 
-      hrn: process.env.EMPLOYER_HRN,
-      sourceIdentifier: process.env.EMPLOYER_SID
-    }
-  });
-
-  if (!customMapper) {
-    throw new Error('Failed to create CustomOrgDataMapper instance');
-  }
-
-  // Pass the custom DataMapper to the main sync function in SyncPersonBatch, which will use it for 
-  // all data mapping during the standard sync process
-  await main({ dataMapper: customMapper });
-}
-
-// Run if this file is executed directly
-if (require.main === module) {
+async function _main(innerMapper?: DataMapper) {
+  // Gather environment variables
   const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_ORG');
 
   [
@@ -228,5 +197,48 @@ if (require.main === module) {
   const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_org_output.json';
   setFileLogging(logFilePath);
 
+  // Load configuration
+  const { HURON_PERSON_CONFIG_PATH } = process.env;
+  const configManager = ConfigManager.getInstance();
+  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+  const config = configManager.reset()
+    .fromEnvironment()
+    .fromFileSystem(localConfigPath)
+    .getConfig('person');
+
+  // Get mapper to decorate (either provided innerMapper or create standard mapper)
+  let mapperToDecorate: DataMapper;
+  if (innerMapper) {
+    mapperToDecorate = innerMapper;
+  } else {
+    mapperToDecorate = await getDataMapper(config, { 
+      orgMap: true, stateMap: true, countryMap: true 
+    });
+  }
+
+  // Create an instance of the CustomOrgDataMapper wrapping the mapper
+  const customMapper = await CustomOrgDataMapper.getInstance(config, {
+    params: mapperToDecorate.params,
+    organization: { 
+      hrn: process.env.ORGANIZATION_HRN,
+      sourceIdentifier: process.env.ORGANIZATION_SID 
+    },
+    employer: { 
+      hrn: process.env.EMPLOYER_HRN,
+      sourceIdentifier: process.env.EMPLOYER_SID
+    },
+    innerMapper: mapperToDecorate
+  });
+
+  if (!customMapper) {
+    throw new Error('Failed to create CustomOrgDataMapper instance');
+  }
+
+  // Pass the custom DataMapper to the main sync function in SyncPersonBatch
+  await main({ dataMapper: customMapper });
+}
+
+// Run if this file is executed directly
+if (require.main === module) {
   _main();
 }

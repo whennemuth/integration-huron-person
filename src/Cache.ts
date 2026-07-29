@@ -25,8 +25,8 @@ export abstract class BasicCache implements Cache<string, string> {
     if (!BasicCache.instance) {
       
       // Deconstruct environment variables and config values for cache settings
-      const { AWS_LAMBDA_FUNCTION_NAME, IS_ECS_TASK, CACHE_ENABLED, CACHE_PATH } = process.env;
-      const { cache: { path, enabled=true } = {} } = config || {};
+      const { AWS_LAMBDA_FUNCTION_NAME, IS_ECS_TASK, CACHE_ENABLED, CACHE_PATH, LANDSCAPE } = process.env;
+      const { cache: { path, enabled=true } = {}, landscape=LANDSCAPE } = config || {};
 
       // Environment variables (if presesent) take precedence over config values for cache settings
       const cachePath = CACHE_PATH || path;
@@ -40,7 +40,7 @@ export abstract class BasicCache implements Cache<string, string> {
       }
       
       if (cachePath) {       
-        BasicCache.instance = new FileSystemCache(cachePath);
+        BasicCache.instance = new FileSystemCache(cachePath, landscape);
       }
       else if (AWS_LAMBDA_FUNCTION_NAME) {
         BasicCache.instance = new InMemoryCache();
@@ -100,9 +100,10 @@ export class InMemoryCache extends BasicCache {
  */
 export class FileSystemCache extends BasicCache {
   private path: string;
-  constructor(dir:string = '/tmp') {
+  constructor(dir:string = '/tmp', landscape?: string) {
     super();
-    this.path = `${dir}/integration-cache.json`.replaceAll('//','/');
+    const landscapeSuffix = landscape ? `-${landscape}` : '';
+    this.path = `${dir}/integration-cache${landscapeSuffix}.json`.replaceAll('//','/');
     // Ensure directory exists
     const fs = require('fs');
     const path = require('path');

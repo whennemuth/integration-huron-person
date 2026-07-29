@@ -20,13 +20,9 @@ describe('Cache', () => {
     });
 
     afterEach(() => {
-      // Clean up test directory
-      const cacheFile = path.join(testCachePath, 'integration-cache.json');
-      if (fs.existsSync(cacheFile)) {
-        fs.unlinkSync(cacheFile);
-      }
+      // Clean up test directory recursively
       if (fs.existsSync(testCachePath)) {
-        fs.rmdirSync(testCachePath);
+        fs.rmSync(testCachePath, { recursive: true, force: true });
       }
       
       // Reset singleton after each test
@@ -149,12 +145,8 @@ describe('Cache', () => {
       expect(cache3).toBe(cache1);
       
       // Clean up
-      const cacheFile = path.join(testPath, 'integration-cache.json');
-      if (fs.existsSync(cacheFile)) {
-        fs.unlinkSync(cacheFile);
-      }
       if (fs.existsSync(testPath)) {
-        fs.rmdirSync(testPath);
+        fs.rmSync(testPath, { recursive: true, force: true });
       }
     });
 
@@ -183,12 +175,8 @@ describe('Cache', () => {
       consoleSpy.mockRestore();
       
       // Clean up
-      const cacheFile = path.join(testPath, 'integration-cache.json');
-      if (fs.existsSync(cacheFile)) {
-        fs.unlinkSync(cacheFile);
-      }
       if (fs.existsSync(testPath)) {
-        fs.rmdirSync(testPath);
+        fs.rmSync(testPath, { recursive: true, force: true });
       }
     });
   });

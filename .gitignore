@@ -41,13 +41,13 @@ coverage/
 
 # Data storage directories
 data/
-delta-storage/
 
 # Configuration overrides (keep template)
 config.local.json
 
 # Cache files
 *-cache.json
+*-cache-*.json
 
 fetchedPersonData.json
 fetched_people*.json

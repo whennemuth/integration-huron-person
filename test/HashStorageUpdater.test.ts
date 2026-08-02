@@ -1,4 +1,4 @@
-import { HashStorageUpdater } from '../src/delta-strategy/merging/HashStorageUpdater';
+import { HashStorageUpdater } from '../src/delta-storage/HashStorageUpdater';
 import { DeltaStorage, FieldSet } from 'integration-core';
 
 describe('HashStorageUpdater', () => {
@@ -38,12 +38,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(1);
@@ -78,12 +79,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(1);
@@ -117,12 +119,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id', 'email']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(1);
@@ -171,12 +174,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate: updatedFieldSets,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(3);
@@ -221,12 +225,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(0);
@@ -246,12 +251,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const count = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage: mockStorage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      const count = await hashStorageUpdater.updateStorage();
 
       // Assert
       expect(count).toBe(1);
@@ -275,7 +281,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const result = HashStorageUpdater.getPrimaryKeyValue(fieldSet, primaryKeyFields);
+      const hashStorageUpdater = new HashStorageUpdater({
+        storage: mockStorage,
+        clientId,
+        fieldSetsToUpdate: new Map(),
+        primaryKeyFields
+      });
+      const result = hashStorageUpdater.getPrimaryKeyValue(fieldSet);
 
       // Assert
       expect(result).toBe('U123');
@@ -289,7 +301,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id', 'email']);
 
       // Act
-      const result = HashStorageUpdater.getPrimaryKeyValue(fieldSet, primaryKeyFields);
+      const hashStorageUpdater = new HashStorageUpdater({
+        storage: mockStorage,
+        clientId,
+        fieldSetsToUpdate: new Map(),
+        primaryKeyFields
+      });
+      const result = hashStorageUpdater.getPrimaryKeyValue(fieldSet);
 
       // Assert
       expect(result).toContain('U123');
@@ -305,7 +323,13 @@ describe('HashStorageUpdater', () => {
       const primaryKeyFields = new Set(['id']);
 
       // Act
-      const result = HashStorageUpdater.getPrimaryKeyValue(fieldSet, primaryKeyFields);
+      const hashStorageUpdater = new HashStorageUpdater({
+        storage: mockStorage,
+        clientId,
+        fieldSetsToUpdate: new Map(),
+        primaryKeyFields
+      });
+      const result = hashStorageUpdater.getPrimaryKeyValue(fieldSet);
 
       // Assert
       expect(result).toBe('');

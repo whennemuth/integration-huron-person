@@ -33,6 +33,7 @@ export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '..
 
 // Data mapper exports
 export { DataMapper, getDataMapper, _fieldDefinitions as FieldDefinitions } from '../src/data-mapper/DataMapper';
+export { ReverseDataMapper } from '../src/data-mapper/ReverseDataMapper';
 export { FieldFilter, FieldFilterParams } from '../src/data-mapper/FieldFilter';
 
 // Delta strategy exports

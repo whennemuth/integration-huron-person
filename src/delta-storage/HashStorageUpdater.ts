@@ -1,4 +1,11 @@
-import { DeltaStorage, FieldSet, InputUtilsDecorator } from 'integration-core';
+import { DeltaStorage, FieldSet } from 'integration-core';
+
+export type HashStorageUpdaterParams = {
+  storage: DeltaStorage;
+  clientId: string;
+  fieldSetsToUpdate: Map<string, FieldSet>;
+  primaryKeyFields: Set<string>;
+};
 
 /**
  * Utility class for updating hash storage with field sets.
@@ -17,6 +24,9 @@ import { DeltaStorage, FieldSet, InputUtilsDecorator } from 'integration-core';
  * single record updates and batch updates.
  */
 export class HashStorageUpdater {
+
+  constructor(private params: HashStorageUpdaterParams) { }
+
   /**
    * Update hash storage with one or more field sets.
    * 
@@ -26,13 +36,8 @@ export class HashStorageUpdater {
    * @param params.primaryKeyFields - Set of primary key field names
    * @returns Count of records updated
    */
-  static async updateStorage(params: {
-    storage: DeltaStorage;
-    clientId: string;
-    fieldSetsToUpdate: Map<string, FieldSet>;
-    primaryKeyFields: Set<string>;
-  }): Promise<number> {
-    const { storage, clientId, fieldSetsToUpdate, primaryKeyFields } = params;
+  public async updateStorage(): Promise<number> {
+    const { storage, clientId, fieldSetsToUpdate, primaryKeyFields } = this.params;
 
     if (fieldSetsToUpdate.size === 0) {
       console.log('No field sets to update in hash storage');
@@ -110,7 +115,8 @@ export class HashStorageUpdater {
    * @param primaryKeyFields - The primary key field names
    * @returns Primary key value as a string (composite keys are joined)
    */
-  static getPrimaryKeyValue(fieldSet: FieldSet, primaryKeyFields: Set<string>): string {
+  public getPrimaryKeyValue(fieldSet: FieldSet): string {
+    const { primaryKeyFields } = this.params;
     const pkFieldsArray = Array.from(primaryKeyFields);
     const pkValues = pkFieldsArray.map((pkField: string) => {
       const field = fieldSet.fieldValues.find(fv => Object.keys(fv)[0] === pkField);

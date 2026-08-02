@@ -6,7 +6,7 @@ import { ConfigManager } from './config/ConfigManager';
 import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
+import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { setFileLogging } from './Utils';
 
@@ -56,12 +56,13 @@ class BatchPersonSync {
       const clientId = config.integration.clientId;
 
       // Delegate to shared utility (primaryKeyFields passed from syncAll)
-      const updateCount = await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage,
         clientId,
         fieldSetsToUpdate: successfulSyncs,
         primaryKeyFields
       });
+      const updateCount = await hashStorageUpdater.updateStorage();
 
       console.log(`Successfully updated hash storage with ${updateCount} person record(s)`);
     } catch (error) {

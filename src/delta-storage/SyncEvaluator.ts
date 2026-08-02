@@ -1,10 +1,11 @@
-import { FieldSet, Input, InputParser, TestEnvironment } from 'integration-core';
+import { FieldSet, Input, InputParser, TestEnvironment, DataMapper as CoreDataMapper } from 'integration-core';
 import { Config } from "../config/Config";
 import { ConfigManager } from "../config/ConfigManager";
-import { DataMapper, getDataMapper, ReverseDataMapper } from "../data-mapper/DataMapper";
+import { DataMapper, getDataMapper } from "../data-mapper/DataMapper";
 import { CountryRow } from "../data-mapper/DataMapperCountry";
 import { StateRow } from "../data-mapper/DataMapperState";
 import { FieldFilter } from "../data-mapper/FieldFilter";
+import { ReverseDataMapper } from '../data-mapper/ReverseDataMapper';
 import { BuCdmPersonDataSource } from "../data-source/PersonDataSource";
 import { HuronPerson } from "../data-target/crud/Person";
 import { ReadPerson } from "../data-target/crud/ReadPerson";
@@ -119,6 +120,15 @@ export class SourcePerson {
     return new FieldFilter({ fieldSet, stateMappings, countryMappings, orgMappings }).filter();
   }
 
+  public getInput = (dataMapper: CoreDataMapper, person: any): Input | undefined => {
+    const unparsedInput= dataMapper.map([person]);
+    const input = new InputParser({ 
+      _input: unparsedInput, 
+      fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
+    }).parse();
+    return input;    
+  }
+
   public getInputFromSource = async (sourcePersonParms: SourcePersonParms): Promise<Input | undefined> => {
     if(this.sourceInput) {
       return this.sourceInput;
@@ -136,18 +146,7 @@ export class SourcePerson {
       return undefined;
     }
 
-    const unparsedInput = sourceDataMapper.map([cdmPerson[0]]);
-
-    console.log('Hashing source data...');
-    
-    const input = new InputParser({ 
-      _input: unparsedInput, 
-      fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
-    }).parse();
-
-    // console.log(`Source data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
-
-    this.sourceInput = input;
+    this.sourceInput = this.getInput(sourceDataMapper, cdmPerson[0]);
     return this.sourceInput;
   }
 
@@ -176,16 +175,7 @@ export class SourcePerson {
       return undefined;
     } 
 
-    const unparsedInput= targetDataMapper.map([huronPerson]);
-    const input = new InputParser({ 
-      _input: unparsedInput, 
-      fieldFilter: fs => this.getFilteredFields(fs) // Apply field filtering to remove non-hashable fields before hashing
-    }).parse();
-
-    console.log('Hashing target data...');
-    // console.log(`Target data that was hashed: ${JSON.stringify(input.fieldSets[0].hashable, null, 2)}`);
-
-    this.targetInput = input;
+    this.targetInput = this.getInput(targetDataMapper, huronPerson);
     return this.targetInput;
   }
 }
@@ -196,7 +186,8 @@ if(require.main === module) {
 
   [
     'HURON_PERSON_CONFIG_PATH',
-    'HURON_PERSON_SOURCE_ID'
+    'HURON_PERSON_SOURCE_ID',
+    'HURON_PERSON_HRN',
   ].forEach(testEnvironment.getVarOrEmptyString);
 
   const { HURON_PERSON_HRN:hrn, HURON_PERSON_SOURCE_ID:buid, HURON_PERSON_CONFIG_PATH } = process.env;
@@ -213,7 +204,7 @@ if(require.main === module) {
     const targetDataMapper = new ReverseDataMapper();
 
     const sourcePersonParms: SourcePersonParms = { config, buid, sourceDataMapper };
-    const targetPersonParms: TargetPersonParms = { config, hrn, targetDataMapper };
+    const targetPersonParms: TargetPersonParms = { config, hrn, buid, targetDataMapper };
     const sourcePerson = new SourcePerson(sourcePersonParms);
     
     const inSync = await sourcePerson.isInSyncWith(targetPersonParms);

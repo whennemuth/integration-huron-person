@@ -9,11 +9,11 @@ import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPerson } from './data-target/crud/Person';
 import { ReadPerson } from './data-target/crud/ReadPerson';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
+import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { HashStorageUpdater } from './delta-strategy/merging/HashStorageUpdater';
 import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
-import { SourcePerson, SourcePersonParms, TargetPersonParms } from './miscellaneous/SyncEvaluator';
+import { SourcePerson, SourcePersonParms, TargetPersonParms } from './delta-storage/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { getLocalConfig, isEmpty } from './Utils';
 
@@ -281,15 +281,16 @@ class SinglePersonSync {
       fieldSetsToUpdate.set(buid, newFieldSet);
 
       // Delegate to shared utility
-      await HashStorageUpdater.updateStorage({
+      const hashStorageUpdater = new HashStorageUpdater({
         storage,
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields
       });
+      await hashStorageUpdater.updateStorage();
 
       // Log success with primary key value
-      const primaryKeyValue = HashStorageUpdater.getPrimaryKeyValue(newFieldSet, primaryKeyFields);
+      const primaryKeyValue = hashStorageUpdater.getPrimaryKeyValue(newFieldSet);
 
       console.log(`${this.logPrefix}Hash storage updated successfully for person ${primaryKeyValue}`);
     } catch (error) {

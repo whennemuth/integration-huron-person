@@ -1,11 +1,11 @@
 import { FieldSet } from 'integration-core';
-import { SourcePerson, SourcePersonParms, TargetPersonParms } from '../../src/miscellaneous/SyncEvaluator';
 import { Config } from '../../src/config/Config';
-import { DataMapper, ReverseDataMapper } from '../../src/data-mapper/DataMapper';
+import { DataMapper } from '../../src/data-mapper/DataMapper';
+import { FieldFilter } from '../../src/data-mapper/FieldFilter';
+import { ReverseDataMapper } from '../../src/data-mapper/ReverseDataMapper';
 import { BuCdmPersonDataSource } from '../../src/data-source/PersonDataSource';
 import { ReadPerson } from '../../src/data-target/crud/ReadPerson';
-import { HuronPerson } from '../../src/data-target/crud/Person';
-import { FieldFilter } from '../../src/data-mapper/FieldFilter';
+import { SourcePerson, SourcePersonParms, TargetPersonParms } from '../../src/delta-storage/SyncEvaluator';
 
 // Mock dependencies
 jest.mock('../../src/data-source/PersonDataSource');

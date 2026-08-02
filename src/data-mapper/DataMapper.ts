@@ -340,51 +340,6 @@ export class DataMapper implements CoreDataMapper {
   }
 }
 
-
-/**
- * Convert raw person data from target system to Input format (implementing core interface)
- * This does not reverse-map back to source format, but rather converts Huron API response
- * data into the Input/FieldSet structure so it can be hashed and compared with forward-mapped
- * source data.
- * @param rawData Array of person data objects from Huron API endpoint.
- */
-export class ReverseDataMapper implements CoreDataMapper {
-  private fieldDefinitions: FieldDefinition[] = [..._fieldDefinitions];
-
-  public addFieldDefinition(fieldDef: FieldDefinition): ReverseDataMapper {
-    const found: FieldDefinition | undefined = this.fieldDefinitions.find(fd => fd.name === fieldDef.name);
-    if (!found) {
-      this.fieldDefinitions.push(fieldDef);
-    }
-    return this;
-  }
-
-  public map(rawData: any[], crudOperation?: CrudOperation): Input {
-    
-    const fieldSets = rawData.map(person => {
-      // Convert Huron person object to FieldSet format, omitting null/undefined values
-      const fieldValues: Field[] = [];
-      
-      if (person && typeof person === 'object') {
-        Object.keys(person).forEach(key => {
-          if ( ! isEmpty(person[key]) ) {
-            if (this.fieldDefinitions.some(fd => fd.name === key) ) {
-              fieldValues.push({ [key]: removeEmptyValues(person[key]) });           
-            }            
-          }
-        });
-      }
-      
-      return { fieldValues };
-    });
-
-    return {
-      fieldDefinitions: this.fieldDefinitions,
-      fieldSets
-    };
-  }
-}
-
 export type StaticMapUsage = { orgMap?: boolean, stateMap?: boolean, countryMap?: boolean };
 
 /**

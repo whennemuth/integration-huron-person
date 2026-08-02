@@ -2,8 +2,9 @@ import { CrudOperation, DataSource, DeltaStrategy, FieldSet, Input, InputParser,
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { DataMapper, getDataMapper, ReverseDataMapper } from './data-mapper/DataMapper';
+import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { FieldFilter } from './data-mapper/FieldFilter';
+import { ReverseDataMapper } from './data-mapper/ReverseDataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
 import { HuronPerson } from './data-target/crud/Person';
 import { ReadPerson } from './data-target/crud/ReadPerson';

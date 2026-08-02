@@ -1,12 +1,12 @@
-import { CrudOperation, FieldSet, SinglePushResult, TestEnvironment } from 'integration-core';
+import { CrudOperation, SinglePushResult, TestEnvironment } from 'integration-core';
 import { BasicCache } from "../../Cache";
 import { Config } from "../../config/Config";
 import { ConfigManager } from "../../config/ConfigManager";
+import { ReverseDataMapper } from '../../data-mapper/ReverseDataMapper';
 import { getLocalConfig } from '../../Utils';
 import { HuronPersonDataTarget } from "../PersonDataTarget";
 import { HuronPerson } from "./Person";
 import { getPersonData, HuronPersonIdType, ReadPerson } from "./ReadPerson";
-import { ReverseDataMapper } from "../../data-mapper/DataMapper";
 
 type PersonToDeactivateParams = {
   config: Config;

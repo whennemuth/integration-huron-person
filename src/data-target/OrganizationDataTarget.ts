@@ -13,7 +13,7 @@ import {
 import { BasicCache, Cache } from '../Cache';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
-import { ReverseDataMapper } from '../data-mapper/DataMapper';
+import { ReverseDataMapper } from '../data-mapper/ReverseDataMapper';
 import { deepClone, getLocalConfig } from '../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronOrganization } from './crud/Organization';

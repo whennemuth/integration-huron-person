@@ -35,7 +35,7 @@ export class SourceIdentifierBulkPatcher extends AbstractBulkTargetPatcher {
 
   public static runPatcher = async (config: Config, dryRun: boolean): Promise<void> => {
     const patcher = new SourceIdentifierBulkPatcher(config, { includeFields: [
-      'hrn', 'id', 'employeeId', 'sourceIdentifier'
+      'hrn', 'id', 'employeeId', 'sourceIdentifier', 'userId'
     ]}, dryRun);
     await patcher.patchPeople();
   }

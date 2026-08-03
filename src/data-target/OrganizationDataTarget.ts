@@ -14,7 +14,7 @@ import { BasicCache, Cache } from '../Cache';
 import { Config } from '../config/Config';
 import { ConfigManager } from '../config/ConfigManager';
 import { ReverseDataMapper } from '../data-mapper/ReverseDataMapper';
-import { deepClone, getLocalConfig } from '../Utils';
+import { deepClone, getLocalConfig, setFileLogging } from '../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronOrganization } from './crud/Organization';
 import { DeleteOrganizationResult, HuronOrganizationDataTargetDelete } from './OrganizationDataTargetDelete';
@@ -51,6 +51,7 @@ export interface OrganizationPushResponse {
     "active": true
   }
 ]
+
 /**
  * DataTarget implementation for pushing organization data to Huron API
  * 
@@ -560,8 +561,14 @@ if (require.main === module) {
     'HURON_PERSON_CONFIG_PATH',
     'SECRET_ARN',
     'CACHE_ENABLED',
-    'CACHE_PATH'
+    'CACHE_PATH',
+    'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVarOrEmptyString);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH;
+  if (logFilePath) {
+    setFileLogging(logFilePath);
+  }
 
   main();
 }

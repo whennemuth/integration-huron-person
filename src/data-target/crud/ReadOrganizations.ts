@@ -1,7 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
-import { getLocalConfig } from '../../Utils';
+import { getLocalConfig, setFileLogging } from '../../Utils';
 import { TestEnvironment } from 'integration-core';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
@@ -271,8 +271,14 @@ if (require.main === module) {
 
   [
     'HURON_ORGS_TASK',
-    'HURON_PERSON_CONFIG_PATH'
+    'HURON_PERSON_CONFIG_PATH',
+    'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVarOrEmptyString);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH;
+  if (logFilePath) {
+    setFileLogging(logFilePath);
+  }
 
   main();
 }

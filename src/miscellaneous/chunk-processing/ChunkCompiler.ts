@@ -102,10 +102,10 @@ if (require.main === module) {
   const testEnvironment = TestEnvironment('CHUNK_COMPILER');
 
   [
-    'CHUNK_COMPILER_BUCKET',
-    'CHUNK_COMPILER_KEY',
-    'CHUNK_COMPILER_REGION',
-    'CHUNK_COMPILER_OUTPUT_FILE'
+    'BUCKET',
+    'KEY',
+    'REGION',
+    'OUTPUT_FILE'
   ].forEach(testEnvironment.getVarOrEmptyString);
 
   (async () => {

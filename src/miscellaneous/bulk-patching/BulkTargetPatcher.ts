@@ -86,9 +86,11 @@ export abstract class AbstractBulkTargetPatcher {
 
     for(const person of people) {
       if((await isPatchable(person))) {
+        console.log(`Person with userId ${person.userId} is patchable`);
         patchablePeople.push(person);
       }
       else {
+        console.log(`Person with userId ${person.userId} is NOT patchable`);
         nonPatchablePeople.push(person);
       }
     }

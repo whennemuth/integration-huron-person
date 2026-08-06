@@ -63,5 +63,14 @@
       "bucketName": "huron-person-chunks-preview",
       "region": "us-east-2"
     }
+  },
+  "cache": {
+    "enabled": true,
+    "path": "/tmp/cache"
+  },
+  "preLoadedMaps": {
+    "orgMap": false,
+    "stateMap": true,
+    "countryMap": true
   }
 }

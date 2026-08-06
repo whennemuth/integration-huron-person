@@ -154,4 +154,14 @@ export interface Config {
     /** Cache TTL in seconds */
     path?: string;
   };
+
+  /** Preload maps vs using hrn lookup expressions */
+  preLoadedMaps?: {
+    /** Preload organization map for faster lookups */
+    orgMap?: boolean;
+    /** Preload state map for faster lookups */
+    stateMap?: boolean;
+    /** Preload country map for faster lookups */
+    countryMap?: boolean;
+  };
 }

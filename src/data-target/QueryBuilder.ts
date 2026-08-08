@@ -110,7 +110,13 @@ export class QueryBuilder {
         if (!this.filterFields.has(filter.field)) {
           throw new Error(`Invalid filter field: ${filter.field}. Allowed fields: ${Array.from(this.filterFields).join(', ')}`);
         }
-        const filterKey = `filter[${filter.priority}!${filter.field}!${filter.logicalOperator}]`;
+        let filterKey;
+        if(filter.field.startsWith('[') && filter.field.endsWith(']')) {
+          filterKey = `filter${filter.field}`
+        }
+        else {
+          filterKey = `filter[${filter.priority}!${filter.field}!${filter.logicalOperator}]`;
+        }
         params[filterKey] = `${filter.comparisonOperator}:${filter.value}`;
       }
     }

@@ -1,6 +1,7 @@
 import { BasicCache } from '../../Cache';
 import { Config } from '../../config/Config';
 import { ConfigManager } from '../../config/ConfigManager';
+import { getLocalConfig } from '../../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from '../ApiClientForJWT';
 import { BuildQueryOptions, FilterSpec, QueryBuilder } from '../QueryBuilder';
 import { SchemaPath } from '../SchemaBroker';
@@ -54,7 +55,8 @@ class ReadPeople {
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
       timeout: config.dataTarget.endpointConfig.timeout || config.integration.timeout,
-      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor
+      errorEventProcessor: errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor,
+      useCustomUrlSerializer: true  // Enable Huron API-compatible URL encoding for filter parameters
     };
     // Pass config to getInstance so cache settings (enabled, path) are respected
     const cache = BasicCache.getInstance(config);
@@ -201,6 +203,16 @@ class ReadPeople {
     return persons;
   }
 
+  public async readPeopleHavingRole(roleHrn: string, includeFields?: string[]): Promise<HuronPerson[]> {
+    const persons: HuronPerson[] = await this.readAllPeople({
+      filters: [
+        ReadPeople.createFilter({ field: 'roles', value: roleHrn, priority: 0, logicalOperator: 'and', comparisonOperator: 'eq' })
+      ],
+      includeFields
+    });
+    return persons;
+  }
+
   public async readPeopleByFilterField(filterField: string, inArray: string[], includeFields?: string[]): Promise<HuronPerson[]> {
     if(!this.queryBuilder['filterFields'].has(filterField)) {
       throw new Error(`Invalid filter field: ${filterField}. Allowed fields: ${Array.from(this.queryBuilder['filterFields']).join(', ')}`);
@@ -249,21 +261,34 @@ class ReadPeople {
 }
 
 async function main() {
+
+  const { 
+    HURON_PEOPLE_FILTER, 
+    HURON_PERSON_SOURCE_IDS, 
+    HURON_PERSON_NAME_FILTER, HURON_PERSON_FNAME, HURON_PERSON_LNAME,
+    HURON_PERSON_TARGET_HRNS,
+    HURON_PERSON_CONFIG_PATH
+  } = process.env;  
+  
+  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+
   const config = ConfigManager
     .getInstance()
     .fromEnvironment()
-    .fromFileSystem()
+    .fromFileSystem(localConfigPath)
     .getConfig('none');
 
   const reader = new ReadPeople({ config });
 
-  const { HURON_PEOPLE_FILTER, 
-    HURON_PERSON_SOURCE_IDS, 
-    HURON_PERSON_NAME_FILTER, HURON_PERSON_FNAME, HURON_PERSON_LNAME } = process.env;
-  
   try {
     let personData: HuronPerson | HuronPerson[];
-    if(HURON_PEOPLE_FILTER && HURON_PEOPLE_FILTER !== 'buid') {
+    if(HURON_PEOPLE_FILTER === 'roles') {
+      const roleHrns = HURON_PERSON_TARGET_HRNS ? HURON_PERSON_TARGET_HRNS.split(',') : [];
+      console.log(`Reading people by role HRNs: ${roleHrns.join(', ')}`);
+      personData = await reader.readPeopleHavingRole(roleHrns[0], 
+        ['sourceIdentifier']);
+    }
+    else if(HURON_PEOPLE_FILTER && HURON_PEOPLE_FILTER !== 'buid') {
       const sourceIds = HURON_PERSON_SOURCE_IDS ? HURON_PERSON_SOURCE_IDS.split(',') : [];
       console.log(`Reading people by filter field: ${HURON_PEOPLE_FILTER} with source IDs: ${sourceIds.join(', ')}`);
       personData = await reader.readPeopleByFilterField(HURON_PEOPLE_FILTER, sourceIds, 
@@ -342,7 +367,9 @@ if (require.main === module) {
     'HURON_PERSON_FNAME',
     'HURON_PERSON_LNAME',
     'HURON_PERSON_NAME_FILTER',
-    'HURON_PERSON_SOURCE_IDS'
+    'HURON_PERSON_SOURCE_IDS',
+    'HURON_PERSON_TARGET_HRNS',
+    'HURON_PERSON_CONFIG_PATH'
   ].forEach(testEnvironment.getVarOrEmptyString);
 
   main();

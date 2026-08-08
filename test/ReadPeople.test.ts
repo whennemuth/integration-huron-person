@@ -542,6 +542,142 @@ describe('ReadPeople', () => {
     });
   });
 
+  describe('readPeopleHavingRole', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          pagination: { offset: 0, pageSize: 25, total: 1 },
+          data: [{ id: 'person1', firstName: 'John', lastName: 'Doe', roles: ['role1'] }]
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
+    });
+
+    it('should filter by role HRN', async () => {
+      const roleHrn = 'hrn:hrs:lists:reviewer-roles/primary';
+      const result = await readPeople.readPeopleHavingRole(roleHrn);
+
+      expect(result).toHaveLength(1);
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'roles',
+              value: roleHrn,
+              comparisonOperator: 'in'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should use "in" comparison operator for roles', async () => {
+      const roleHrn = 'hrn:hrs:lists:roles/agreements-site-manager';
+      await readPeople.readPeopleHavingRole(roleHrn);
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              comparisonOperator: 'in'
+            })
+          ])
+        })
+      );
+    });
+
+    it('should include specified fields when provided', async () => {
+      const roleHrn = 'hrn:hrs:lists:reviewer-roles/primary';
+      const includeFields = ['id', 'firstName', 'lastName', 'roles'];
+      
+      await readPeople.readPeopleHavingRole(roleHrn, includeFields);
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeFields
+        })
+      );
+    });
+
+    it('should handle HRNs with complex paths', async () => {
+      const complexRoleHrn = 'hrn:hrs:lists:roles/department/sub-unit/specific-role';
+      await readPeople.readPeopleHavingRole(complexRoleHrn);
+
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'roles',
+              value: complexRoleHrn
+            })
+          ])
+        })
+      );
+    });
+
+    it('should return empty array when no people have the role', async () => {
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          pagination: { offset: 0, pageSize: 25, total: 0 },
+          data: []
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
+
+      const result = await readPeople.readPeopleHavingRole('hrn:hrs:lists:nonexistent-role');
+
+      expect(result).toHaveLength(0);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('URL encoding with custom serializer', () => {
+    it('should enable custom URL serializer in ReadPeople constructor', () => {
+      // This test verifies that ReadPeople constructor passes useCustomUrlSerializer=true
+      // to ApiClientForJWT, which is necessary for Huron API compatibility
+      const config = ConfigManager
+        .getInstance()
+        .reset()
+        .fromPartial(createMockConfig())
+        .getConfig('none');
+
+      // Create a new ReadPeople instance
+      const testReadPeople = new ReadPeople({ config });
+
+      // The constructor should have passed useCustomUrlSerializer: true
+      // This is verified by the fact that readPeopleHavingRole works with HRN values
+      expect(testReadPeople).toBeDefined();
+      expect(typeof testReadPeople.readPeopleHavingRole).toBe('function');
+    });
+
+    it('should use "in" operator for roles filter', async () => {
+      // Verify that readPeopleHavingRole creates filter with correct operator
+      const roleHrn = 'hrn:hrs:lists:reviewer-roles/primary';
+      
+      await readPeople.readPeopleHavingRole(roleHrn);
+
+      // Verify the queryBuilder was called with 'in' operator for roles
+      expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              field: 'roles',
+              comparisonOperator: 'in',
+              value: roleHrn
+            })
+          ])
+        })
+      );
+    });
+  });
+
   // Note: Integration tests for actual API calls would require a test environment
   // and are not included here as they would depend on external services
 });

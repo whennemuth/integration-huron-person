@@ -8,6 +8,7 @@ import type { TokenAuthConfig } from './AuthToken';
 import { AuthToken } from './AuthToken';
 import { error as logError } from '../Utils';
 import { ApiRetryStrategy } from '../ApiRetryStrategy';
+import { serializeParams } from './UrlSerializer';
 
 export type TargetApiErrorEventProcessor = { process: (error: any, details?: ErrorEventDetails) => Promise<void> };
 
@@ -29,6 +30,12 @@ export type EndpointConfigForJWT = {
    * Must implement ApiRetryStrategy interface with executeWithRetry method.
    */
   retryStrategy?: ApiRetryStrategy;
+  /**
+   * Whether to use custom URL serializer that preserves brackets in parameter names.
+   * Set to true for Huron API compatibility (prevents encoding of brackets, colons, etc.).
+   * Defaults to false (uses standard axios encoding).
+   */
+  useCustomUrlSerializer?: boolean;
 } & (BasicAuthConfig | TokenAuthConfig);
 
 
@@ -54,6 +61,10 @@ export class ApiClientForJWT implements IApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Conditionally use custom URL serializer for Huron API compatibility
+      ...(endpointConfig.useCustomUrlSerializer && {
+        paramsSerializer: (params) => serializeParams(params)
+      }),
     });
 
     // Store cache instance - if provided, caching is enabled

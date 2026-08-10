@@ -1,4 +1,4 @@
-import { FileConfig, DatabaseConfig, S3Config as S3FolderConfig } from 'integration-core';
+import { FileConfig, DatabaseConfig, S3Config as S3FolderConfig, DynamoDBConfig } from 'integration-core';
 import { EndpointConfigForJWT } from '../data-target/ApiClientForJWT';
 import { EndpointConfigForApiKey } from '../data-source/ApiClientForApiKey';
 
@@ -141,10 +141,10 @@ export interface Config {
   
   /** Delta storage configuration */
   storage: {
-    /** Storage type: 'file' | 'database' | 's3' */
-    type: 'file' | 'database' | 's3';
+    /** Storage type: 'file' | 'database' | 's3' | 'dynamodb' */
+    type: 'file' | 'database' | 's3' | 'dynamodb';
     /** Storage-specific configuration */
-    config: FileConfig | DatabaseConfig | S3FolderConfig;
+    config: FileConfig | DatabaseConfig | S3FolderConfig | DynamoDBConfig;
   };
 
   /** Filesystem path for cache storage of JWT tokens */

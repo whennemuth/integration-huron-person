@@ -1,9 +1,9 @@
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
 import { main } from "../../SyncPersonBatch";
 import { getLocalConfig, setFileLogging } from "../../Utils";
-import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
-import { ConfigManager } from "../../config/ConfigManager";
 import { Config } from "../../config/Config";
+import { ConfigManager } from "../../config/ConfigManager";
+import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
 import { ReadOrganization } from "../../data-target/crud/ReadOrganization";
 
 type OrgFields = {
@@ -173,38 +173,17 @@ class CustomOrgDataMapper extends DataMapper {
   }
 }
 
-async function _main(innerMapper?: DataMapper) {
-  // Gather environment variables
-  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_ORG');
-
-  [
-    'SYNC_PREVIEW', 
-    'SYNC_UPDATE_HASH',
-    'INTEGRATED_DELTA_CLIENT_ID',
-    'DELTA_STORAGE_BUCKET',
-    'EMPLOYER_HRN',
-    'EMPLOYER_SID',
-    'ORGANIZATION_HRN',
-    'ORGANIZATION_SID',
-    'OUTPUT_FILE_PATH'
-  ].forEach(testEnvironment.getVar);
-
-  [
-    'SYNC_BUIDS_FILE_PATH', 
-    'SYNC_BUIDS',
-  ].forEach(testEnvironment.getVarOrEmptyString);
-
-  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_org_output.json';
-  setFileLogging(logFilePath);
-
-  // Load configuration
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
+async function _main({ config, innerMapper }: { config?: Config; innerMapper?: DataMapper }) {
+  if(!config) {
+    // Load configuration
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const configManager = ConfigManager.getInstance();
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    config = configManager.reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
+  }
 
   // Get mapper to decorate (either provided innerMapper or create standard mapper)
   let mapperToDecorate: DataMapper;
@@ -235,10 +214,33 @@ async function _main(innerMapper?: DataMapper) {
   }
 
   // Pass the custom DataMapper to the main sync function in SyncPersonBatch
-  await main({ dataMapper: customMapper });
+  await main({ dataMapper: customMapper, config });
 }
 
 // Run if this file is executed directly
 if (require.main === module) {
-  _main();
+  // Gather environment variables
+  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_ORG');
+
+  [
+    'SYNC_PREVIEW', 
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET',
+    'EMPLOYER_HRN',
+    'EMPLOYER_SID',
+    'ORGANIZATION_HRN',
+    'ORGANIZATION_SID',
+    'OUTPUT_FILE_PATH'
+  ].forEach(testEnvironment.getVar);
+
+  [
+    'SYNC_BUIDS_FILE_PATH', 
+    'SYNC_BUIDS',
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_org_output.json';
+  setFileLogging(logFilePath);
+
+  _main({});
 }

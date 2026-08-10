@@ -2,11 +2,12 @@ import * as fs from 'fs';
 import { CrudOperation, FieldSet, InputUtilsDecorator, isS3Config, Status, TestEnvironment } from 'integration-core';
 import { getLocalConfig } from '../bin';
 import { BasicCache } from './Cache';
+import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
+import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { setFileLogging } from './Utils';
 
@@ -134,6 +135,7 @@ class BatchPersonSync {
 }
 
 export type MainParams = {
+  config?: Config;
   dataMapper?: DataMapper;
   forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
 };
@@ -144,16 +146,19 @@ export type MainParams = {
 export async function main(params?: MainParams): Promise<void> {
   const { HURON_PERSON_CONFIG_PATH } = process.env;
   try {
+    let { dataMapper, forceUpdate, config } = params || {};
+
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-    const config = configManager.reset()
-      .fromEnvironment()
-      .fromFileSystem(localConfigPath)
-      .getConfig('person');
+    if(!config) {
+      config = configManager.reset()
+        .fromEnvironment()
+        .fromFileSystem(localConfigPath)
+        .getConfig('person');
+    }
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    let { dataMapper, forceUpdate } = params || {};
     if(!dataMapper) {
       dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
     }

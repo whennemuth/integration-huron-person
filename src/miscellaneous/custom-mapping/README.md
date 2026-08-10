@@ -76,14 +76,13 @@ npx ts-node src/miscellaneous/custom-mapping/SyncPersonBatchCustomOrg.ts
 
 **Purpose:** Applies the same role(s) to ALL people being synced in the batch.
 
-**Problem:** Need to assign uniform roles across multiple people, either replacing existing roles or appending to them.
+**Problem:** Need to assign uniform roles across multiple people, with options to append, replace, or remove roles.
 
-**Solution:** Extends the standard DataMapper to inject the same custom role HRNs into all mapped person records. Supports both replace and append modes via the REPLACE flag, and controls whether to use only custom roles or combine with source data via the OVERRIDE flag.
+**Solution:** Extends the standard DataMapper to inject the same custom role HRNs into all mapped person records. Supports three operation modes: 'append' (merge with existing), 'replace' (use only custom roles), or 'remove' (subtract custom roles from existing).
 
 **Environment Variables** (all prefixed with `SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_`):
 - `ROLE_HRNS` - Comma-separated role HRNs to assign (required)
-- `REPLACE` - Replace existing roles (`true`) or append (`false`, default)
-- `OVERRIDE` - Use only custom roles (`true`) or combine with source (`false`, default)
+- `OPERATION` - Operation mode: `append`, `replace`, or `remove` (required)
 - `SYNC_BUIDS` - Comma-separated list of BUIDs to sync
 - `SYNC_BUIDS_FILE_PATH` - Path to file with BUIDs (one per line)
 - `SYNC_PREVIEW` - Preview mode, no actual updates (true/false)
@@ -95,10 +94,9 @@ npx ts-node src/miscellaneous/custom-mapping/SyncPersonBatchCustomOrg.ts
 
 **Usage:**
 ```bash
-# Example .env configuration (append mode, combine with source)
+# Example .env configuration (append mode)
 SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_ROLE_HRNS=hrn:hrs:lists:roles/custom-role-1,hrn:hrs:lists:roles/custom-role-2
-SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_REPLACE=false
-SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_OVERRIDE=false
+SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_OPERATION=append
 SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_SYNC_BUIDS=U12345678,U23456789
 SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_SYNC_PREVIEW=false
 SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_SYNC_UPDATE_HASH=true
@@ -110,14 +108,13 @@ SYNC_PERSON_BATCH_CUSTOM_ROLE_PATCHER_OUTPUT_FILE_PATH=data/output.json
 npx ts-node src/miscellaneous/custom-mapping/SyncPersonBatchCustomRolePatcher.ts
 ```
 
-**Flag Behavior:**
+**Operation Modes:**
 
-| REPLACE | OVERRIDE | Behavior |
-|---------|----------|----------|
-| `false` | `false` | Appends custom roles to existing target roles, combines with source roles (default) |
-| `false` | `true` | Appends only custom roles (ignores source data roles) |
-| `true` | `false` | Replaces all target roles with source + custom roles combined |
-| `true` | `true` | Replaces all target roles with only custom roles |
+| OPERATION | Behavior |
+|-----------|----------|
+| `append` | Merges custom roles with existing roles (combines source + custom, removes duplicates) |
+| `replace` | Replaces all roles with only custom roles (ignores source roles) |
+| `remove` | Removes custom roles from existing roles (subtracts specified roles) |
 
 **Note:** Uses `forceUpdate=true` to bypass hash comparison since roles are excluded from hashing (see [FieldFilter.ts](../../data-mapper/FieldFilter.ts)).
 
@@ -129,12 +126,11 @@ npx ts-node src/miscellaneous/custom-mapping/SyncPersonBatchCustomRolePatcher.ts
 
 **Problem:** Need to assign different roles to different individuals, with granular control over who gets which roles.
 
-**Solution:** Loads role assignments from a JSON file mapping BUIDs to role HRNs. Extends the standard DataMapper to inject person-specific custom role assignments. Supports both replace and append modes, and controls whether to use only custom roles or combine with source data.
+**Solution:** Loads role assignments from a JSON file mapping BUIDs to role HRNs. Extends the standard DataMapper to inject person-specific custom role assignments. Supports three operation modes: 'append' (merge with existing), 'replace' (use only custom roles), or 'remove' (subtract custom roles from existing).
 
 **Environment Variables** (all prefixed with `SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_`):
 - `ROLES_FILE_PATH` - Path to JSON file with role assignments (required)
-- `REPLACE` - Replace existing roles (`true`) or append (`false`, default)
-- `OVERRIDE` - Use only custom roles (`true`) or combine with source (`false`, default)
+- `OPERATION` - Operation mode: `append`, `replace`, or `remove` (required)
 - `SYNC_PREVIEW` - Preview mode, no actual updates (true/false)
 - `SYNC_UPDATE_HASH` - Update hash storage (recommended: `true` for role updates)
 - `INTEGRATED_DELTA_CLIENT_ID` - Delta storage client identifier
@@ -162,8 +158,7 @@ npx ts-node src/miscellaneous/custom-mapping/SyncPersonBatchCustomRolePatcher.ts
 # Create role assignments file (see JSON format above)
 # Example .env configuration
 SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_ROLES_FILE_PATH=./custom-role-assignments.json
-SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_REPLACE=false
-SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_OVERRIDE=false
+SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_OPERATION=append
 SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_SYNC_PREVIEW=false
 SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_SYNC_UPDATE_HASH=true
 SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN_INTEGRATED_DELTA_CLIENT_ID=delta-storage

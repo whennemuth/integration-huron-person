@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
 import { main } from "../../SyncPersonBatch";
 import { getLocalConfig, setFileLogging } from "../../Utils";
+import { Config } from '../../config/Config';
 import { ConfigManager } from "../../config/ConfigManager";
 import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
 
@@ -217,27 +218,7 @@ function loadSyncBuids(source: string, isFilePath: boolean): string {
   return result;
 }
 
-async function _main(innerMapper?: DataMapper) {
-  // Gather environment variables
-  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER');
-
-  [
-    'SYNC_PREVIEW', 
-    'SYNC_UPDATE_HASH',
-    'INTEGRATED_DELTA_CLIENT_ID',
-    'DELTA_STORAGE_BUCKET',
-    'AUTHORIZED_BUIDS_FILE_PATH',
-    'OUTPUT_FILE_PATH'
-  ].forEach(testEnvironment.getVar);
-
-  [
-    'SYNC_BUIDS',
-    'SYNC_BUIDS_FILE_PATH'
-  ].forEach(testEnvironment.getVarOrEmptyString);
-
-  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_unassigned_org_enforcer_output.json';
-  setFileLogging(logFilePath);
-
+async function _main({ config, innerMapper }: { config?: Config; innerMapper?: DataMapper }) {
   // Parse SYNC_BUIDS source (string takes precedence over file)
   const { SYNC_BUIDS, SYNC_BUIDS_FILE_PATH } = process.env;
 
@@ -263,14 +244,16 @@ async function _main(innerMapper?: DataMapper) {
   
   const authorizedBuids = loadAuthorizedBuids(AUTHORIZED_BUIDS_FILE_PATH);
 
-  // Load configuration
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
+  if (!config) {
+    // Load configuration
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const configManager = ConfigManager.getInstance();
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    config = configManager.reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
+  }
 
   // Get mapper to decorate (either provided innerMapper or create standard mapper)
   let mapperToDecorate: DataMapper;
@@ -290,12 +273,32 @@ async function _main(innerMapper?: DataMapper) {
   });
 
   // Pass the enforcer DataMapper to the main sync function in SyncPersonBatch
-  await main({ dataMapper: enforcerMapper });
+  await main({ dataMapper: enforcerMapper, config });
 }
 
 // Run if this file is executed directly
 if (require.main === module) {
-  _main();
+  // Gather environment variables
+  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER');
+
+  [
+    'SYNC_PREVIEW', 
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET',
+    'AUTHORIZED_BUIDS_FILE_PATH',
+    'OUTPUT_FILE_PATH'
+  ].forEach(testEnvironment.getVar);
+
+  [
+    'SYNC_BUIDS',
+    'SYNC_BUIDS_FILE_PATH'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_unassigned_org_enforcer_output.json';
+  setFileLogging(logFilePath);
+
+  _main({});
 }
 
 export { loadAuthorizedBuids, UnassignedOrgEnforcer };

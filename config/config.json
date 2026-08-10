@@ -1,5 +1,5 @@
 {
-  "landscape": "staging",
+  "landscape": "preview",
   "dataSource": {
     "person": {
       "endpointConfig": {
@@ -39,7 +39,7 @@
   },
   "dataTarget": {
     "endpointConfig": {
-      "baseUrl": "https://bu.hrs-staging.com",
+      "baseUrl": "https://bu.hrs-preview.com",
       "authMethod": "externalToken",
       "externalToken": "your-external-token-here",
       "userId": "bu-sso_wrh@bu.edu",
@@ -60,7 +60,7 @@
     "type": "s3",
     "config": {
       "_bucketName": "huron-person-file-drop-dev",
-      "bucketName": "huron-person-chunks-staging",
+      "bucketName": "huron-person-chunks-preview",
       "region": "us-east-2"
     }
   },

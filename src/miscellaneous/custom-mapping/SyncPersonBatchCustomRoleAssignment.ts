@@ -1,11 +1,11 @@
+import * as fs from 'fs';
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
+import * as path from 'path';
 import { main } from "../../SyncPersonBatch";
 import { getLocalConfig, setFileLogging } from "../../Utils";
-import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
+import { Config } from '../../config/Config';
 import { ConfigManager } from "../../config/ConfigManager";
-import { Config } from "../../config/Config";
-import * as fs from 'fs';
-import * as path from 'path';
+import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
 
 type RoleAssignment = {
   buid: string;
@@ -17,8 +17,7 @@ type RoleAssignment = {
 type CustomRoleDataMapperParams = {
   params: ConstructorParameters<typeof DataMapper>[0];
   roleAssignments: Map<string, string[]>;
-  replace: boolean;
-  override: boolean;
+  operation: 'append' | 'replace' | 'remove';
   innerMapper?: DataMapper; // Optional inner mapper for decorator chaining
 };
 
@@ -30,20 +29,26 @@ type CustomRoleDataMapperParams = {
  * 2) Update people with a specific set of roles if they already exist.
  *  
  * This extends the standard DataMapper and overrides the getMappedData 
- * method to inject custom role assignments while preserving the default role 
- * (hrn:hrs:lists:roles/irb-general-user).
+ * method to inject custom role assignments on a per-person basis.
+ * 
+ * Supports three operations:
+ * - 'append': Add custom roles to existing roles (merge and append at target)
+ * - 'replace': Replace all roles with only custom roles (ignore source roles)
+ * - 'remove': Remove custom roles from existing roles (subtract specified roles)
+ * 
+ * NOTE: This differs from SyncPersonBatchCustomRolePatcher in that it assigns roles on a 
+ * per-person basis, where each set of roles applied is specific to the individual, rather than 
+ * applying the same set of roles to all people as a blanket operation.
  */
 class CustomRoleDataMapper extends DataMapper {
   private roleAssignments: Map<string, string[]>;
-  private replace: boolean;
-  private override: boolean;
+  private operation: 'append' | 'replace' | 'remove';
   private innerMapper?: DataMapper;
 
   constructor(params: CustomRoleDataMapperParams) {
     super(params.params);
     this.roleAssignments = params.roleAssignments;
-    this.replace = params.replace;
-    this.override = params.override;
+    this.operation = params.operation;
     this.innerMapper = params.innerMapper;
   }
 
@@ -53,9 +58,13 @@ class CustomRoleDataMapper extends DataMapper {
 
   /**
    * Override the standard getMappedData to inject custom role assignments into the mapped data.
-   * For people with custom role assignments, roles are either replaced or appended based on
-   * the replace flag. The override flag determines whether to use only custom roles or combine
-   * with existing roles from the source data.
+   * For people with custom role assignments, roles are modified according to the operation mode.
+   * 
+   * Operation modes:
+   * - 'append': Send only NEW roles (delta) not already present, use append directive
+   * - 'replace': Use only custom roles, use replace directive
+   * - 'remove': Calculate remaining roles after removal, use replace directive
+   * 
    * @param params 
    * @returns 
    */
@@ -65,7 +74,7 @@ class CustomRoleDataMapper extends DataMapper {
       ? this.innerMapper.getMappedData(params)
       : super.getMappedData(params);
 
-    // Mutate the standard mapping to add or override roles for specific people
+    // Mutate the standard mapping to modify roles for specific people
     const modifiedFieldSets = standardMappedData.fieldSets.map(fieldSet => {
       // Find the sourceIdentifier (BUID) for this person
       const sourceIdentifierField = fieldSet.fieldValues.find(field => 'sourceIdentifier' in field);
@@ -80,37 +89,44 @@ class CustomRoleDataMapper extends DataMapper {
         
         const modifiedFields = fieldSet.fieldValues.map(field => {
           if ('roles' in field) {
-            if (this.override) {
-              // Use only the custom roles
+            const existingRoles = Array.isArray(field.roles) ? field.roles : [];
+            const existingHrns = existingRoles.map(role => 
+              typeof role === 'object' && role !== null && 'hrn' in role ? role.hrn : null
+            ).filter((hrn): hrn is string => hrn !== null);
+            
+            if (this.operation === 'replace') {
+              // Replace all roles with only custom roles
               return { 
                 roles: customRoleHrns.map(hrn => ({ hrn }))
               };
-            } else {
-              // Combine standard roles with custom roles and remove duplicates
-              const existingRoles = Array.isArray(field.roles) ? field.roles : [];
-              const existingHrns = existingRoles.map(role => 
-                typeof role === 'object' && role !== null && 'hrn' in role ? role.hrn : null
-              ).filter((hrn): hrn is string => hrn !== null);
-              
-              // Combine and remove duplicates
-              const allHrns = [...existingHrns, ...customRoleHrns];
-              const uniqueHrns = Array.from(new Set(allHrns));
-              
+            } else if (this.operation === 'append') {
+              // Send only NEW roles (delta) - append directive will add them to existing
+              const existingHrnSet = new Set(existingHrns);
+              const deltaHrns = customRoleHrns.filter(hrn => !existingHrnSet.has(hrn));
               return { 
-                roles: uniqueHrns.map(hrn => ({ hrn }))
+                roles: deltaHrns.map(hrn => ({ hrn }))
+              };
+            } else if (this.operation === 'remove') {
+              // Calculate remaining roles after removal - replace directive will overwrite
+              const customHrnSet = new Set(customRoleHrns);
+              const remainingHrns = existingHrns.filter(hrn => !customHrnSet.has(hrn));
+              return { 
+                roles: remainingHrns.map(hrn => ({ hrn }))
               };
             }
           }
           
-          // Update __arrayFieldOperations based on replace flag
-          if ('__arrayFieldOperations' in field && !this.replace) {
-            // Keep append behavior when not replacing
-            return field;
-          }
-          if ('__arrayFieldOperations' in field && this.replace) {
-            // Remove append instruction when replacing (use default replace behavior)
-            // return { __arrayFieldOperations: {} }; // This won't work - defaults to append
-            return { };
+          // Update __arrayFieldOperations based on operation mode
+          if ('__arrayFieldOperations' in field) {
+            if (this.operation === 'replace' || this.operation === 'remove') {
+              // Use replace directive for both replace and remove operations
+              // Remove append instruction when replacing (use default replace behavior)
+              // return { __arrayFieldOperations: {} }; // This won't work - defaults to append
+              return { };
+            } else {
+              // Keep append directive for append operation
+              return field;
+            }
           }
           
           return field;
@@ -162,23 +178,7 @@ function buildSyncBuids(roleAssignments: Map<string, string[]>): string {
   return Array.from(roleAssignments.keys()).join(',');
 }
 
-async function _main(innerMapper?: DataMapper) {
-  // Gather environment variables
-  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN');
-
-  [
-    'SYNC_PREVIEW', 
-    'SYNC_UPDATE_HASH',
-    'INTEGRATED_DELTA_CLIENT_ID',
-    'DELTA_STORAGE_BUCKET',
-    'ROLES_FILE_PATH',
-    'REPLACE',
-    'OVERRIDE',
-    'OUTPUT_FILE_PATH'
-  ].forEach(testEnvironment.getVar);
-
-  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_role_assignments.json';
-  setFileLogging(logFilePath);
+async function _main({ config, innerMapper }: { config?: Config; innerMapper?: DataMapper }) {
 
   // Load role assignments from file
   const rolesFilePath = process.env.ROLES_FILE_PATH;
@@ -197,14 +197,16 @@ async function _main(innerMapper?: DataMapper) {
   process.env.SYNC_BUIDS = syncBuids;
   console.log(`Set SYNC_BUIDS: ${syncBuids}`);
 
-  // Load configuration
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
+  if(!config) {
+    // Load configuration
+    const { HURON_PERSON_CONFIG_PATH } = process.env;
+    const configManager = ConfigManager.getInstance();
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    config = configManager.reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
+  }
 
   // Get mapper to decorate (either provided innerMapper or create standard mapper)
   let mapperToDecorate: DataMapper;
@@ -216,20 +218,18 @@ async function _main(innerMapper?: DataMapper) {
     });
   }
 
-  // Parse REPLACE and OVERRIDE flags from environment
-  const { REPLACE, OVERRIDE } = process.env;
-  const replace = `${REPLACE}`.trim().toLowerCase() === 'true';
-  const override = `${OVERRIDE}`.trim().toLowerCase() === 'true';
-
-  console.log(`REPLACE mode: ${replace ? 'enabled (replace existing roles)' : 'disabled (append to existing roles)'}`);
-  console.log(`OVERRIDE mode: ${override ? 'enabled (custom roles only)' : 'disabled (combine with source roles)'}`);
+  // Parse and validate operation mode
+  const operation = process.env.OPERATION?.toLowerCase();
+  if (operation !== 'append' && operation !== 'replace' && operation !== 'remove') {
+    throw new Error(`Invalid OPERATION value: '${operation}'. Must be 'append', 'replace', or 'remove'.`);
+  }
+  console.log(`Operation mode: ${operation.toUpperCase()}`);
 
   // Create an instance of the CustomRoleDataMapper wrapping the mapper
   const customMapper = new CustomRoleDataMapper({
     params: mapperToDecorate.params,
     roleAssignments,
-    replace,
-    override,
+    operation,
     innerMapper: mapperToDecorate
   });
 
@@ -247,10 +247,26 @@ async function _main(innerMapper?: DataMapper) {
   const forceUpdate = true;
 
   // Pass the custom DataMapper to the main sync function in SyncPersonBatch
-  await main({ dataMapper: customMapper, forceUpdate });
+  await main({ dataMapper: customMapper, forceUpdate, config });
 }
 
 // Run if this file is executed directly
 if (require.main === module) {
-  _main();
+  // Gather environment variables
+  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_ROLE_ASSIGN');
+
+  [
+    'SYNC_PREVIEW', 
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET',
+    'ROLES_FILE_PATH',
+    'OPERATION',
+    'OUTPUT_FILE_PATH'
+  ].forEach(testEnvironment.getVar);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_role_assignments.json';
+  setFileLogging(logFilePath);
+
+  _main({});
 }

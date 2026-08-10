@@ -36,7 +36,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1014.0",
     "axios": "^1.6.2",
     "humanize-duration": "^3.33.1",
-    "integration-core": "https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
+    "integration-core": "file:../integration-core",
     "jsonwebtoken": "^9.0.2",
     "stream-json": "^1.9.1"
   },

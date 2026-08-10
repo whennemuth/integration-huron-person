@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { CrudOperation, Input, TestEnvironment } from "integration-core";
 import { main } from "../../SyncPersonBatch";
 import { getLocalConfig, setFileLogging } from "../../Utils";
+import { Config } from '../../config/Config';
 import { ConfigManager } from "../../config/ConfigManager";
 import { DataMapper, getDataMapper } from "../../data-mapper/DataMapper";
 import { loadAuthorizedBuids, UnassignedOrgEnforcer } from "./SyncPersonBatchUnassignedOrgEnforcer";
@@ -270,27 +271,7 @@ function buildSyncBuids(buidRoleMap: Map<string, string[]>): string {
   return Array.from(buidRoleMap.keys()).join(',');
 }
 
-async function _main(innerMapper?: DataMapper) {
-  // Gather environment variables
-  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_LEGACY_SEEDER');
-
-  [
-    'SYNC_PREVIEW', 
-    'SYNC_UPDATE_HASH',
-    'INTEGRATED_DELTA_CLIENT_ID',
-    'DELTA_STORAGE_BUCKET',
-    'AUTHORIZED_BUIDS_FILE_PATH', // From UnassignedOrgEnforcer
-    'OUTPUT_FILE_PATH',
-    'REPLACE_ROLES' // Optional - default false, whether to replace orgs or not
-  ].forEach(testEnvironment.getVar);
-
-  [
-    'SYNC_BUIDS_AND_ROLES_FILE_PATH',
-    'SYNC_BUIDS_AND_ROLES'
-  ].forEach(testEnvironment.getVarOrEmptyString);
-
-  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_legacy_seeder_output.json';
-  setFileLogging(logFilePath);
+async function _main({ config, innerMapper }: { config?: Config; innerMapper?: DataMapper }) {
   const replaceRoles = process.env.REPLACE_ROLES === 'true';
 
   // Parse SYNC_BUIDS_AND_ROLES source
@@ -312,12 +293,14 @@ async function _main(innerMapper?: DataMapper) {
 
   // Load configuration
   const { HURON_PERSON_CONFIG_PATH, AUTHORIZED_BUIDS_FILE_PATH } = process.env;
-  const configManager = ConfigManager.getInstance();
-  const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-  const config = configManager.reset()
-    .fromEnvironment()
-    .fromFileSystem(localConfigPath)
-    .getConfig('person');
+  if(!config) {
+    const configManager = ConfigManager.getInstance();
+    const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
+    config = configManager.reset()
+      .fromEnvironment()
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
+  }
 
   // Determine the mapper to use as innerMapper for this decorator
   let mapperToDecorate: DataMapper;
@@ -362,12 +345,34 @@ async function _main(innerMapper?: DataMapper) {
   const forceUpdate = true;
 
   // Pass to batch sync
-  await main({ dataMapper: legacySeederMapper, forceUpdate });
+  await main({ dataMapper: legacySeederMapper, forceUpdate, config });
 }
 
 // Run if this file is executed directly
 if (require.main === module) {
-  _main();
+  // Gather environment variables
+  const testEnvironment = TestEnvironment('SYNC_PERSON_BATCH_CUSTOM_LEGACY_SEEDER');
+
+  [
+    'SYNC_PREVIEW', 
+    'SYNC_UPDATE_HASH',
+    'INTEGRATED_DELTA_CLIENT_ID',
+    'DELTA_STORAGE_BUCKET',
+    'AUTHORIZED_BUIDS_FILE_PATH', // From UnassignedOrgEnforcer
+    'OUTPUT_FILE_PATH',
+    'REPLACE_ROLES' // Optional - default false, whether to replace orgs or not
+  ].forEach(testEnvironment.getVar);
+
+  [
+    'SYNC_BUIDS_AND_ROLES_FILE_PATH',
+    'SYNC_BUIDS_AND_ROLES'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
+  const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_legacy_seeder_output.json';
+  setFileLogging(logFilePath);
+
+  _main({});
 }
 
-export { CustomLegacySeederDataMapper, loadBuidRoles, buildSyncBuids };
+export { buildSyncBuids, CustomLegacySeederDataMapper, loadBuidRoles };
+

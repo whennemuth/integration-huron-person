@@ -25,6 +25,55 @@ Canonical settings entry:
 
 Core-only and core+person+fargate workspace examples are documented in this repository's `README.md`.
 
+## Implementation Verification Protocol
+
+**CRITICAL**: When implementing code that depends on unfamiliar abstractions, control flow directives, or domain-specific patterns, you MUST verify their actual behavior before proceeding.
+
+### High-Risk Abstractions Requiring Verification
+
+- **Control flow directives**: `__arrayFieldOperations`, `__metadata`, behavioral flags
+- **Update semantics**: append vs replace, merge vs overwrite patterns  
+- **Authentication patterns**: JWT token refresh, external token handling
+- **Data mapping abstractions**: DataMapper extensions, field filters
+- **Sync strategies**: UpsertDeltaStrategy, hash comparison logic
+- **Role management**: Role assignment directives, HRN encoding
+
+### Mandatory Verification Steps
+
+Before implementing code that uses an unfamiliar abstraction:
+
+1. **Search for definition**: Use `grep_search` to find where it's defined
+2. **Find consumers**: Search for where it's processed/interpreted
+3. **Read usage examples**: Look at tests and similar patterns
+4. **State your understanding**: Explicitly describe what you think it does
+5. **Think through interactions**: Consider edge cases and combinations
+6. **Only then implement**: Proceed with verified understanding
+
+### Real Example: __arrayFieldOperations Bug
+
+A critical bug occurred when implementing role operations without verifying `__arrayFieldOperations` behavior:
+- **Assumption**: Keeping the field meant "append mode"
+- **Reality**: Empty `{}` means replace, populated means append
+- **Result**: 'remove' operation broke (appended instead of replaced)
+
+This bug could have been prevented by searching for how the directive is processed before implementing.
+
+### When You're Uncertain
+
+If you cannot fully verify an abstraction's behavior:
+
+- **State explicitly what you don't know**
+- **Ask whether to search for implementation first**
+- **Do NOT proceed on "educated guesses"**
+
+### User Override
+
+You can skip verification by saying:
+- "Skip verification and proceed"
+- "Use inference for this"
+
+**See Also**: `verify-abstractions-before-implementation` skill in workspace skills repository
+
 ## Architecture: Explicit Environment Variable Declarations
 
 ### Design Approach

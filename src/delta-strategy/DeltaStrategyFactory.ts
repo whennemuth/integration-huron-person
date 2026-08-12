@@ -2,12 +2,15 @@ import {
   DeltaStorage,
   DeltaStrategy,
   DeltaStrategyForDatabase,
+  DeltaStrategyForDynamoDB,
   DeltaStrategyForFileSystem,
   DeltaStrategyForS3Bucket,
   DeltaStrategyParams,
+  DynamoDBConfig,
   FieldSet,
   FileConfig,
   isDatabaseConfig,
+  isDynamoDBConfig,
   isS3Config
 } from 'integration-core';
 import { Config } from '../config/Config';
@@ -33,7 +36,7 @@ export interface CreateStrategyParams {
  * The DeltaStrategy instance is built using one or more decorators depending on the configuration parameters.
  * 
  * Key configuration parameters that influence the strategy composition include:
- * - storage.type (file, database, s3)
+ * - storage.type (file, database, s3, dynamodb)
  * - chunkId (presence indicates chunked processing)
  * - bulkReset (forces UpsertDeltaStrategy for cache-based lookups)
  * - integratedDeltaClientId (redirects baseline reads to shared integrated delta path)
@@ -112,6 +115,15 @@ export class DeltaStrategyFactory {
           (strategyParams.config as any).outputKeyPrefix = createChunkedOutputPath;
         }
         deltaStrategy = new DeltaStrategyForS3Bucket(strategyParams);
+        break;
+
+      case 'dynamodb':
+        if( ! isDynamoDBConfig(storage.config)) {
+          throw new Error('Invalid DynamoDB configuration');
+        }
+        // DynamoDB doesn't need custom output paths - writes directly to tables
+        // Chunk-scoped operations handled by batch operations with personIds from current chunk
+        deltaStrategy = new DeltaStrategyForDynamoDB(strategyParams);
         break;
 
       default:

@@ -5,8 +5,12 @@ import { _fieldDefinitions, DataMapper, getDataMapper } from "../data-mapper/Dat
 import { ReverseDataMapper } from "../data-mapper/ReverseDataMapper";
 import { ReadPeople } from "../data-target/crud/ReadPeople";
 import { getLocalConfig } from "../Utils";
-import { HashStorageReset } from "./HashStorageReset";
+import { HashStorageReset as HashStorageResetForS3 } from "./HashStorageResetForS3";
+import { HashStorageReset as HashStorageResetForFile } from "./HashStorageResetForFile";
+import { HashStorageReset as HashStorageResetForDb } from "./HashStorageResetForDb";
+import { HashStorageReset as HashStorageResetForDynamoDB } from "./HashStorageResetForDynamoDb";
 import { SourcePerson } from "./SyncEvaluator";
+import { AbstractHashStorageReset } from "./AbstractHashStorage";
 
 export type HashStorageResetAllParms = {
   config: Config,
@@ -26,9 +30,25 @@ export class HashStorageResetAll {
   constructor(private params: HashStorageResetAllParms) { }
 
   public resetAllHashStorage = async (): Promise<void> => {
-    const { config } = this.params;
+    const { config, config: { storage: { type: storageType } = {} } = {} } = this.params;
     const targetPersonData: Input[] = await this.getAllTargetPersons();
-    const updater = HashStorageReset.instanceFromData(config, targetPersonData);
+    let updater: AbstractHashStorageReset;
+    switch (storageType) {
+      case 's3':
+        updater = HashStorageResetForS3.instanceFromData(config, targetPersonData);
+        break;
+      case 'file':
+        updater = HashStorageResetForFile.instanceFromData(config, targetPersonData);
+        break;
+      case 'database':
+        updater = HashStorageResetForDb.instanceFromData(config, targetPersonData);
+        break;
+      case 'dynamodb':
+        updater = HashStorageResetForDynamoDB.instanceFromData(config, targetPersonData);
+        break;
+      default:
+        throw new Error(`Unsupported storage type: ${storageType}`);
+    }
     await updater.updateHashStorage();
   }
 

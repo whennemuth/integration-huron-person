@@ -19,10 +19,10 @@
     "clean": "rimraf dist",
     "npm-clean": "npm cache clean --force",
     "uninstall-tgz": "npm uninstall integration-core",
-    "install-tgz": "npm install --force integration-core https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/integration-core-1.0.0.tgz",
+    "install-tgz": "npm install --force integration-core https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/dynamodb/integration-core-1.0.0.tgz",
     "reinstall-tgz": "npm run uninstall-tgz && npm run install-tgz",
     "reinstall-tgz-clean": "npm run npm-clean && npm run uninstall-tgz && npm run install-tgz",
-    "publish-s3": "npm run pack && aws s3 cp integration-huron-person-1.0.0.tgz s3://simple-npm-package-bucket/"
+    "publish-s3": "npm run pack && aws s3 cp integration-huron-person-1.0.0.tgz s3://simple-npm-package-bucket/dynamodb/"
   },
   "keywords": [
     "huron",
@@ -36,7 +36,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1014.0",
     "axios": "^1.6.2",
     "humanize-duration": "^3.33.1",
-    "integration-core": "file:../integration-core",
+    "integration-core": "https://simple-npm-package-bucket.s3.us-east-1.amazonaws.com/dynamodb/integration-core-1.0.0.tgz",
     "jsonwebtoken": "^9.0.2",
     "stream-json": "^1.9.1"
   },

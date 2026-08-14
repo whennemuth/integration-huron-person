@@ -568,14 +568,14 @@ describe('ReadPeople', () => {
             expect.objectContaining({
               field: 'roles',
               value: roleHrn,
-              comparisonOperator: 'in'
+              comparisonOperator: 'eq'
             })
           ])
         })
       );
     });
 
-    it('should use "in" comparison operator for roles', async () => {
+    it('should use "eq" comparison operator for roles', async () => {
       const roleHrn = 'hrn:hrs:lists:roles/agreements-site-manager';
       await readPeople.readPeopleHavingRole(roleHrn);
 
@@ -583,7 +583,7 @@ describe('ReadPeople', () => {
         expect.objectContaining({
           filters: expect.arrayContaining([
             expect.objectContaining({
-              comparisonOperator: 'in'
+              comparisonOperator: 'eq'
             })
           ])
         })
@@ -657,19 +657,19 @@ describe('ReadPeople', () => {
       expect(typeof testReadPeople.readPeopleHavingRole).toBe('function');
     });
 
-    it('should use "in" operator for roles filter', async () => {
+    it('should use "eq" operator for roles filter', async () => {
       // Verify that readPeopleHavingRole creates filter with correct operator
       const roleHrn = 'hrn:hrs:lists:reviewer-roles/primary';
       
       await readPeople.readPeopleHavingRole(roleHrn);
 
-      // Verify the queryBuilder was called with 'in' operator for roles
+      // Verify the queryBuilder was called with 'eq' operator for roles
       expect(mockQueryBuilder.buildQueryParams).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: expect.arrayContaining([
             expect.objectContaining({
               field: 'roles',
-              comparisonOperator: 'in',
+              comparisonOperator: 'eq',
               value: roleHrn
             })
           ])

@@ -11,11 +11,16 @@ import { DynamoDBClient, GetItemCommand, PutItemCommand, DeleteItemCommand } fro
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 
 /**
- * Mock DataTarget implementation for testing with source simulator.
+ * Mock Person DataTarget implementation for testing with source simulator.
  * 
  * Purpose:
- * Simulates target system behavior by storing person records in DynamoDB instead of calling real API.
- * This allows full end-to-end testing with SourceSimulator without affecting production data.
+ * Simulates target system behavior for person records by storing them in DynamoDB 
+ * instead of calling real Huron API. This allows full end-to-end testing with 
+ * SourceSimulator without affecting production data.
+ * 
+ * Scope:
+ * This mock is specific to person data operations (CREATE, UPDATE, DELETE).
+ * Organization, state, and country lookups are handled separately via Config.preLoadedMaps.
  * 
  * Design:
  * - Writes to MockTargetStateTable (PK: personId)
@@ -30,11 +35,11 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
  * Usage Pattern:
  * ```typescript
  * const factory = new DataTargetFactory(config, flags);
- * const target = factory.create(); // Returns MockDataTarget when flags.useMockTarget is true
+ * const target = factory.create(); // Returns MockPersonDataTarget when flags.useMockTarget is true
  * await target.pushOne({ data: personRecord, crud: CrudOperation.CREATE });
  * ```
  */
-export class MockDataTarget implements DataTarget {
+export class MockPersonDataTarget implements DataTarget {
   public readonly name = 'Mock Data Target (DynamoDB)';
   public readonly description = 'Simulates target system by storing person records in DynamoDB';
 
@@ -53,7 +58,7 @@ export class MockDataTarget implements DataTarget {
     
     this.tableName = tableName || process.env.DYNAMODB_MOCK_TARGET_STATE_TABLE_NAME || '';
     if (!this.tableName) {
-      throw new Error('MockDataTarget requires tableName or DYNAMODB_MOCK_TARGET_STATE_TABLE_NAME environment variable');
+      throw new Error('MockPersonDataTarget requires tableName or DYNAMODB_MOCK_TARGET_STATE_TABLE_NAME environment variable');
     }
 
     this.syncRunId = syncRunId || new Date().toISOString();

@@ -30,7 +30,7 @@ export { PersonResponse, ReadPerson, ReadPersonParams, getPersonData, HuronPerso
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';
 export { ListPeople } from '../src/data-target/crud/ListPeople';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
-export { MockDataTarget } from '../src/data-target/MockDataTarget';
+export { MockPersonDataTarget } from '../src/data-target/MockPersonDataTarget';
 export { DataTargetFactory, DataTargetFlags } from '../src/data-target/DataTargetFactory';
 
 // Data mapper exports

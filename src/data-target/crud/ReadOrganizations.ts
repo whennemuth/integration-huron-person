@@ -206,11 +206,26 @@ class ReadOrganizations {
 }
 
 async function main() {
-  const { HURON_PERSON_CONFIG_PATH } = process.env;
+  const { HURON_PERSON_CONFIG_PATH, OUTPUT_FILE_PATH, LANDSCAPE } = process.env;
   const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
   const config: Config = ConfigManager.getInstance().reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('none');
   const reader = new ReadOrganizations({ config });
   const task = process.env.HURON_ORGS_TASK;
+
+  const outputAsJson = (orgs: HuronOrganization[], asMap: boolean = false) => {
+    const outputFileDir = `${OUTPUT_FILE_PATH}`.split('/').slice(0, -1).join('/');
+    const fs = require('fs');
+
+    const outputOrgs = asMap ? 
+      orgs.map(org => ( { [org.id]: org.hrn } )) :
+      orgs;
+
+    const outputFileName = asMap ? 
+      `read-all-organizations-map-${LANDSCAPE || 'default'}.json` : 
+      `read-all-organizations-${LANDSCAPE || 'default'}.json`;
+
+    fs.writeFileSync(`${outputFileDir}/${outputFileName}`, JSON.stringify(outputOrgs, null, 2));
+  };
 
   try {
     switch (task) {
@@ -219,6 +234,10 @@ async function main() {
         console.log('Reading all organizations...');
         const allOrganizations = await reader.readAllOrganizations();
         console.log(`Found ${allOrganizations.length} organizations`);
+
+        // Write all organizations out to a json file
+        outputAsJson(allOrganizations, true);
+
         // Print all organization ids that are not numeric
         const nonNumericOrgs = allOrganizations.filter(org => isNaN(Number(org.id)));
         console.log(`Organizations with non-numeric IDs (${nonNumericOrgs.length}):`, JSON.stringify(nonNumericOrgs.map(org => ( `${org.id}: ${org.name}` )), null, 2));

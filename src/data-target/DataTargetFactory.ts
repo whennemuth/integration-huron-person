@@ -3,7 +3,7 @@ import { Cache } from '../Cache';
 import { Config } from '../config/Config';
 import { TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronPersonDataTarget } from './PersonDataTarget';
-import { MockDataTarget } from './MockDataTarget';
+import { MockPersonDataTarget } from './MockPersonDataTarget';
 
 /**
  * Flags interface (subset of fargate metadata Flags type)
@@ -23,7 +23,7 @@ export interface DataTargetFlags {
  * 
  * Purpose:
  * Provides single point of control for switching between real and mock targets.
- * When flags.useMockTarget is true, returns MockDataTarget for testing with source simulator.
+ * When flags.useMockTarget is true, returns MockPersonDataTarget for testing with source simulator.
  * Otherwise, returns HuronPersonDataTarget for production API calls.
  * 
  * Usage Pattern:
@@ -71,11 +71,11 @@ export class DataTargetFactory {
     const useMockTarget = this.flags.useMockTarget === true;
 
     if (useMockTarget) {
-      console.log('[DATA-TARGET-FACTORY] Using MockDataTarget (flags.useMockTarget = true)');
+      console.log('[DATA-TARGET-FACTORY] Using MockPersonDataTarget (flags.useMockTarget = true)');
       
       const mockConfig = this.flags.mockTargetConfig || {};
       
-      return new MockDataTarget({
+      return new MockPersonDataTarget({
         config: this.config,
         tableName: mockConfig.tableName,
         syncRunId: this.syncRunId,

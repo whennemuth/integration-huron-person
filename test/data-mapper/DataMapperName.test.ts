@@ -99,6 +99,71 @@ describe('NameMapper', () => {
       });
     });
 
+    it('should skip higher priority names without firstName/lastName fields', () => {
+      const person = {
+        personid: 'U12345678',
+        personBasic: {
+          names: [
+            {
+              source: 'SAP',
+              nameType: 'PRI'
+              // No firstName, middleName, or lastName
+            },
+            {
+              source: 'PersonRegistryVDS',
+              nameType: 'PRI',
+              firstName: 'Farhad',
+              middleName: 'John',
+              lastName: 'Dokhani'
+            },
+            {
+              source: 'PersonRegistryVDS',
+              nameType: 'PRF',
+              displayName: 'Dokhani, Farhad',
+              firstName: 'Farhad',
+              lastName: 'Dokhani'
+            }
+          ]
+        }
+      };
+
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
+      const result = mapper.getName();
+
+      // Should skip the first SAP PRI entry (no fields) and use the second PRI entry
+      expect(result).toEqual({
+        firstName: 'Farhad',
+        middleName: 'John',
+        lastName: 'Dokhani'
+      });
+    });
+
+    it('should return empty object when no names have required fields', () => {
+      const person = {
+        personid: 'U12345678',
+        personBasic: {
+          names: [
+            {
+              source: 'SAP',
+              nameType: 'PRI'
+              // No firstName, middleName, or lastName
+            },
+            {
+              source: 'Campus Solutions',
+              nameType: 'PRF',
+              displayName: 'Doe, John'
+              // Has displayName but no firstName or lastName
+            }
+          ]
+        }
+      };
+
+      const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
+      const result = mapper.getName();
+
+      expect(result).toEqual({});
+    });
+
     it('should select PRF from Campus Solutions (priority 2) over PRI from SAP (priority 3)', () => {
       const person = {
         personBasic: {
@@ -339,11 +404,8 @@ describe('NameMapper', () => {
       const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
-      expect(result).toEqual({
-        firstName: 'John',
-        middleName: undefined,
-        lastName: undefined
-      });
+      // Missing lastName means this is not a valid name entry
+      expect(result).toEqual({});
     });
 
     it('should handle multiple names with same priority by selecting first in sorted order', () => {
@@ -436,11 +498,8 @@ describe('NameMapper', () => {
       const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
-      expect(result).toEqual({
-        firstName: '',
-        middleName: '',
-        lastName: ''
-      });
+      // Empty strings are treated as invalid names
+      expect(result).toEqual({});
     });
 
     it('should handle null values in name fields', () => {
@@ -461,11 +520,8 @@ describe('NameMapper', () => {
       const mapper = NameMapper({ person, removeNullValues: true, preferredOnly: false });
       const result = mapper.getName();
 
-      expect(result).toEqual({
-        firstName: undefined,
-        middleName: undefined,
-        lastName: undefined
-      });
+      // Null values are treated as invalid names
+      expect(result).toEqual({});
     });
 
     it('should handle null personBasic property', () => {

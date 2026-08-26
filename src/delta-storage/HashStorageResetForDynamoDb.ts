@@ -98,8 +98,8 @@ if (require.main === module) {
 
     [
       'INTEGRATED_DELTA_CLIENT_ID',
-      'PERSON_CURRENT_STATE_TABLE_NAME',
-      'PERSON_HISTORY_TABLE_NAME',
+      'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
+      'DYNAMODB_PERSON_HISTORY_TABLE_NAME',
       'REGION'
     ].forEach(testEnvironment.getVar);
 
@@ -114,8 +114,8 @@ if (require.main === module) {
       HURON_PERSON_SOURCE_ID: buid, 
       HURON_PERSON_CONFIG_PATH,
       INTEGRATED_DELTA_CLIENT_ID: clientId,
-      PERSON_CURRENT_STATE_TABLE_NAME: personCurrentStateTableName,
-      PERSON_HISTORY_TABLE_NAME: personHistoryTableName,
+      DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME: personCurrentStateTableName,
+      DYNAMODB_PERSON_HISTORY_TABLE_NAME: personHistoryTableName,
       REGION: region
     } = process.env;
 

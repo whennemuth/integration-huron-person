@@ -23,7 +23,7 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
  * Organization, state, and country lookups are handled separately via Config.preLoadedMaps.
  * 
  * Design:
- * - Writes to MockTargetStateTable (PK: personId)
+ * - Writes to MockTargetPersonTable (PK: personId)
  * - One record per person (overwrites on update)
  * - Supports CREATE, UPDATE, DELETE operations
  * - Records timestamps and sync run tracking
@@ -56,9 +56,9 @@ export class MockPersonDataTarget implements DataTarget {
   }) {
     const { config, tableName, syncRunId, validateOnly = false } = params;
     
-    this.tableName = tableName || process.env.DYNAMODB_MOCK_TARGET_STATE_TABLE_NAME || '';
+    this.tableName = tableName || process.env.DYNAMODB_MOCK_TARGET_PERSON_TABLE_NAME || '';
     if (!this.tableName) {
-      throw new Error('MockPersonDataTarget requires tableName or DYNAMODB_MOCK_TARGET_STATE_TABLE_NAME environment variable');
+      throw new Error('MockPersonDataTarget requires tableName or DYNAMODB_MOCK_TARGET_PERSON_TABLE_NAME environment variable');
     }
 
     this.syncRunId = syncRunId || new Date().toISOString();

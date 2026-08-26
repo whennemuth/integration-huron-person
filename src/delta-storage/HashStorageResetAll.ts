@@ -30,10 +30,10 @@ export class HashStorageResetAll {
   constructor(private params: HashStorageResetAllParms) { }
 
   public resetAllHashStorage = async (): Promise<void> => {
-    const { config, config: { storage: { type: storageType } = {} } = {} } = this.params;
+    const { config, config: { storage: { type: previousStorageType } = {} } = {} } = this.params;
     const targetPersonData: Input[] = await this.getAllTargetPersons();
     let updater: AbstractHashStorageReset;
-    switch (storageType) {
+    switch (previousStorageType) {
       case 's3':
         updater = HashStorageResetForS3.instanceFromData(config, targetPersonData);
         break;
@@ -47,7 +47,7 @@ export class HashStorageResetAll {
         updater = HashStorageResetForDynamoDB.instanceFromData(config, targetPersonData);
         break;
       default:
-        throw new Error(`Unsupported storage type: ${storageType}`);
+        throw new Error(`Unsupported storage type: ${previousStorageType}`);
     }
     await updater.updateHashStorage();
   }

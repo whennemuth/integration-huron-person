@@ -7,7 +7,7 @@ import {
   Status,
 } from 'integration-core';
 import { Config } from '../config/Config';
-import { DynamoDBClient, GetItemCommand, PutItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 
 /**
@@ -26,6 +26,7 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
  * - Writes to MockTargetPersonTable (PK: personId)
  * - One record per person (overwrites on update)
  * - Supports CREATE, UPDATE, DELETE operations
+ * - DELETE is a soft-delete (sets deactivated/deactivatedAt), matching Huron's soft-delete-only requirement
  * - Records timestamps and sync run tracking
  * 
  * Configuration:
@@ -80,7 +81,9 @@ export class MockPersonDataTarget implements DataTarget {
    */
   private getPersonId(data: FieldSet): string {
     // FieldSet.fieldValues is an array of Field objects (key-value pairs)
+    // sourceIdentifier is the field name DataMapper actually emits for the source BUID
     const idField = data.fieldValues.find(field => 
+      field.sourceIdentifier !== undefined ||
       field.buid !== undefined || 
       field.personId !== undefined || 
       field.BUID !== undefined ||
@@ -88,11 +91,11 @@ export class MockPersonDataTarget implements DataTarget {
     );
     
     if (!idField) {
-      throw new Error('Cannot find person ID in record. Expected field: buid, personId, BUID, or id');
+      throw new Error('Cannot find person ID in record. Expected field: sourceIdentifier, buid, personId, BUID, or id');
     }
 
     // Extract the ID value
-    const id = idField.buid || idField.personId || idField.BUID || idField.id;
+    const id = idField.sourceIdentifier || idField.buid || idField.personId || idField.BUID || idField.id;
     return String(id);
   }
 
@@ -106,6 +109,24 @@ export class MockPersonDataTarget implements DataTarget {
       Object.assign(obj, field);
     }
     return obj;
+  }
+
+  /**
+   * Look up a person by BUID for existence checks (used by UpsertDeltaStrategy in mock target mode).
+   * A deactivated (soft-deleted) person still counts as existing, matching real Huron lookup behavior.
+   */
+  async getPersonByBuid(buid: string): Promise<{ sourceIdentifier: string } | undefined> {
+    const getResult = await this.dynamoDbClient.send(new GetItemCommand({
+      TableName: this.tableName,
+      Key: marshall({ personId: buid }),
+    }));
+
+    if (!getResult.Item) {
+      return undefined;
+    }
+
+    const item = unmarshall(getResult.Item);
+    return { sourceIdentifier: item.personId };
   }
 
   /**
@@ -239,23 +260,41 @@ export class MockPersonDataTarget implements DataTarget {
   }
 
   /**
-   * Handle DELETE operation - remove person record
+   * Handle DELETE operation - soft-delete person record (real Huron only supports soft deletes)
    */
   private async handleDelete(
     personId: string, 
     primaryKey: any[]
   ): Promise<SinglePushResult> {
-    await this.dynamoDbClient.send(new DeleteItemCommand({
+    const getResult = await this.dynamoDbClient.send(new GetItemCommand({
       TableName: this.tableName,
       Key: marshall({ personId }),
     }));
 
-    console.log(`[MOCK-TARGET:DELETE] ✓ Deleted person ${personId}`);
+    const existingItem = getResult.Item ? unmarshall(getResult.Item) : undefined;
+    const timestamp = new Date().toISOString();
+
+    const item = {
+      personId,
+      data: existingItem?.data ?? {},
+      createdAt: existingItem?.createdAt || timestamp,
+      lastModified: timestamp,
+      syncRunId: this.syncRunId,
+      deactivated: true,
+      deactivatedAt: timestamp,
+    };
+
+    await this.dynamoDbClient.send(new PutItemCommand({
+      TableName: this.tableName,
+      Item: marshall(item),
+    }));
+
+    console.log(`[MOCK-TARGET:DELETE] ✓ Soft-deleted (deactivated) person ${personId}`);
 
     return {
       status: Status.SUCCESS,
       primaryKey,
-      message: `Successfully deleted person ${personId} from mock target`,
+      message: `Successfully deactivated person ${personId} in mock target`,
       timestamp: new Date(),
       crud: CrudOperation.DELETE,
     };

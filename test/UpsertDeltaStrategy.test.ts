@@ -1,15 +1,19 @@
 import { UpsertDeltaStrategy } from '../src/delta-strategy/decorators/Upsert';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
+import { MockPersonDataTarget } from '../src/data-target/MockPersonDataTarget';
 import { Config } from '../src/config/Config';
 import { DeltaStrategy, DeltaStorage, FieldSet } from 'integration-core';
 
 // Mock ReadPerson
 jest.mock('../src/data-target/crud/ReadPerson');
+// Mock MockPersonDataTarget
+jest.mock('../src/data-target/MockPersonDataTarget');
 
 describe('UpsertDeltaStrategy', () => {
   let mockDeltaStrategy: jest.Mocked<DeltaStrategy>;
   let mockConfig: Config;
   let mockReadPerson: jest.Mocked<ReadPerson>;
+  let mockMockTarget: jest.Mocked<MockPersonDataTarget>;
   let mockStorage: jest.Mocked<DeltaStorage>;
 
   const createMockPerson = (sourceIdentifier: string, firstName: string = 'John', lastName: string = 'Doe'): FieldSet => ({
@@ -92,6 +96,12 @@ describe('UpsertDeltaStrategy', () => {
       readPersonBySourceIdentifier: jest.fn()
     } as any;
     (ReadPerson as jest.Mock).mockImplementation(() => mockReadPerson);
+
+    // Mock MockPersonDataTarget
+    mockMockTarget = {
+      getPersonByBuid: jest.fn()
+    } as any;
+    (MockPersonDataTarget as jest.Mock).mockImplementation(() => mockMockTarget);
   });
 
   describe('Constructor', () => {
@@ -106,6 +116,60 @@ describe('UpsertDeltaStrategy', () => {
       const mockCacheLookup = jest.fn();
       const strategy = new UpsertDeltaStrategy(mockDeltaStrategy, mockConfig, mockCacheLookup);
       expect(strategy).toBeDefined();
+    });
+
+    it('should construct ReadPerson (real mode) when flags.useMockTarget is not set', () => {
+      new UpsertDeltaStrategy(mockDeltaStrategy, mockConfig, undefined, undefined);
+      expect(ReadPerson).toHaveBeenCalledWith({ config: mockConfig });
+      expect(MockPersonDataTarget).not.toHaveBeenCalled();
+    });
+
+    it('should construct MockPersonDataTarget instead of ReadPerson when flags.useMockTarget is true', () => {
+      new UpsertDeltaStrategy(mockDeltaStrategy, mockConfig, undefined, { useMockTarget: true });
+      expect(MockPersonDataTarget).toHaveBeenCalledWith({ config: mockConfig });
+      expect(ReadPerson).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('computeDelta - mock target mode (flags.useMockTarget=true)', () => {
+    let strategy: UpsertDeltaStrategy;
+
+    beforeEach(() => {
+      strategy = new UpsertDeltaStrategy(mockDeltaStrategy, mockConfig, undefined, { useMockTarget: true });
+    });
+
+    it('treats a mock-target hit as an existing person (UPDATE)', async () => {
+      const persons = [createMockPerson('SRC001', 'John', 'Doe')];
+      mockMockTarget.getPersonByBuid.mockResolvedValue({ sourceIdentifier: 'SRC001' });
+
+      const result = await strategy.computeDelta({
+        storage: mockStorage,
+        currentFieldSets: persons,
+        inputUtils: {},
+        clientId: 'test-client'
+      });
+
+      expect(result.added).toHaveLength(0);
+      expect(result.updated).toHaveLength(1);
+      expect(mockMockTarget.getPersonByBuid).toHaveBeenCalledWith('SRC001');
+      expect(mockReadPerson.readPersonBySourceIdentifier).not.toHaveBeenCalled();
+    });
+
+    it('treats a mock-target miss as a new person (CREATE)', async () => {
+      const persons = [createMockPerson('SRC002', 'Jane', 'Smith')];
+      mockMockTarget.getPersonByBuid.mockResolvedValue(undefined);
+
+      const result = await strategy.computeDelta({
+        storage: mockStorage,
+        currentFieldSets: persons,
+        inputUtils: {},
+        clientId: 'test-client'
+      });
+
+      expect(result.added).toHaveLength(1);
+      expect(result.updated).toHaveLength(0);
+      expect(mockMockTarget.getPersonByBuid).toHaveBeenCalledWith('SRC002');
+      expect(mockReadPerson.readPersonBySourceIdentifier).not.toHaveBeenCalled();
     });
   });
 

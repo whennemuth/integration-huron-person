@@ -162,7 +162,7 @@ class HuronPersonIntegration {
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
         errorEventProcessor, bulkReset, trustPreviousStorage, ignoreRemovals,
-        lookupPersonInTargetSystemCache, cleanupPreviousData
+        lookupPersonInTargetSystemCache, cleanupPreviousData, flags
       } = this;
 
       // Ensure personDeleteType ALWAYS reflects the Huron soft-delete requirement
@@ -210,7 +210,8 @@ class HuronPersonIntegration {
         bulkReset: effectiveBulkReset,
         trustPreviousStorage,
         lookupPersonInTargetSystemCache,
-        ignoreRemovals
+        ignoreRemovals,
+        flags
       });
 
       const fieldFilterParms = {

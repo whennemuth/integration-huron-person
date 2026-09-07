@@ -1,5 +1,9 @@
 import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
+import { MockPersonDataTarget } from '../src/data-target/MockPersonDataTarget';
 import { Config } from '../src/config/Config';
+
+// Mock MockPersonDataTarget so UpsertDeltaStrategy's mock-mode branch doesn't need a real DynamoDB table
+jest.mock('../src/data-target/MockPersonDataTarget');
 
 // Mock integration-core
 jest.mock('integration-core', () => ({
@@ -517,6 +521,27 @@ describe('DeltaStrategyFactory', () => {
       // Should still wrap with UpsertDeltaStrategy (cache is optional)
       expect(result).toBeDefined();
       expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('should pass flags through to UpsertDeltaStrategy so mock-target mode is honored', () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true,
+        flags: { useMockTarget: true }
+      });
+
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+      expect(MockPersonDataTarget).toHaveBeenCalledWith({ config: mockConfig });
+    });
+
+    it('should not construct MockPersonDataTarget when flags.useMockTarget is omitted', () => {
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig,
+        bulkReset: true
+      });
+
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+      expect(MockPersonDataTarget).not.toHaveBeenCalled();
     });
 
     it('should ignore cache function when bulkReset is false', () => {

@@ -68,6 +68,15 @@ A critical bug occurred when implementing role operations without verifying `__a
 
 This bug could have been prevented by searching for how the directive is processed before implementing.
 
+### Real Example: MockPersonDataTarget sourceIdentifier Field Mismatch
+
+A bug existed in `MockPersonDataTarget.getPersonId()` (used to key records for the mock DynamoDB target) without verifying which field name `DataMapper` actually emits on mapped person records:
+- **Assumption**: Person records would carry the ID under `buid`, `personId`, `BUID`, or `id`
+- **Reality**: `DataMapper` emits `sourceIdentifier` as the field name for the source BUID - none of the assumed field names matched
+- **Result**: CRUD operations against the mock target would silently fail to find an ID for any real mapped person record, only working in tests that happened to use one of the assumed field names
+
+This was caught while adding `getPersonByBuid()` for mock-mode existence lookups, and fixed by adding `sourceIdentifier` as the first-checked field. The lesson: verify the actual field/property names a producer emits (e.g. via `grep_search` on the producing code) rather than assuming names based on similar-sounding conventions elsewhere in the codebase.
+
 ### When You're Uncertain
 
 If you cannot fully verify an abstraction's behavior:

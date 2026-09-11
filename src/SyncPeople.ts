@@ -153,8 +153,9 @@ class HuronPersonIntegration {
    * @returns IntegrationResult with processing statistics
    */
   async run(taskName?: string, chunkId?: string): Promise<IntegrationResult> {
-    // Hoisted so the finally block below can still reach it if execute() throws
+    // Hoisted so the finally block below can still reach them if execute() throws
     let dataMapper: DataMapper | undefined;
+    let timer: Timer | undefined;
     try {
       const { config, config: { 
         dataSource: { people: { fieldsOfInterest } = {} } = {},
@@ -173,7 +174,7 @@ class HuronPersonIntegration {
         console.log(`Chunk ID: ${chunkId}`);
       }
       
-      const timer = new Timer();
+      timer = new Timer();
       timer.start();
 
       // Create integration components with currentTerms
@@ -260,9 +261,6 @@ class HuronPersonIntegration {
         result.totalProcessed += mappingErrorCount;
       }
 
-      timer.stop();
-      timer.logElapsed(`✓ ${taskName} completed`);
-      
       return result;
     } catch (error) {
       console.error(`✗ ${taskName} failed:`, error);
@@ -280,6 +278,12 @@ class HuronPersonIntegration {
             console.error('Custom person record processor failed for a record:', processorError);
           }
         }
+      }
+
+      // Stopped here (not the try block) so elapsed time also covers the processor loop above
+      if (timer) {
+        timer.stop();
+        timer.logElapsed(`✓ ${taskName} completed`);
       }
     }
   }

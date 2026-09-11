@@ -3,7 +3,7 @@ import { getLocalConfig } from '../bin';
 import { Cache } from './Cache';
 import { Config, TargetPersonDeleteType } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { getDataMapper, StaticMapUsage } from './data-mapper/DataMapper';
+import { getDataMapper, DataMapper, StaticMapUsage } from './data-mapper/DataMapper';
 import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 import { getDataSource } from './data-source/DataSource';
 import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
@@ -15,6 +15,14 @@ import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResp
 import { ApiRetryStrategy } from './ApiRetryStrategy';
 
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
+
+/**
+ * Optional per-person async hook, invoked once for each record mapped during an integration
+ * run - whether mapping succeeded (`mapped` set) or failed (`error` set instead) - and
+ * regardless of whether the overall sync ultimately succeeds (see HuronPersonIntegration.run()).
+ * Only runs if provided.
+ */
+type PersonRecordProcessor = (raw: any, mapped?: FieldSet, error?: unknown) => Promise<void>;
 
 type HuronPersonIntegrationParams = {
   configPath?: string, 
@@ -51,6 +59,12 @@ type HuronPersonIntegrationParams = {
    * Used by mock target for tracking which run last modified a person
    */
   syncRunId?: string;
+  /**
+   * personRecordProcessor: Optional per-person async hook invoked once per record encountered
+   * during mapping (success or failure) regardless of whether the sync itself ultimately
+   * succeeds. Only runs if provided (dependency injection - no-op otherwise).
+   */
+  personRecordProcessor?: PersonRecordProcessor;
 };
 
 /**
@@ -64,18 +78,19 @@ class HuronPersonIntegration {
   private bulkReset: boolean;
   private trustPreviousStorage: boolean;
   private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>;
-  private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: ApiRetryStrategy;
   private cleanupPreviousData?: boolean;
   private ignoreRemovals: boolean;
   private flags?: DataTargetFlags;
   private syncRunId?: string;
+  private personRecordProcessor?: PersonRecordProcessor;
+  private errorEventProcessor?: TargetApiErrorEventProcessor;
 
   constructor(params: HuronPersonIntegrationParams) {
     const { 
       configPath, cache, config, staticMapUsage, bulkReset = false, trustPreviousStorage = true, errorEventProcessor, 
       retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false,
-      flags, syncRunId
+      flags, syncRunId, personRecordProcessor
     } = params;
 
     console.log(`⚙️  HuronPersonIntegration params: ${JSON.stringify({
@@ -103,6 +118,7 @@ class HuronPersonIntegration {
     this.ignoreRemovals = ignoreRemovals;
     this.flags = flags;
     this.syncRunId = syncRunId;
+    this.personRecordProcessor = personRecordProcessor;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -137,6 +153,8 @@ class HuronPersonIntegration {
    * @returns IntegrationResult with processing statistics
    */
   async run(taskName?: string, chunkId?: string): Promise<IntegrationResult> {
+    // Hoisted so the finally block below can still reach it if execute() throws
+    let dataMapper: DataMapper | undefined;
     try {
       const { config, config: { 
         dataSource: { people: { fieldsOfInterest } = {} } = {},
@@ -175,7 +193,7 @@ class HuronPersonIntegration {
         personDeleteType = SOFT;
       }
 
-      const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
+      dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
       let responseFilter: ResponseProcessor | undefined;
       if (fieldsOfInterest) {
@@ -249,6 +267,20 @@ class HuronPersonIntegration {
     } catch (error) {
       console.error(`✗ ${taskName} failed:`, error);
       throw error;
+    } finally {
+      // Custom per-person async processing (dependency injection - only runs if provided).
+      // Runs regardless of per-record mapping outcome or overall sync success/failure.
+      if (this.personRecordProcessor && dataMapper) {
+        console.log(`Running custom per-person processor over ${dataMapper.mappedPersonRecords.length} record(s)...`);
+        for (const { raw, mapped, error } of dataMapper.mappedPersonRecords) {
+          try {
+            await this.personRecordProcessor(raw, mapped, error);
+          } catch (processorError) {
+            // Don't fail the entire sync just because a custom side-channel operation failed
+            console.error('Custom person record processor failed for a record:', processorError);
+          }
+        }
+      }
     }
   }
 

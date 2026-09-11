@@ -214,6 +214,88 @@ describe('DataMapper', () => {
       expect((secondaryUnitField!.secondaryUnit as any).hrn).toBe('lookup:sourceIdentifier:20003827');
     });
 
+    it('should collect raw+mapped pairs via mappedPersonRecords', () => {
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
+      const person = {
+        personid: '123',
+        personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] },
+        employeeInfo: { address: [] },
+        studentInfo: { address: [] },
+        facultyInfo: { address: [] },
+        affiliateInfo: { address: [] },
+        constituentInfo: { address: [] }
+      };
+      mapper.map([person]);
+      expect(mapper.mappedPersonRecords).toHaveLength(1);
+      const { raw, mapped, error } = mapper.mappedPersonRecords[0];
+      expect(error).toBeUndefined();
+      expect(raw.personid).toBe('123');
+      expect(mapped!.fieldValues.find((f: any) => 'sourceIdentifier' in f)?.sourceIdentifier).toBe('123');
+    });
+
+    it('should reset mappedPersonRecords between map() calls', () => {
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
+      const person = {
+        personid: '123',
+        personBasic: { names: [{ firstName: 'Test', lastName: 'User' }] },
+        employeeInfo: { address: [] },
+        studentInfo: { address: [] },
+        facultyInfo: { address: [] },
+        affiliateInfo: { address: [] },
+        constituentInfo: { address: [] }
+      };
+      mapper.map([person]);
+      expect(mapper.mappedPersonRecords).toHaveLength(1);
+      mapper.map([]);
+      expect(mapper.mappedPersonRecords).toHaveLength(0);
+    });
+
+    it('should collect failed-mapping records in mappedPersonRecords with error set and mapped absent', () => {
+      const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
+      // null throws inside the per-person mapping loop (e.g. removeEmptyValues/property access on null)
+      const result = mapper.map([null]);
+      expect(result.fieldSets).toHaveLength(0); // filtered out of the returned Input
+      expect(mapper.getMappingErrorCount()).toBe(1);
+      expect(mapper.mappedPersonRecords).toHaveLength(1);
+      const { mapped, error } = mapper.mappedPersonRecords[0];
+      expect(mapped).toBeUndefined();
+      expect(error).toBeDefined();
+    });
+
+    it('should expose infoValidationErrorMessage when secondaryUnit HRN cannot be resolved', () => {
+      const orgHrn = (id: string) => id === '10003827' ? 'hrn:hrs:organizations/primary' : undefined;
+      const mapper = new DataMapper({
+        currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings,
+        idpName: 'test-idp', orgHrn
+      });
+      const dualOrgPerson = {
+        personid: '456',
+        personBasic: { names: [{ firstName: 'Dual', lastName: 'Org' }] },
+        employeeInfo: {
+          positions: [
+            {
+              positionInfo: {
+                BasicData: { mainPernrIndicator: 'Y', employmentDate: '20200101', terminationDate: '' },
+                Department: { organizationalUnit: '10003827' }
+              }
+            },
+            {
+              positionInfo: {
+                BasicData: { mainPernrIndicator: 'N', employmentDate: '20200101' },
+                Department: { organizationalUnit: '20003827' }
+              }
+            }
+          ]
+        },
+        studentInfo: { address: [] },
+        facultyInfo: { address: [] },
+        affiliateInfo: { address: [] },
+        constituentInfo: { address: [] }
+      };
+      mapper.map([dualOrgPerson]);
+      expect(mapper.infoValidationErrorMessage).toContain('SecondaryUnit HRN could not be determined');
+    });
+
     it('should expose currentTerms via getter', () => {
       const mapper = new DataMapper({ currentTerms: mockCurrentTerms, stateMappings: mockStateMappings, countryMappings: mockCountryMappings, idpName: 'test-idp' });
       expect(mapper.currentTerms).toEqual(mockCurrentTerms);

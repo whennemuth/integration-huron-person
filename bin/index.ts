@@ -47,5 +47,5 @@ export { IntegratedDeltaClientIdDeltaStrategy } from '../src/delta-strategy/deco
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';
-export { HuronPersonIntegration } from '../src/SyncPeople';
+export { HuronPersonIntegration, PersonRecordProcessor } from '../src/SyncPeople';
 export type { HuronPersonIntegrationParams } from '../src/SyncPeople';

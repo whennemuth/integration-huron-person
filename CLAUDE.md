@@ -236,9 +236,11 @@ successfully mapped records, `error` is set instead for records that threw
 during mapping - exposed via the `mappedPersonRecords` getter
 (`PersonRecordPair[]`, reset on every `getMappedData()`/`map()` call).
 `HuronPersonIntegration` (in `SyncPeople.ts`) accepts an optional
-`personRecordProcessor?: (raw: any, mapped?: FieldSet, error?: unknown) =>
+`personRecordProcessor?: (record: { raw: any, mapped?: FieldSet, error?: unknown }) =>
 Promise<void>` constructor param - pure dependency injection, a no-op if not
-supplied. If provided, `run()` iterates `dataMapper.mappedPersonRecords` from a
+supplied. A single object param is used rather than positional args so that
+supplying `error` without `mapped` (or vice versa) is unambiguous. If provided,
+`run()` iterates `dataMapper.mappedPersonRecords` from a
 **`finally` block** (not the success path), so the hook runs for every
 encountered record regardless of per-record mapping outcome or whether
 `endToEnd.execute()` itself throws. `dataMapper` is hoisted above the `try` so

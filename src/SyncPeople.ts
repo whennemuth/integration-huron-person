@@ -20,9 +20,10 @@ export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } fro
  * Optional per-person async hook, invoked once for each record mapped during an integration
  * run - whether mapping succeeded (`mapped` set) or failed (`error` set instead) - and
  * regardless of whether the overall sync ultimately succeeds (see HuronPersonIntegration.run()).
- * Only runs if provided.
+ * A single object parameter is used (rather than positional args) so that supplying `error`
+ * without `mapped` (or vice versa) is unambiguous. Only runs if provided.
  */
-type PersonRecordProcessor = (raw: any, mapped?: FieldSet, error?: unknown) => Promise<void>;
+type PersonRecordProcessor = (record: { raw: any, mapped?: FieldSet, error?: unknown }) => Promise<void>;
 
 type HuronPersonIntegrationParams = {
   configPath?: string, 
@@ -272,7 +273,7 @@ class HuronPersonIntegration {
         console.log(`Running custom per-person processor over ${dataMapper.mappedPersonRecords.length} record(s)...`);
         for (const { raw, mapped, error } of dataMapper.mappedPersonRecords) {
           try {
-            await this.personRecordProcessor(raw, mapped, error);
+            await this.personRecordProcessor({ raw, mapped, error });
           } catch (processorError) {
             // Don't fail the entire sync just because a custom side-channel operation failed
             console.error('Custom person record processor failed for a record:', processorError);
@@ -372,5 +373,5 @@ if (require.main === module) {
   main();
 }
 
-export { HuronPersonIntegration, HuronPersonIntegrationParams };
+export { HuronPersonIntegration, HuronPersonIntegrationParams, PersonRecordProcessor };
 

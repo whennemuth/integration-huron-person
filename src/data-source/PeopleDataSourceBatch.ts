@@ -42,6 +42,7 @@ abstract class BuCdmPeopleDataSourceBatch {
   private _recordsProcessed = 0;
   private _hasMoreRecords: boolean = true;
   private _batchable: boolean = true;
+  private _lastOffsetUsed?: number;
 
   constructor(private config: BuCdmPeopleDataSourceBatchConfig) {
     if (config.iterationLimit !== undefined && config.iterationLimit === -1) {
@@ -61,6 +62,7 @@ abstract class BuCdmPeopleDataSourceBatch {
 
     do {
       this.setQueryParam(dataSource, 'offset', offset);
+      this._lastOffsetUsed = offset;
       this.response = await dataSource.fetchRaw();
       await this.process(this.response);
       this._recordsProcessed += this.response.length;
@@ -129,6 +131,11 @@ abstract class BuCdmPeopleDataSourceBatch {
 
   public reachedTheEndOfRecords(): boolean {
     return !this._hasMoreRecords;
+  }
+
+  /** The offset of the last (or only) page actually requested from the API, regardless of outcome. */
+  public getLastOffsetUsed(): number | undefined {
+    return this._lastOffsetUsed;
   }
 }
 

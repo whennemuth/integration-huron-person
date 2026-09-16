@@ -68,4 +68,59 @@ describe('BuCdmPeopleDataSourceBatch', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('records the offset of the final partial page as the last offset used', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const setQueryParam = jest.fn();
+    const fetchRaw = jest
+      .fn()
+      .mockResolvedValueOnce([{ personid: 'U1' }, { personid: 'U2' }])
+      .mockResolvedValueOnce([{ personid: 'U3' }]);
+
+    const dataSource = {
+      setQueryParam,
+      fetchRaw,
+      apiClient: { recreateInstance: jest.fn() }
+    } as unknown as BuCdmPeopleDataSource;
+
+    const process = jest.fn().mockResolvedValue(undefined);
+
+    const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
+      protected process = process;
+    }({ dataSource, batchSize: 2, offset: 540, iterationLimit: 10 });
+
+    await batchProcessor.processBatch();
+
+    expect(batchProcessor.reachedTheEndOfRecords()).toBe(true);
+    expect(batchProcessor.getLastOffsetUsed()).toBe(541);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('records its own starting offset as the last offset used when the first page is already empty', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const setQueryParam = jest.fn();
+    const fetchRaw = jest.fn().mockResolvedValueOnce([]);
+
+    const dataSource = {
+      setQueryParam,
+      fetchRaw,
+      apiClient: { recreateInstance: jest.fn() }
+    } as unknown as BuCdmPeopleDataSource;
+
+    const process = jest.fn().mockResolvedValue(undefined);
+
+    const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
+      protected process = process;
+    }({ dataSource, batchSize: 200, offset: 700, iterationLimit: 10 });
+
+    await batchProcessor.processBatch();
+
+    expect(batchProcessor.reachedTheEndOfRecords()).toBe(true);
+    expect(batchProcessor.getLastOffsetUsed()).toBe(700);
+
+    consoleSpy.mockRestore();
+  });
 });

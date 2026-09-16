@@ -1,7 +1,10 @@
 import {
+  BasicPushAllOperation,
+  BatchPushResult,
   CrudOperation,
   DataTarget,
   FieldSet,
+  PushAllParms,
   PushOneParms,
   SinglePushResult,
   Status,
@@ -28,6 +31,8 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
  * - Supports CREATE, UPDATE, DELETE operations
  * - DELETE is a soft-delete (sets deactivated/deactivatedAt), matching Huron's soft-delete-only requirement
  * - Records timestamps and sync run tracking
+ * - pushAll delegates to pushOne per record via BasicPushAllOperation (integration-core), so
+ *   EndToEnd's unconditional dataTarget.pushAll! call doesn't throw and persistence stays real
  * 
  * Configuration:
  * Enabled via flags.useMockTarget in chunk metadata. When true, processors use this
@@ -178,6 +183,13 @@ export class MockPersonDataTarget implements DataTarget {
   }
 
   /**
+   * Batch push, delegating to pushOne per record so mock persistence stays real (not a no-op).
+   */
+  async pushAll(params: PushAllParms): Promise<BatchPushResult> {
+    return BasicPushAllOperation({ all: params, pusher: this }).push();
+  }
+
+  /**
    * Handle CREATE operation - insert new person record
    */
   private async handleCreate(
@@ -198,7 +210,8 @@ export class MockPersonDataTarget implements DataTarget {
 
     await this.dynamoDbClient.send(new PutItemCommand({
       TableName: this.tableName,
-      Item: marshall(item),
+      // removeUndefinedValues: mapped FieldSets routinely include unset-but-present fields (e.g. middleName)
+      Item: marshall(item, { removeUndefinedValues: true }),
     }));
 
     console.log(`[MOCK-TARGET:CREATE] ✓ Created person ${personId}`);
@@ -245,7 +258,7 @@ export class MockPersonDataTarget implements DataTarget {
 
     await this.dynamoDbClient.send(new PutItemCommand({
       TableName: this.tableName,
-      Item: marshall(item),
+      Item: marshall(item, { removeUndefinedValues: true }),
     }));
 
     console.log(`[MOCK-TARGET:UPDATE] ✓ Updated person ${personId}`);
@@ -286,7 +299,7 @@ export class MockPersonDataTarget implements DataTarget {
 
     await this.dynamoDbClient.send(new PutItemCommand({
       TableName: this.tableName,
-      Item: marshall(item),
+      Item: marshall(item, { removeUndefinedValues: true }),
     }));
 
     console.log(`[MOCK-TARGET:DELETE] ✓ Soft-deleted (deactivated) person ${personId}`);

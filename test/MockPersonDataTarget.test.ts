@@ -99,6 +99,17 @@ describe('MockPersonDataTarget', () => {
       await expect(target.pushOne({ data: person, crud: CrudOperation.CREATE }))
         .rejects.toThrow(/Cannot find person ID/);
     });
+
+    it('succeeds when a mapped field is present but undefined (e.g. middleName absent from DataMapper output)', async () => {
+      dynamoMock.on(PutItemCommand).resolves({});
+
+      const target = new MockPersonDataTarget({ config: mockConfig, tableName });
+      const person = createMockPerson([{ sourceIdentifier: 'U12345678' }, { middleName: undefined }]);
+
+      const result = await target.pushOne({ data: person, crud: CrudOperation.CREATE });
+
+      expect(result.status).toBe(Status.SUCCESS);
+    });
   });
 
   describe('pushOne - DELETE (soft-delete)', () => {
@@ -152,4 +163,23 @@ describe('MockPersonDataTarget', () => {
       expect(dynamoMock).not.toHaveReceivedCommand(PutItemCommand);
     });
   });
+
+  describe('pushAll', () => {
+    it('delegates to pushOne for each added/updated/removed record and actually persists them', async () => {
+      dynamoMock.on(GetItemCommand).resolves({ Item: undefined });
+      dynamoMock.on(PutItemCommand).resolves({});
+
+      const target = new MockPersonDataTarget({ config: mockConfig, tableName });
+      const added = createMockPerson([{ sourceIdentifier: 'U00000001' }]);
+      const updated = createMockPerson([{ sourceIdentifier: 'U00000002' }]);
+      const removed = createMockPerson([{ sourceIdentifier: 'U00000003' }]);
+
+      const result = await target.pushAll({ added: [added], updated: [updated], removed: [removed] });
+
+      expect(result.successes).toHaveLength(3);
+      expect(result.failures).toHaveLength(0);
+      expect(dynamoMock).toHaveReceivedCommandTimes(PutItemCommand, 3);
+    });
+  });
 });
+

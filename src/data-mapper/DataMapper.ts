@@ -329,6 +329,8 @@ export class DataMapper implements CoreDataMapper {
             raw: person
           }
         };
+        // Always surface the failure directly, since errorEventProcessor may not be wired or may not log
+        console.error(errorDetails.message, JSON.stringify(errorDetails.object));
         if (errorEventProcessor && typeof errorEventProcessor.process === 'function') {
           errorEventProcessor.process(error, errorDetails);
         }

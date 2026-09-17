@@ -123,4 +123,106 @@ describe('BuCdmPeopleDataSourceBatch', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('proceeds normally when isOffsetPastKnownEnd reports no boundary has been reached', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const setQueryParam = jest.fn();
+    const fetchRaw = jest
+      .fn()
+      .mockResolvedValueOnce([{ personid: 'U1' }, { personid: 'U2' }])
+      .mockResolvedValueOnce([{ personid: 'U3' }]);
+
+    const dataSource = {
+      setQueryParam,
+      fetchRaw,
+      apiClient: { recreateInstance: jest.fn() }
+    } as unknown as BuCdmPeopleDataSource;
+
+    const process = jest.fn().mockResolvedValue(undefined);
+    const isOffsetPastKnownEnd = jest.fn().mockResolvedValue(false);
+
+    const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
+      protected process = process;
+    }({ dataSource, batchSize: 2, offset: 0, iterationLimit: 10, isOffsetPastKnownEnd });
+
+    await batchProcessor.processBatch();
+
+    expect(isOffsetPastKnownEnd).toHaveBeenCalledWith(0);
+    expect(isOffsetPastKnownEnd).toHaveBeenCalledWith(1);
+    expect(fetchRaw).toHaveBeenCalledTimes(2);
+    expect(batchProcessor.recordsProcessed()).toBe(3);
+    expect(batchProcessor.reachedTheEndOfRecords()).toBe(true);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('discards a batch and stops without fetching when isOffsetPastKnownEnd reports the offset is already past the boundary', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const setQueryParam = jest.fn();
+    const fetchRaw = jest.fn().mockResolvedValueOnce([{ personid: 'U1' }, { personid: 'U2' }]);
+
+    const dataSource = {
+      setQueryParam,
+      fetchRaw,
+      apiClient: { recreateInstance: jest.fn() }
+    } as unknown as BuCdmPeopleDataSource;
+
+    const process = jest.fn().mockResolvedValue(undefined);
+    const isOffsetPastKnownEnd = jest
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+
+    const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
+      protected process = process;
+    }({ dataSource, batchSize: 2, offset: 840, iterationLimit: 10, isOffsetPastKnownEnd });
+
+    await batchProcessor.processBatch();
+
+    expect(isOffsetPastKnownEnd).toHaveBeenCalledTimes(2);
+    expect(fetchRaw).toHaveBeenCalledTimes(1);
+    expect(process).toHaveBeenCalledTimes(1);
+    expect(batchProcessor.recordsProcessed()).toBe(2);
+    expect(batchProcessor.reachedTheEndOfRecords()).toBe(true);
+    expect(batchProcessor.getLastOffsetUsed()).toBe(841);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Offset 841 is already past a boundary established elsewhere'));
+
+    consoleSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('discards even the very first offset and still records it as the last offset used', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const setQueryParam = jest.fn();
+    const fetchRaw = jest.fn();
+
+    const dataSource = {
+      setQueryParam,
+      fetchRaw,
+      apiClient: { recreateInstance: jest.fn() }
+    } as unknown as BuCdmPeopleDataSource;
+
+    const process = jest.fn().mockResolvedValue(undefined);
+    const isOffsetPastKnownEnd = jest.fn().mockResolvedValue(true);
+
+    const batchProcessor = new class extends BuCdmPeopleDataSourceBatch {
+      protected process = process;
+    }({ dataSource, batchSize: 2, offset: 900, iterationLimit: 10, isOffsetPastKnownEnd });
+
+    await batchProcessor.processBatch();
+
+    expect(fetchRaw).not.toHaveBeenCalled();
+    expect(setQueryParam).not.toHaveBeenCalledWith('offset', 900);
+    expect(batchProcessor.recordsProcessed()).toBe(0);
+    expect(batchProcessor.reachedTheEndOfRecords()).toBe(true);
+    expect(batchProcessor.getLastOffsetUsed()).toBe(900);
+
+    consoleSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });

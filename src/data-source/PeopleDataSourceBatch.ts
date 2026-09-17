@@ -11,6 +11,10 @@ export type BuCdmPeopleDataSourceBatchConfig = {
     // Optional limit on total number of calls that can be made to the source API for 
     // records to process (useful for testing or partial processing)
   iterationLimit?: number; 
+  // Optional guard checked before each fetch; return true if offset is already past a
+  // boundary established elsewhere (e.g. by another parallel task), so this iteration should
+  // be discarded rather than fetched/processed.
+  isOffsetPastKnownEnd?: (offset: number) => Promise<boolean>;
 };
 
 /**
@@ -55,12 +59,19 @@ abstract class BuCdmPeopleDataSourceBatch {
   protected abstract process: (response: any[]) => Promise<void>
 
   public processBatch = async (): Promise<void> => {
-    let { dataSource, batchSize = 100, offset = 0, iterationLimit = 0 } = this.config;
+    let { dataSource, batchSize = 100, offset = 0, iterationLimit = 0, isOffsetPastKnownEnd } = this.config;
     let iterations: number = 0;
 
     this.setQueryParam(dataSource, 'recordCount', batchSize);
 
     do {
+      if (isOffsetPastKnownEnd && await isOffsetPastKnownEnd(offset)) {
+        this._hasMoreRecords = false;
+        this._lastOffsetUsed = offset;
+        console.error(`Offset ${offset} is already past a boundary established elsewhere for this run; discarding as an API glitch and stopping.`);
+        break;
+      }
+
       this.setQueryParam(dataSource, 'offset', offset);
       this._lastOffsetUsed = offset;
       this.response = await dataSource.fetchRaw();
@@ -133,7 +144,10 @@ abstract class BuCdmPeopleDataSourceBatch {
     return !this._hasMoreRecords;
   }
 
-  /** The offset of the last (or only) page actually requested from the API, regardless of outcome. */
+  /**
+   * The offset of the last (or only) page requested from the API, regardless of outcome - or, if
+   * isOffsetPastKnownEnd discarded an offset before it was ever requested, that discarded offset.
+   */
   public getLastOffsetUsed(): number | undefined {
     return this._lastOffsetUsed;
   }

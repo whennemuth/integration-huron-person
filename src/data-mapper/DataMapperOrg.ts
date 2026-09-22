@@ -175,9 +175,8 @@ const isCurrentSemester = (semester: any, currentTerms: Term[]): boolean => {
  * based on priority and alphabetical ordering.
  * 
  * Priority is determined by the OrgTypes array (employeeInfo > studentInfo > affiliateInfo).
- * For students, organizations are derived from:
- * - Primary (employer/organization): /studentInfo/studentSemester[x]/studentSemesterInfo/degreeProgram[y]/academicOrganization/code
- * - Secondary (secondaryUnit/additionalUnit): /studentInfo/studentSemester[x]/studentSemesterInfo/degreeProgram[y]/academicGroup/code (only if mapped)
+ * For students, both primary (employer/organization) and secondary (secondaryUnit/additionalUnit)
+ * codes are derived from the same field: /studentInfo/studentSemester[x]/studentSemesterInfo/degreeProgram[y]/academicGroup/code
  * 
  * Assignment rules for students:
  * - employer: Use first mapped primary code (via orgHrn); fallback to first primary code
@@ -258,6 +257,10 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
   // Load organization from student positions into org list for priority sorting.
   // Filter to only include current semesters based on currentTerms data
   const currentSemesters = studentSemester.filter((semester: any) => isCurrentSemester(semester, currentTerms));
+
+  if (currentSemesters.length > 1) {
+    console.warn(`⚠ Multiple current semesters found for person ${person?.personid || 'UNKNOWN'}: ${JSON.stringify(currentSemesters)}`);
+  }
   
   // Check if student-only with no current term enrollment (for skip determination)
   let skipReason: string | undefined;
@@ -291,9 +294,8 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
     }
   }
 
-  // Collect organization codes from degree programs:
-  // - primaryOrgCodes: from degreeProgram.academicOrganization.code (for employer/organization)
-  // - secondaryOrgCodes: from degreeProgram.academicGroup.code (for secondaryUnit/additionalUnit, only if mapped)
+  // Collect organization codes from degree programs - both primary and secondary org codes are
+  // now sourced from the same field, degreeProgram.academicGroup.code
   const primaryOrgCodes: string[] = [];
   const secondaryOrgCodes: string[] = [];
   
@@ -304,26 +306,22 @@ export const OrgMapper = (params: OrgMapperParams): { getOrgs: () => OrgAssignme
     const currentPrograms = degreeProgram.filter((program: any) => isCurrentAcademicProgram(program));
     
     for (const program of currentPrograms) {
-      // Extract academicOrganization.code from degree program (one level up from academicPlan)
       const { 
         academicOrganization, 
-        academicOrganization: { code: primaryOrgCode } = {},
-        academicGroup, college
+        academicGroup, 
+        academicGroup: { code: orgCode } = {},
+        college
       } = program || {};
 
-      if (isNotEmpty(primaryOrgCode)) {
-        primaryOrgCodes.push(`${primaryOrgCode}`.trim());
-      }
-      
-      // Extract academicGroup.code from degree program for secondary/additional units
-      const secondaryOrgCode = program?.academicGroup?.code;
-      if (isNotEmpty(secondaryOrgCode)) {
-        secondaryOrgCodes.push(`${secondaryOrgCode}`.trim());
+      if (isNotEmpty(orgCode)) {
+        const trimmedOrgCode = `${orgCode}`.trim();
+        primaryOrgCodes.push(trimmedOrgCode);
+        secondaryOrgCodes.push(trimmedOrgCode);
       }
 
       // TEMPORARY: supplemental logging
-      if(isEmpty(primaryOrgCode) || !orgHrn?.(primaryOrgCode)) {
-        console.log(`Unmappable/missing academicOrganization: ${JSON.stringify({
+      if(isEmpty(orgCode) || !orgHrn?.(orgCode)) {
+        console.log(`Unmappable/missing academicGroup: ${JSON.stringify({
           academicOrganization, academicGroup, college
         })}`);
       }

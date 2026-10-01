@@ -149,6 +149,7 @@ PEOPLE_CDM_DATASOURCE_SECRET_ARN=<arn:aws:secretsmanager:region:account:secret:p
 # ---------- Use these for PEOPLE_DATASOURCE_BATCH ---------- #
 PEOPLE_DATASOURCE_BATCH_HURON_PERSON_CONFIG_PATH=
 PEOPLE_DATASOURCE_BATCH_SECRET_ARN=<arn:aws:secretsmanager:region:account:secret:path-xxxxx>
+PEOPLE_DATASOURCE_BATCH_STOP_AT_FIRST_PARTIAL=false
 
 # ---------- Use these for PEOPLE_S3_DATASOURCE ---------- #
 PEOPLE_S3_DATASOURCE_HURON_PERSON_CONFIG_PATH=

@@ -15,6 +15,10 @@ export type BuCdmPeopleDataSourceBatchConfig = {
   // boundary established elsewhere (e.g. by another parallel task), so this iteration should
   // be discarded rather than fetched/processed.
   isOffsetPastKnownEnd?: (offset: number) => Promise<boolean>;
+  // Optional (default false). If true, the first batch smaller than batchSize (a "partial") is
+  // treated as the end of the records. If false, only an empty batch marks the end, since the
+  // source API is known to occasionally return a partial batch mid-population.
+  stopAtFirstPartial?: boolean;
 };
 
 /**
@@ -59,7 +63,7 @@ abstract class BuCdmPeopleDataSourceBatch {
   protected abstract process: (response: any[]) => Promise<void>
 
   public processBatch = async (): Promise<void> => {
-    let { dataSource, batchSize = 100, offset = 0, iterationLimit = 0, isOffsetPastKnownEnd } = this.config;
+    let { dataSource, batchSize = 100, offset = 0, iterationLimit = 0, isOffsetPastKnownEnd, stopAtFirstPartial = false } = this.config;
     let iterations: number = 0;
 
     this.setQueryParam(dataSource, 'recordCount', batchSize);
@@ -101,10 +105,19 @@ abstract class BuCdmPeopleDataSourceBatch {
       }
       
       // Use cached responseLength instead of this.response.length for hasMoreRecords check
-      if (responseLength < batchSize) {
+      if (responseLength === 0) {
         this._hasMoreRecords = false;
-        console.log(`Batch ${offset} returned ${responseLength} records, which is less than the batch size of ${batchSize}. Assuming no more records to process.`);
+        console.log(`Batch ${offset} returned no records. Assuming no more records to process.`);
         break;
+      }
+
+      if (responseLength < batchSize) {
+        if (stopAtFirstPartial) {
+          this._hasMoreRecords = false;
+          console.log(`Batch ${offset} returned ${responseLength} records, which is less than the batch size of ${batchSize}. Assuming no more records to process.`);
+          break;
+        }
+        console.warn(`Batch ${offset} returned ${responseLength} records, which is less than the batch size of ${batchSize}. Continuing anyway (stopAtFirstPartial=false) - only an empty batch marks the end of the records.`);
       }
 
       // If a call limit is set and we've processed enough records, stop processing
@@ -140,6 +153,11 @@ abstract class BuCdmPeopleDataSourceBatch {
     return this._hasMoreRecords;
   }
 
+  /**
+   * True if the loop stopped because the end of the records was detected: an empty batch, a
+   * partial batch (only if stopAtFirstPartial), a discarded offset (isOffsetPastKnownEnd), or the
+   * single request of non-batchable mode. False if it stopped only because iterationLimit was met.
+   */
   public reachedTheEndOfRecords(): boolean {
     return !this._hasMoreRecords;
   }
@@ -160,7 +178,8 @@ const testEnvironment = TestEnvironment('PEOPLE_DATASOURCE_BATCH');
 
   [
     'HURON_PERSON_CONFIG_PATH',
-    'SECRET_ARN'
+    'SECRET_ARN',
+    'STOP_AT_FIRST_PARTIAL'
   ].forEach(testEnvironment.getVarOrEmptyString);
   (async () => {
     // Load configuration
@@ -194,7 +213,7 @@ const testEnvironment = TestEnvironment('PEOPLE_DATASOURCE_BATCH');
         console.log(`Procesing batch of ${response.length} records [{ personid: ${response[0]?.personid} }...]`);
         // Your implementation here
       };
-    }({ dataSource, batchSize: 100, offset: 7, iterationLimit: 10 });
+    }({ dataSource, batchSize: 100, offset: 7, iterationLimit: 10, stopAtFirstPartial: process.env.STOP_AT_FIRST_PARTIAL === 'true' });
 
     const timer = new Timer();
     timer.start();   

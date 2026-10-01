@@ -261,6 +261,24 @@ storage backend (DynamoDB table vs. S3), provisioning it via fargate's CDK
 stack, implementing a concrete processor there, and refreshing fargate's
 installed `integration-huron-person` tgz dependency.
 
+## End-of-Records Detection in BuCdmPeopleDataSourceBatch (stopAtFirstPartial)
+
+The BU CDM people API occasionally returns a "partial" batch (0 < length < `recordCount`)
+that may NOT mean the population is exhausted (a source-side bug). So
+`BuCdmPeopleDataSourceBatchConfig.stopAtFirstPartial` (optional, **default `false`**) selects
+the end criterion:
+- `false` (default): only an **empty** batch ends the loop; partials are logged as a
+  `console.warn` and the loop continues to the next offset.
+- `true`: legacy behavior - the first partial (or empty) batch ends the loop.
+
+Record counts (`recordsProcessed()`) always come from the actual `response.length`, never
+inferred from `batchSize`, so partials that no longer end the loop are still counted correctly.
+`reachedTheEndOfRecords()` therefore means "an end condition was hit" (empty batch, partial only
+if `stopAtFirstPartial`, `isOffsetPastKnownEnd` discard, or non-batchable single request) - NOT
+"a partial was seen". It stays `false` if the loop stopped only because `iterationLimit` was met,
+even when that last batch was a partial. Consumers in `integration-huron-person-fargate`
+(`BigJsonFetch` -> `partialChunkEncountered`) inherit this semantics.
+
 ## Patterns to Follow
 
 ### Adding a New Harness

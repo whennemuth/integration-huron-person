@@ -133,6 +133,8 @@ describe('MockPersonDataTarget', () => {
       expect(putItem.createdAt.S).toBe('2020-01-01T00:00:00.000Z');
       // Data is preserved, not wiped out
       expect(putItem.data.M.firstName.S).toBe('Jane');
+      // ...but reads as inactive, mirroring Huron's PATCH active=false
+      expect(putItem.data.M.__active.BOOL).toBe(false);
     });
 
     it('creates a deactivated record even if the person never previously existed', async () => {

@@ -29,7 +29,7 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
  * - Writes to MockTargetPersonTable (PK: personId)
  * - One record per person (overwrites on update)
  * - Supports CREATE, UPDATE, DELETE operations
- * - DELETE is a soft-delete (sets deactivated/deactivatedAt), matching Huron's soft-delete-only requirement
+ * - DELETE is a soft-delete (sets deactivated/deactivatedAt, and data.__active=false), matching Huron's soft-delete-only requirement
  * - Records timestamps and sync run tracking
  * - pushAll delegates to pushOne per record via BasicPushAllOperation (integration-core), so
  *   EndToEnd's unconditional dataTarget.pushAll! call doesn't throw and persistence stays real
@@ -289,7 +289,9 @@ export class MockPersonDataTarget implements DataTarget {
 
     const item = {
       personId,
-      data: existingItem?.data ?? {},
+      // Mirror Huron's soft-delete (PATCH active=false) in the stored person data too, so the
+      // record reads as inactive, not just the top-level deactivated flag.
+      data: { ...(existingItem?.data ?? {}), __active: false },
       createdAt: existingItem?.createdAt || timestamp,
       lastModified: timestamp,
       syncRunId: this.syncRunId,

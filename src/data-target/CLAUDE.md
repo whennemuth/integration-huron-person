@@ -24,11 +24,13 @@ Implements DataTarget abstraction for writing person records and managing state 
 **Harness Location**: `crud/ReadList.ts`
 
 #### 3. ReadPeople
-**Purpose**: Batch read multiple person records
+**Purpose**: Batch read multiple person records with filtering and sorting
 
 **Environment Prefix**: READ_PEOPLE
 
 **Harness Location**: `crud/ReadPeople.ts`
+
+**Special Configuration**: Uses custom URL serializer (`useCustomUrlSerializer: true`) for HRN-based filtering (e.g., `readPeopleHavingRole`). See "URL Serialization for Huron API" section below.
 
 #### 4. DeactivatePerson
 **Purpose**: Soft delete (deactivate) person in target
@@ -124,6 +126,46 @@ if (tokenExpired(token)) {
 - AUTH_TOKEN_PASSWORD (shared, unprefixed)
 - AUTH_TOKEN_LOGIN_SVC_PATH (shared, unprefixed)
 - AUTH_TOKEN_TIMEOUT (prefix-specific if needed)
+
+## URL Serialization for Huron API
+
+**Problem**: The Huron API has specific URL encoding requirements that differ from standard axios behavior. The API expects:
+- **Unencoded brackets** in parameter names: `filter[roles]=...` not `filter%5Broles%5D=...`
+- **Encoded special characters** in values: `hrn%3Ahrs%3Alists%3Aroles%2Fprimary` (colons → %3A, slashes → %2F)
+
+This incompatibility only surfaced with HRN-based filtering (e.g., role filtering) since previous filters used simple string values like `'true'` which didn't expose the encoding issue.
+
+**Solution**: Custom URL parameter serializer in `UrlSerializer.ts`
+
+```typescript
+import { serializeParams } from './UrlSerializer';
+
+// In ApiClientForJWT constructor
+const config = {
+  baseURL: this.baseUrl,
+  paramsSerializer: (params) => serializeParams(params)
+};
+```
+
+**When to Use**:
+- Enable in `ApiClientForJWT` via `useCustomUrlSerializer: true` in EndpointConfigForJWT
+- Currently used by `ReadPeople` for HRN-based role filtering
+- Defaults to `false` for backward compatibility
+
+**Example Output**:
+```
+// Custom serializer produces:
+filter[roles]=in:hrn%3Ahrs%3Alists%3Aroles%2Fprimary
+
+// Standard axios would produce (rejected by Huron API):
+filter%5Broles%5D=in:hrn:hrs:lists:roles/primary
+```
+
+**Encoding Rules**:
+- Parameter names: Preserve brackets `[]`, colons `:`, exclamation marks `!`
+- Comparison operators: Preserve `eq:`, `neq:`, `lt:`, `lte:`, `gt:`, `gte:`, `in:`, `null:`
+- HRN values: Encode colons `%3A` and slashes `%2F`
+- Include parameters: Preserve commas in field lists
 
 ## ConfigManager Integration
 

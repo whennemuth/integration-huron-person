@@ -30,6 +30,8 @@ export { PersonResponse, ReadPerson, ReadPersonParams, getPersonData, HuronPerso
 export { ReadPeople } from '../src/data-target/crud/ReadPeople';
 export { ListPeople } from '../src/data-target/crud/ListPeople';
 export { HuronPersonDataTarget, PersonPushRequest, PersonPushResponse } from '../src/data-target/PersonDataTarget';
+export { MockPersonDataTarget } from '../src/data-target/MockPersonDataTarget';
+export { DataTargetFactory, DataTargetFlags } from '../src/data-target/DataTargetFactory';
 
 // Data mapper exports
 export { DataMapper, getDataMapper, _fieldDefinitions as FieldDefinitions } from '../src/data-mapper/DataMapper';
@@ -45,5 +47,5 @@ export { IntegratedDeltaClientIdDeltaStrategy } from '../src/delta-strategy/deco
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';
-export { HuronPersonIntegration } from '../src/SyncPeople';
+export { HuronPersonIntegration, PersonRecordProcessor } from '../src/SyncPeople';
 export type { HuronPersonIntegrationParams } from '../src/SyncPeople';

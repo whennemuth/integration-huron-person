@@ -77,6 +77,23 @@ if [ -f "$ENV_FILE" ]; then
     CURRENT_ENV_LANDSCAPE=$(grep -E "^LANDSCAPE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
 fi
 
+# Validate .env LANDSCAPE variable and check for mismatch
+if [ -f "$ENV_FILE" ]; then
+    if [ -z "$CURRENT_ENV_LANDSCAPE" ]; then
+        echo -e "${YELLOW}Warning: .env file exists but has no LANDSCAPE variable${NC}"
+        echo "Will use config.json landscape ($CURRENT_LANDSCAPE) as fallback for .env backup."
+        echo ""
+        CURRENT_ENV_LANDSCAPE="$CURRENT_LANDSCAPE"  # Fallback to config.json landscape
+    elif [ "$CURRENT_ENV_LANDSCAPE" != "$CURRENT_LANDSCAPE" ]; then
+        echo -e "${YELLOW}Warning: Landscape mismatch detected${NC}"
+        echo "  config.json landscape: $CURRENT_LANDSCAPE"
+        echo "  .env LANDSCAPE: $CURRENT_ENV_LANDSCAPE"
+        echo "  → .env will be saved to config/$CURRENT_ENV_LANDSCAPE.env (preserving $CURRENT_ENV_LANDSCAPE state)"
+        echo "  → config.json will be saved to config/config.$CURRENT_LANDSCAPE.json (preserving $CURRENT_LANDSCAPE state)"
+        echo ""
+    fi
+fi
+
 # Only exit early if BOTH config.json and .env are already at target landscape
 if [ "$CURRENT_LANDSCAPE" = "$TARGET_LANDSCAPE" ]; then
     if [ -z "$CURRENT_ENV_LANDSCAPE" ] || [ "$CURRENT_ENV_LANDSCAPE" = "$TARGET_LANDSCAPE" ]; then
@@ -109,7 +126,8 @@ fi
 
 # 4. Perform the swap
 BACKUP_CONFIG_FILE="$SCRIPT_DIR/config.$CURRENT_LANDSCAPE.json"
-BACKUP_ENV_FILE="$SCRIPT_DIR/$CURRENT_LANDSCAPE.env"
+# Use .env's LANDSCAPE variable (not config.json) to determine where to save .env backup
+BACKUP_ENV_FILE="$SCRIPT_DIR/$CURRENT_ENV_LANDSCAPE.env"
 
 echo -e "${GREEN}Swapping landscape from $CURRENT_LANDSCAPE to $TARGET_LANDSCAPE${NC}"
 echo ""
@@ -118,9 +136,9 @@ echo ""
 echo "Saving current config.json → config/config.$CURRENT_LANDSCAPE.json"
 cp "$CONFIG_FILE" "$BACKUP_CONFIG_FILE"
 
-# Save current .env to config/<current_landscape>.env if it exists
+# Save current .env to config/<current_env_landscape>.env if it exists
 if [ -f "$ENV_FILE" ]; then
-    echo "Saving current .env → config/$CURRENT_LANDSCAPE.env"
+    echo "Saving current .env → config/$CURRENT_ENV_LANDSCAPE.env"
     cp "$ENV_FILE" "$BACKUP_ENV_FILE"
 else
     echo -e "${YELLOW}Note: .env file not found at root, skipping .env backup${NC}"
@@ -134,6 +152,14 @@ cp "$TARGET_CONFIG_FILE" "$CONFIG_FILE"
 if [ -f "$TARGET_ENV_FILE" ]; then
     echo "Loading config/$TARGET_LANDSCAPE.env → .env"
     cp "$TARGET_ENV_FILE" "$ENV_FILE"
+    
+    # Validate that loaded .env contains expected LANDSCAPE variable
+    LOADED_ENV_LANDSCAPE=$(grep -E "^LANDSCAPE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    if [ -z "$LOADED_ENV_LANDSCAPE" ]; then
+        echo -e "${YELLOW}Warning: Loaded .env file has no LANDSCAPE variable${NC}"
+    elif [ "$LOADED_ENV_LANDSCAPE" != "$TARGET_LANDSCAPE" ]; then
+        echo -e "${YELLOW}Warning: Loaded .env has LANDSCAPE=$LOADED_ENV_LANDSCAPE but expected $TARGET_LANDSCAPE${NC}"
+    fi
 fi
 
 echo ""
@@ -148,7 +174,7 @@ echo ""
 echo "Files preserved:"
 echo "  - config/config.$CURRENT_LANDSCAPE.json (saved current state)"
 if [ -f "$BACKUP_ENV_FILE" ]; then
-    echo "  - config/$CURRENT_LANDSCAPE.env (saved current state)"
+    echo "  - config/$CURRENT_ENV_LANDSCAPE.env (saved current state)"
 fi
 echo "  - config/config.$TARGET_LANDSCAPE.json (preserved)"
 if [ -f "$TARGET_ENV_FILE" ]; then

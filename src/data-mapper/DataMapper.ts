@@ -48,6 +48,13 @@ export const _fieldDefinitions = [
 ];
 
 /**
+ * A raw source record paired with its mapped FieldSet, collected during getMappedData() for
+ * callers that need both (e.g. custom per-person async post-processing). `mapped` is only
+ * present when the record mapped successfully; `error` is only present when it did not.
+ */
+export type PersonRecordPair = { raw: any; mapped?: FieldSet; error?: unknown };
+
+/**
  * DataMapper class for:
  *   1) Sending raw person data fetched from the Boston University CDM api 
  *      through a mapping process that converts field names and formats into a form compatible 
@@ -61,6 +68,7 @@ export class DataMapper implements CoreDataMapper {
   private _params: DataMapperParams;
   private _orgHrn: (sourceOrgId: string) => string | undefined
   private _mappingErrorCount: number = 0;
+  private _mappedPersonRecords: PersonRecordPair[] = [];
 
   constructor(params: DataMapperParams) { 
     this._params = params;
@@ -119,6 +127,15 @@ export class DataMapper implements CoreDataMapper {
   }
 
   /**
+   * Raw+mapped pairs collected during the most recent getMappedData() call - includes both
+   * successfully mapped records (`mapped` set) and failed ones (`error` set instead). Enables
+   * callers to run custom per-person async logic regardless of mapping outcome.
+   */
+  public get mappedPersonRecords(): PersonRecordPair[] {
+    return this._mappedPersonRecords;
+  }
+
+  /**
    * Get the count of records that failed during the mapping phase.
    * These are filtered out of the returned Input and should be counted as failures.
    */
@@ -141,7 +158,6 @@ export class DataMapper implements CoreDataMapper {
     return this.getMappedData({ rawData, crudOperation: crudOperation });
   }
 
-
   /**
    * Convert raw person data from source system to Input format
    * @param rawData Array of person data objects from Boston University CDM API
@@ -152,6 +168,7 @@ export class DataMapper implements CoreDataMapper {
 
     this.clearMessages();
     this._mappingErrorCount = 0; // Reset error count for this mapping operation
+    this._mappedPersonRecords = []; // Reset raw+mapped pairs for this mapping operation
 
     const fieldDefinitions = [..._fieldDefinitions];
 
@@ -296,7 +313,9 @@ export class DataMapper implements CoreDataMapper {
             fieldValues.push({ additionalUnit: { hrn: additionalHrn } });
           }
         }
-        return { fieldValues };
+        const mapped = { fieldValues };
+        this._mappedPersonRecords.push({ raw: person, mapped });
+        return mapped;
       } catch (error) {
         // Handle mapping error: log to errorEventProcessor and mark for filtering
         const { errorEventProcessor } = this._params;
@@ -310,11 +329,14 @@ export class DataMapper implements CoreDataMapper {
             raw: person
           }
         };
+        // Always surface the failure directly, since errorEventProcessor may not be wired or may not log
+        console.error(errorDetails.message, JSON.stringify(errorDetails.object));
         if (errorEventProcessor && typeof errorEventProcessor.process === 'function') {
           errorEventProcessor.process(error, errorDetails);
         }
         // Increment error count for this filtered-out record
         this._mappingErrorCount++;
+        this._mappedPersonRecords.push({ raw: person, error });
         // Return a marker FieldSet that will be filtered out before returning
         return {
           fieldValues: [
@@ -339,6 +361,8 @@ export class DataMapper implements CoreDataMapper {
     };
   }
 }
+
+
 
 export type StaticMapUsage = { orgMap?: boolean, stateMap?: boolean, countryMap?: boolean };
 

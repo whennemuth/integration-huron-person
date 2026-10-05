@@ -29,6 +29,13 @@ export const NameMapper = (params: { person: any, removeNullValues:boolean, pref
     return compareMMDDYYYYDates(a.effectiveDate, b.effectiveDate);
   }
   
+  /**
+   * Helper function to check if a name entry has both firstName and lastName.
+   * middleName is optional.
+   */
+  const hasRequiredNameFields = (nameEntry: any): boolean => {
+    return !!(nameEntry?.firstName && nameEntry?.lastName);
+  }
 
   const { personBasic: { names = [] } = {}} = person;
 
@@ -73,7 +80,12 @@ export const NameMapper = (params: { person: any, removeNullValues:boolean, pref
           // This handles the case where there are multiple "PRF" names by selecting the one that is currently 
           // in effect based on the effectiveDate.
           const sortedNames = filteredNames.slice().sort(compareEffectiveDates);
-          name = sortedNames[0];
+          // Find the first name entry that has both firstName and lastName
+          name = sortedNames.find(hasRequiredNameFields) || {};
+          if (Object.keys(name).length === 0) {
+            console.warn(`No preferred names with required fields (firstName, lastName) found for person ${person.personid}`);
+            return name;
+          }
           const { firstName, middleName, lastName } = name as any;
           return { firstName, middleName, lastName };
         }
@@ -94,7 +106,12 @@ export const NameMapper = (params: { person: any, removeNullValues:boolean, pref
           return name;
         }
         
-        name = sortedNames[0];
+        // Find the first name entry that has both firstName and lastName
+        name = sortedNames.find(hasRequiredNameFields) || {};
+        if (Object.keys(name).length === 0) {
+          console.warn(`No names with required fields (firstName, lastName) found for person ${person.personid}`);
+          return name;
+        }
         const { firstName, middleName, lastName } = name as any;
         return { firstName, middleName, lastName };
       }

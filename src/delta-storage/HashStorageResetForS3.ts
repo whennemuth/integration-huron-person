@@ -1,63 +1,23 @@
-import { FieldSet, Input, InputUtilsDecorator, TestEnvironment } from "integration-core";
-import { Config } from "../config/Config";
+import { FieldSet, InputUtilsDecorator, TestEnvironment } from "integration-core";
+import { DeltaStrategyFactory } from "../delta-strategy/DeltaStrategyFactory";
+import { AbstractHashStorageReset, HashStorageResetParms } from "./AbstractHashStorage";
+import { HashStorageUpdater } from "./HashStorageUpdater";
 import { ConfigManager } from "../config/ConfigManager";
+import { getLocalConfig } from "../Utils";
 import { getDataMapper } from "../data-mapper/DataMapper";
 import { ReverseDataMapper } from "../data-mapper/ReverseDataMapper";
-import { DeltaStrategyFactory } from "../delta-strategy/DeltaStrategyFactory";
-import { SourcePerson, SourcePersonParms, TargetPersonParms } from "./SyncEvaluator";
-import { getLocalConfig } from "../Utils";
-import { HashStorageUpdater } from "./HashStorageUpdater";
-
-export type HashStorageResetParms = {
-  sourcePersonParms: SourcePersonParms
-  targetPersonParms: TargetPersonParms
-};
+import { SourcePersonParms, TargetPersonParms } from "./SyncEvaluator";
 
 /**
- * This class resets the hash value stored in the hash storage file for a specific person to reflect
- * the current state of their record in the target system.
+ * This class resets the hash value stored in the hash storage file inside the S3 bucket for 
+ * a specific person to reflect the current state of their record in the target system.
  */
-export class HashStorageReset {
-  private targetPersonData: Input[] = [];
-  private config: Config;
-
-  /**
-   * Perform an API lookup against the target system to retrieve the current state of a 
-   * specific person's record.
-   * @param hashStorageResetParms The parameters required to perform the lookup.
-   * @returns A promise that resolves to an instance of HashStorageReset.
-   */
-  public static instanceFromLookup = async (hashStorageResetParms: HashStorageResetParms): Promise<HashStorageReset> => {
-    // Lookup the target person data.
-    const { sourcePersonParms, targetPersonParms } = hashStorageResetParms;
-    const syncEvaluator = new SourcePerson(sourcePersonParms);
-    let data = await syncEvaluator.getInputFromTarget(targetPersonParms);
-
-    // Create an instance from the looked-up data.
-    const instance = new HashStorageReset();
-    const { sourcePersonParms: { config: srcConfig }, targetPersonParms: { config: targetConfig } } = hashStorageResetParms;
-    const config = srcConfig || targetConfig;
-    return HashStorageReset.instanceFromData(config, data ? [data] : []);
+export class HashStorageReset extends AbstractHashStorageReset {
+  constructor() {
+    super();
   }
-
-  /**
-   * Create an instance of HashStorageReset from the provided data.
-   * @param config The configuration object.
-   * @param targetPersonData The current state of the target person's record.
-   * @returns An instance of HashStorageReset.
-   */
-  public static instanceFromData = (config:Config, targetPersonData: Input[]): HashStorageReset => {
-    const instance = new HashStorageReset();
-    instance.config = config;
-    if (targetPersonData) {
-      instance.targetPersonData = targetPersonData;
-    }
-    return instance;
-  }
-
-  constructor() { }
-
-  public updateHashStorage = async (): Promise<void> => {
+  
+  public async updateHashStorage(): Promise<void> {
     let {
       config, config: { integratedDeltaClientId } = {}, targetPersonData
     } = this;
@@ -106,6 +66,7 @@ export class HashStorageReset {
   }
 }
 
+
 /**
  * Test harness for HashStorageReset
  * 
@@ -121,7 +82,7 @@ export class HashStorageReset {
  *   - HASH_STORAGE_RESET_S3_DELTA_STORAGE_BUCKET
  */
 if (require.main === module) {
-  const testEnvironment = TestEnvironment('HASH_STORAGE_RESET');
+  const testEnvironment = TestEnvironment('HASH_STORAGE_RESET_S3');
 
   [
     'INTEGRATED_DELTA_CLIENT_ID',
@@ -190,4 +151,3 @@ if (require.main === module) {
     }
   })();
 }
-

@@ -160,7 +160,7 @@ export async function main(params?: MainParams): Promise<void> {
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
     if(!dataMapper) {
-      dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
+      dataMapper = await getDataMapper(config, { orgMap: false, stateMap: true, countryMap: true });
     }
 
     // Get environment variables for batch sync

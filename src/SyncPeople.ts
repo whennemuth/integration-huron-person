@@ -3,17 +3,27 @@ import { getLocalConfig } from '../bin';
 import { Cache } from './Cache';
 import { Config, TargetPersonDeleteType } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
-import { getDataMapper, StaticMapUsage } from './data-mapper/DataMapper';
+import { getDataMapper, DataMapper, StaticMapUsage } from './data-mapper/DataMapper';
 import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 import { getDataSource } from './data-source/DataSource';
 import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
+import { DataTargetFactory, DataTargetFlags } from './data-target/DataTargetFactory';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { ApiRetryStrategy } from './ApiRetryStrategy';
 
 export { AxiosResponseStreamFilter as PersonDataSourceResponseStreamFilter } from './stream/AxiosResponseStreamFilter';
+
+/**
+ * Optional per-person async hook, invoked once for each record mapped during an integration
+ * run - whether mapping succeeded (`mapped` set) or failed (`error` set instead) - and
+ * regardless of whether the overall sync ultimately succeeds (see HuronPersonIntegration.run()).
+ * A single object parameter is used (rather than positional args) so that supplying `error`
+ * without `mapped` (or vice versa) is unambiguous. Only runs if provided.
+ */
+type PersonRecordProcessor = (record: { raw: any, mapped?: FieldSet, error?: unknown }) => Promise<void>;
 
 type HuronPersonIntegrationParams = {
   configPath?: string, 
@@ -40,6 +50,22 @@ type HuronPersonIntegrationParams = {
   retryStrategy?: ApiRetryStrategy;
   cleanupPreviousData?: boolean; // Optional flag to control whether previous data should be cleaned up after update
   ignoreRemovals?: boolean; // Optional flag to control whether person removals should be ignored in delta computation (used for chunked processing where removals are determined by merger)
+  /**
+   * flags: Optional flags for controlling target behavior (e.g., useMockTarget for testing)
+   * Typically read from chunk metadata FLAGS record in processor context
+   */
+  flags?: DataTargetFlags;
+  /**
+   * syncRunId: Optional ISO timestamp identifying the current sync run
+   * Used by mock target for tracking which run last modified a person
+   */
+  syncRunId?: string;
+  /**
+   * personRecordProcessor: Optional per-person async hook invoked once per record encountered
+   * during mapping (success or failure) regardless of whether the sync itself ultimately
+   * succeeds. Only runs if provided (dependency injection - no-op otherwise).
+   */
+  personRecordProcessor?: PersonRecordProcessor;
 };
 
 /**
@@ -53,15 +79,19 @@ class HuronPersonIntegration {
   private bulkReset: boolean;
   private trustPreviousStorage: boolean;
   private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>;
-  private errorEventProcessor?: TargetApiErrorEventProcessor;
   private retryStrategy?: ApiRetryStrategy;
   private cleanupPreviousData?: boolean;
   private ignoreRemovals: boolean;
+  private flags?: DataTargetFlags;
+  private syncRunId?: string;
+  private personRecordProcessor?: PersonRecordProcessor;
+  private errorEventProcessor?: TargetApiErrorEventProcessor;
 
   constructor(params: HuronPersonIntegrationParams) {
     const { 
       configPath, cache, config, staticMapUsage, bulkReset = false, trustPreviousStorage = true, errorEventProcessor, 
-      retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false
+      retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false,
+      flags, syncRunId, personRecordProcessor
     } = params;
 
     console.log(`⚙️  HuronPersonIntegration params: ${JSON.stringify({
@@ -74,7 +104,9 @@ class HuronPersonIntegration {
       lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided',
       ignoreRemovals,
       retryStrategy: !!retryStrategy ? retryStrategy : 'not provided',
-      cleanupPreviousData: !!cleanupPreviousData ? cleanupPreviousData : 'not provided'
+      cleanupPreviousData: !!cleanupPreviousData ? cleanupPreviousData : 'not provided',
+      flags: flags ? JSON.stringify(flags) : 'not provided',
+      syncRunId: syncRunId || 'not provided'
     })}`);
     
     this.staticMapUsage = staticMapUsage;
@@ -85,6 +117,9 @@ class HuronPersonIntegration {
     this.retryStrategy = retryStrategy;
     this.cleanupPreviousData = cleanupPreviousData;
     this.ignoreRemovals = ignoreRemovals;
+    this.flags = flags;
+    this.syncRunId = syncRunId;
+    this.personRecordProcessor = personRecordProcessor;
     
     // Use provided config or load from environment/filesystem
     if (config) {
@@ -119,6 +154,9 @@ class HuronPersonIntegration {
    * @returns IntegrationResult with processing statistics
    */
   async run(taskName?: string, chunkId?: string): Promise<IntegrationResult> {
+    // Hoisted so the finally block below can still reach them if execute() throws
+    let dataMapper: DataMapper | undefined;
+    let timer: Timer | undefined;
     try {
       const { config, config: { 
         dataSource: { people: { fieldsOfInterest } = {} } = {},
@@ -137,14 +175,14 @@ class HuronPersonIntegration {
         console.log(`Chunk ID: ${chunkId}`);
       }
       
-      const timer = new Timer();
+      timer = new Timer();
       timer.start();
 
       // Create integration components with currentTerms
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
         errorEventProcessor, bulkReset, trustPreviousStorage, ignoreRemovals,
-        lookupPersonInTargetSystemCache, cleanupPreviousData
+        lookupPersonInTargetSystemCache, cleanupPreviousData, flags
       } = this;
 
       // Ensure personDeleteType ALWAYS reflects the Huron soft-delete requirement
@@ -157,20 +195,32 @@ class HuronPersonIntegration {
         personDeleteType = SOFT;
       }
 
-      const dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
+      dataMapper = await getDataMapper(config, { orgMap, stateMap, countryMap });
 
       let responseFilter: ResponseProcessor | undefined;
       if (fieldsOfInterest) {
         responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest });
       }
       let dataSource: DataSource = getDataSource(config, responseFilter, this.retryStrategy) as DataSource;
-      const dataTarget = new HuronPersonDataTarget({ config, cache: config.cache as any, errorEventProcessor });
       
-      // JWT Safeguard: Ensure valid token before any data operations
+      // Use DataTargetFactory to support mock target for testing
+      const targetFlags = this.flags || {};
+      const targetFactory = new DataTargetFactory({
+        config,
+        flags: targetFlags,
+        cache: config.cache as any,
+        errorEventProcessor,
+        syncRunId: this.syncRunId
+      });
+      const dataTarget = targetFactory.create();
+      
+      // JWT Safeguard: Ensure valid token before any data operations (only for real target)
       // This guarantees that we have a JWT token acquired and cached before we start processing
-      console.log('[SyncPeople] Acquiring JWT token for data target API...');
-      await dataTarget.ensureValidToken();
-      console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
+      if (dataTarget instanceof HuronPersonDataTarget) {
+        console.log('[SyncPeople] Acquiring JWT token for data target API...');
+        await dataTarget.ensureValidToken();
+        console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
+      }
       
       // Calculate effective bulkReset: use upsert (cache-based lookup) if bulkReset is true OR if trustPreviousStorage is false
       const effectiveBulkReset = bulkReset || !trustPreviousStorage;
@@ -180,7 +230,8 @@ class HuronPersonIntegration {
         bulkReset: effectiveBulkReset,
         trustPreviousStorage,
         lookupPersonInTargetSystemCache,
-        ignoreRemovals
+        ignoreRemovals,
+        flags
       });
 
       const fieldFilterParms = {
@@ -211,13 +262,30 @@ class HuronPersonIntegration {
         result.totalProcessed += mappingErrorCount;
       }
 
-      timer.stop();
-      timer.logElapsed(`✓ ${taskName} completed`);
-      
       return result;
     } catch (error) {
       console.error(`✗ ${taskName} failed:`, error);
       throw error;
+    } finally {
+      // Custom per-person async processing (dependency injection - only runs if provided).
+      // Runs regardless of per-record mapping outcome or overall sync success/failure.
+      if (this.personRecordProcessor && dataMapper) {
+        console.log(`Running custom per-person processor over ${dataMapper.mappedPersonRecords.length} record(s)...`);
+        for (const { raw, mapped, error } of dataMapper.mappedPersonRecords) {
+          try {
+            await this.personRecordProcessor({ raw, mapped, error });
+          } catch (processorError) {
+            // Don't fail the entire sync just because a custom side-channel operation failed
+            console.error('Custom person record processor failed for a record:', processorError);
+          }
+        }
+      }
+
+      // Stopped here (not the try block) so elapsed time also covers the processor loop above
+      if (timer) {
+        timer.stop();
+        timer.logElapsed(`✓ ${taskName} completed`);
+      }
     }
   }
 
@@ -305,5 +373,5 @@ if (require.main === module) {
   main();
 }
 
-export { HuronPersonIntegration, HuronPersonIntegrationParams };
+export { HuronPersonIntegration, HuronPersonIntegrationParams, PersonRecordProcessor };
 

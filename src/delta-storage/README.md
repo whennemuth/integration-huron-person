@@ -83,7 +83,7 @@ flowchart TB
 npx ts-node src/delta-storage/HashStorageReset.ts
 ```
 
-**Required Environment Variables** (prefixed with `HASH_STORAGE_RESET_`):
+**Required Environment Variables** (prefixed with `HASH_STORAGE_RESET_S3_`):
 - `INTEGRATED_DELTA_CLIENT_ID` - Delta storage client identifier
 - `DELTA_STORAGE_BUCKET` - S3 bucket for delta storage
 - `HURON_PERSON_SOURCE_ID` or `HURON_PERSON_HRN` - Person identifier (BUID or HRN)
@@ -93,10 +93,10 @@ npx ts-node src/delta-storage/HashStorageReset.ts
 
 **Example .env Configuration**:
 ```env
-HASH_STORAGE_RESET_HURON_PERSON_SOURCE_ID=U01733060
-HASH_STORAGE_RESET_HURON_PERSON_CONFIG_PATH=
-HASH_STORAGE_RESET_INTEGRATED_DELTA_CLIENT_ID=delta-storage
-HASH_STORAGE_RESET_DELTA_STORAGE_BUCKET=huron-person-chunks-staging
+HASH_STORAGE_RESET_S3_HURON_PERSON_SOURCE_ID=U01733060
+HASH_STORAGE_RESET_S3_HURON_PERSON_CONFIG_PATH=
+HASH_STORAGE_RESET_S3_INTEGRATED_DELTA_CLIENT_ID=delta-storage
+HASH_STORAGE_RESET_S3_DELTA_STORAGE_BUCKET=huron-person-chunks-staging
 ```
 
 ---
@@ -251,9 +251,9 @@ Both utilities include test harnesses that can be run directly:
 
 ```bash
 # Test single person hash reset
-HASH_STORAGE_RESET_HURON_PERSON_SOURCE_ID=U01733060 \
-HASH_STORAGE_RESET_INTEGRATED_DELTA_CLIENT_ID=delta-storage \
-HASH_STORAGE_RESET_DELTA_STORAGE_BUCKET=test-bucket \
+HASH_STORAGE_RESET_S3_HURON_PERSON_SOURCE_ID=U01733060 \
+HASH_STORAGE_RESET_S3_INTEGRATED_DELTA_CLIENT_ID=delta-storage \
+HASH_STORAGE_RESET_S3_DELTA_STORAGE_BUCKET=test-bucket \
 npx ts-node src/delta-storage/HashStorageReset.ts
 
 # Test all people hash reset (use test environment!)

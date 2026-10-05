@@ -1,174 +1,71 @@
 # integration-huron-person/src/data-mapper: Data Transformation Patterns
 
 ## Purpose
-Implements field-level data transformation and validation for person records. Converts source data format to target format.
+Converts raw BU CDM person records into the Huron target API's field format
+(`integration-core` `Input`/`FieldSet` shape), applying field renaming, type
+conversion, organization/state/country HRN resolution, and validation.
 
-## Harnesses (5 total)
+## Core Class: DataMapper.ts
 
-### 1. DataMapper (Base)
-**Purpose**: Foundation data mapping with field transformations
+`DataMapper` implements `CoreDataMapper` (`integration-core`), whose `map()`
+method is **contractually synchronous** (`(rawData, crudOperation?) => Input`).
+This constrains the whole file: no real async work can happen inside
+`map()`/`getMappedData()` without breaking that interface for every consumer.
 
-**Environment Prefix**: DATA_MAPPER
+**Entry points**:
+- `map(rawData, crudOperation?)` - implements the core interface, delegates to `getMappedData()`
+- `getMappedData({ rawData, personHrn?, crudOperation? })` - the actual per-person
+  mapping loop (`rawData.map(person => { try { ... } catch { ... } })`)
 
-**Location**: `DataMapper.ts`
+**Per-person collaborators** (called once per record inside `getMappedData()`'s loop):
+- `NameMapper` - resolves first/middle/last name
+- `UserIdMapper` - resolves userId (varies by CrudOperation)
+- `EmailMapper` - resolves email
+- `AddressMapper` - resolves address line/city/state/postal/country (uses `stateMappings`/`countryMappings`)
+- `OrgMapper` - resolves organization/employer/secondaryUnit/additionalUnit assignments and `skipReason` (uses `currentTerms`)
+- `TitleMapper` - resolves title (depends on `orgAssignments.personType`)
 
-**Operations**:
-- Field name translation (source → target format)
-- Type conversion (string → date, etc.)
-- Value normalization
-- Conditional logic
+**Status/introspection getters** (read the state left behind by the most recent `getMappedData()` call):
+- `criticalValidationErrorMessage` - first critical validation failure encountered in the batch (missing personid/name/organization, unresolvable organization HRN). Read externally by `SyncPerson.ts` to bail out of a single-person sync.
+- `infoValidationErrorMessage` - first non-critical (info-level) issue, e.g. unresolved secondaryUnit/additionalUnit HRN. Also read by `SyncPerson.ts`'s `getMappingError()`.
+- `getMappingErrorCount()` - count of records that threw during mapping and were filtered out of the returned `Input` (marked with `__mappingError`, never sent to target)
+- `mappedPersonRecords: PersonRecordPair[]` - `{raw, mapped?, error?}` entries for **every** record encountered (successfully mapped ones get `mapped`, failed ones get `error` instead), reset on every `getMappedData()`/`map()` call. Enables callers to run custom per-person async logic post-mapping regardless of per-record outcome (see `personRecordProcessor` in the root `CLAUDE.md`) without needing `map()` itself to be async.
 
-### 2. DataMapperCountry
-**Purpose**: Country code/name mapping
+**`_fieldDefinitions`**: the target field schema (`id`, `sourceIdentifier`,
+`firstName`/`lastName`, `organization`, `contactInformation`, `roles`,
+`__arrayFieldOperations`, etc.) - see root `CLAUDE.md`'s `__arrayFieldOperations`
+Real Example for the append-vs-replace semantics of that special field.
 
-**Environment Prefix**: DATA_MAPPER_COUNTRY
+## Other modules in this directory
+- `DataMapperCountry.ts` / `DataMapperState.ts` - forward/reverse lookup maps (ISO country codes, US state abbreviations) loaded once via `getDataMapperMaps()` and shared across a whole sync
+- `DataMapperOrg.ts` - organization/employer/secondaryUnit/additionalUnit assignment logic, semester/current-terms filtering
+- `DataMapperAddressSorter.ts` / `DataMapperDateSorter.ts` - deterministic ordering helpers for arrays with multiple candidate entries (addresses, dated records)
+- `DataMapperHeuristics.ts` - shared heuristic helpers used across multiple mappers
+- `FieldFilter.ts` - post-mapping field inclusion/exclusion, applied via `EndToEnd`'s `fieldFilter` callback (see `SyncPeople.ts`)
+- `MappingValidator.ts` - field-level validation
+- `ReverseDataMapper.ts` - target → source direction mapping (used where the pipeline needs to go the other way)
+- `csv/` - CSV-driven mapping configuration/data
 
-**Location**: `DataMapperCountry.ts`
+## Architecture History: DataMapOne.ts (removed)
+A short-lived `DataMapOne.ts` module attempted to extract the per-person body of
+`getMappedData()`'s loop into a separately-callable, `Promise.all`-driven async
+function (to support per-person async side effects). It was deleted after
+review surfaced two bugs (see root `CLAUDE.md`'s Real Examples: discarded
+`removeEmptyValues()` result, and an unawaited `Promise.all` that always
+produced empty results) and a cleaner alternative was adopted instead: the
+`mappedPersonRecords` getter above, combined with `personRecordProcessor`
+dependency injection at the `HuronPersonIntegration` orchestration layer
+(`SyncPeople.ts`), where async work is natural and the synchronous `map()`
+interface never has to be violated.
 
-**Mapping**:
-- ISO 3166-1 country codes
-- Country names
-- Locale handling
-
-### 3. DataMapperOrganization
-**Purpose**: Organizational unit mapping
-
-**Environment Prefix**: DATA_MAPPER_ORGANIZATION
-
-**Location**: `DataMapperOrganization.ts`
-
-**Mapping**:
-- Dept/college hierarchy
-- Cost centers
-- Reporting relationships
-
-### 4. DataMapperState
-**Purpose**: US state abbreviation/full name mapping
-
-**Environment Prefix**: DATA_MAPPER_STATE
-
-**Location**: `DataMapperState.ts`
-
-### 5. FieldFilter
-**Purpose**: Include/exclude fields based on configuration
-
-**Environment Prefix**: FIELD_FILTER
-
-**Location**: `FieldFilter.ts`
-
-**Operations**:
-- Whitelist fields (include only these)
-- Blacklist fields (exclude these)
-- Conditional inclusion (include if matches criteria)
-
-## Mapping Configuration
-
-### Source Format (Huron IRB)
-```json
-{
-  "person_id": "P123456",
-  "person_name": "Alice Smith",
-  "country_code": "USA",
-  "state_code": "MA",
-  "org_name": "College of Arts and Sciences"
-}
-```
-
-### Target Format (HRS)
-```json
-{
-  "id": "P123456",
-  "name": "Alice Smith",
-  "country": "United States",
-  "state": "Massachusetts",
-  "organization": "CAS"
-}
-```
-
-### Mapper Implementation
-
-```typescript
-export class DataMapper {
-  private config: MappingConfig;
-
-  constructor(config: MappingConfig) {
-    this.config = config;
-  }
-
-  map(sourcePerson: SourcePerson): TargetPerson {
-    const mapped = {
-      // Field transformation
-      id: sourcePerson.person_id,
-      name: this.normalizePersonName(sourcePerson.person_name),
-      
-      // Country mapping
-      country: this.countryMapper.map(sourcePerson.country_code),
-      
-      // State mapping
-      state: this.stateMapper.map(sourcePerson.state_code),
-      
-      // Organization mapping
-      organization: this.orgMapper.map(sourcePerson.org_name),
-      
-      // Conditional fields
-      ...(sourcePerson.email && { email: sourcePerson.email })
-    };
-    
-    // Apply field filter
-    return this.fieldFilter.filter(mapped);
-  }
-  
-  private normalizePersonName(name: string): string {
-    return name.trim().replace(/\s+/g, ' ');
-  }
-}
-```
-
-## Adding New Mappings
-
-1. **Create new mapper file** in this directory
-2. **Extend Mapper base class** if applicable
-3. **Add test harness** with require.main block
-4. **Add environment variables** to .env
-5. **Document mapping logic** in file
-
-## Testing Mappers
+## Testing
+`test/data-mapper/DataMapper.test.ts` covers: basic field mapping, critical/info
+validation messages, `mappedPersonRecords` population and reset-between-calls,
+multi-person batches, secondary/additional unit HRN resolution, and
+`StaticMapUsage`/dynamic-lookup fallback behavior.
 
 ```bash
-# Test field mapping
-npx ts-node src/data-mapper/DataMapper.ts
-
-# Test country mapping
-npx ts-node src/data-mapper/DataMapperCountry.ts
-
-# Test field filtering
-npx ts-node src/data-mapper/FieldFilter.ts
+npx jest test/data-mapper/DataMapper.test.ts
 ```
 
-## Common Mapping Patterns
-
-### Simple Field Rename
-```typescript
-const target = { id: source.person_id };
-```
-
-### Lookup Table
-```typescript
-const countryMap = { 'USA': 'United States', 'CAN': 'Canada' };
-const target = { country: countryMap[source.country_code] };
-```
-
-### Conditional Transformation
-```typescript
-const target = {
-  status: source.is_active ? 'active' : 'inactive'
-};
-```
-
-### Format Conversion
-```typescript
-const target = {
-  birth_date: new Date(source.birth_date).toISOString()
-};
-```
 

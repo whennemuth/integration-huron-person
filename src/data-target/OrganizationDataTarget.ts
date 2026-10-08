@@ -3,6 +3,7 @@ import {
   BatchStatus,
   CrudOperation,
   DataTarget,
+  FieldSet,
   PushAllParms,
   PushOneParms,
   SinglePushResult,
@@ -17,6 +18,7 @@ import { ReverseDataMapper } from '../data-mapper/ReverseDataMapper';
 import { deepClone, getLocalConfig, setFileLogging } from '../Utils';
 import { ApiClientForJWT, EndpointConfigForJWT, TargetApiErrorEventProcessor } from './ApiClientForJWT';
 import { HuronOrganization } from './crud/Organization';
+import { ReadOrganization } from './crud/ReadOrganization';
 import { DeleteOrganizationResult, HuronOrganizationDataTargetDelete } from './OrganizationDataTargetDelete';
 import { HuronOrganizationDataTargetUpdate, UpdateOrganizationResult } from './OrganizationDataTargetUpdate';
 import { HuronSchemaBroker, Method, SchemaPath } from './SchemaBroker';
@@ -35,6 +37,19 @@ export interface OrganizationPushRequest {
  */
 export interface OrganizationPushResponse {
   hrn: string;
+}
+
+/** What upsertOne does when the organization already exists in the target system */
+export type OnExistingOrganization = 'update' | 'skip';
+
+export type UpsertOneParms = {
+  data: FieldSet;
+  /** Default 'update' */
+  onExisting?: OnExistingOrganization;
+  /** HRN of the organization in the target system, if the caller already knows it */
+  existingHrn?: string;
+  /** Caller has already determined the organization does not exist, so don't look it up */
+  skipLookup?: boolean;
 }
 
 [
@@ -68,8 +83,6 @@ export interface OrganizationPushResponse {
  *  - ORGANIZATION_DATA_TARGET_CACHE_PATH=.
  * 
  * Then run in launch configuration.
- * 
- * TODO: Introduce "upsert" capability.
  */
 export class HuronOrganizationDataTarget implements DataTarget {
   public readonly name = 'Huron Organization Data Target';
@@ -137,6 +150,7 @@ export class HuronOrganizationDataTarget implements DataTarget {
             sourceIdentifier: organizationRequest.data?.sourceIdentifier 
           }});
           response = await this.apiClient.post<OrganizationPushResponse>(endpoint, organizationRequest.data);
+          _hrn = response?.data?.hrn;
           retval = { response };          
         }
 
@@ -212,6 +226,60 @@ export class HuronOrganizationDataTarget implements DataTarget {
         crud
       };
     }
+  }
+
+  /**
+   * Create the organization if it does not exist in the target system (matched by id), otherwise
+   * update it or leave it alone depending on onExisting. A skipped result has skipReason set.
+   */
+  async upsertOne(params: UpsertOneParms): Promise<SinglePushResult> {
+    const { data, onExisting = 'update', existingHrn, skipLookup = false } = params;
+    const fieldValuesWithoutHrn = data.fieldValues.filter(fv => !('hrn' in fv));
+    let hrn = existingHrn;
+
+    if( ! hrn && ! skipLookup) {
+      try {
+        hrn = await this.lookupHrn(data);
+      }
+      catch (error) {
+        return {
+          status: Status.FAILURE,
+          message: `Failed to look up organization: ${error instanceof Error ? error.message : String(error)}`,
+          timestamp: new Date(),
+          primaryKey: data.fieldValues.filter((fv: any) => 'id' in fv),
+        };
+      }
+    }
+
+    if(hrn) {
+      if(onExisting === 'skip') {
+        return {
+          status: Status.SUCCESS,
+          message: `Organization already exists: ${hrn}`,
+          timestamp: new Date(),
+          primaryKey: [{ hrn }],
+          skipReason: 'Organization already exists'
+        };
+      }
+      return await this.pushOne({
+        data: { ...data, fieldValues: [...fieldValuesWithoutHrn, { hrn }] },
+        crud: CrudOperation.UPDATE
+      });
+    }
+
+    return await this.pushOne({
+      data: { ...data, fieldValues: fieldValuesWithoutHrn },
+      crud: CrudOperation.CREATE
+    });
+  }
+
+  private async lookupHrn(data: FieldSet): Promise<string | undefined> {
+    const id = data.fieldValues.find(fv => 'id' in fv)?.id;
+    if( ! id) {
+      return undefined;
+    }
+    const found = await new ReadOrganization(this.config).readOrganizationById(`${id}`);
+    return found?.[0]?.hrn;
   }
 
   /**
@@ -402,7 +470,7 @@ async function main() {
     CACHE_PATH
   } = process.env;
   
-  let task = TASK as 'create' | 'update' | 'delete';
+  let task = TASK as 'create' | 'update' | 'delete' | 'upsert';
   let json: string | undefined;
 
   if(JSON_VALUE) {
@@ -419,7 +487,7 @@ async function main() {
   }
 
   if(!task) {
-    throw new Error('No TASK provided. Set TASK environment variable to one of: create, update, delete');
+    throw new Error('No TASK provided. Set TASK environment variable to one of: create, update, delete, upsert');
   }
 
   // Parse the JSON data
@@ -510,6 +578,17 @@ async function main() {
           crud: CrudOperation.UPDATE,
           data: input.fieldSets[0]
         });
+        results.push(result);
+        console.log(`Result: ${result.status} - ${result.message}`);
+      }
+      break;
+
+    case 'upsert':
+      console.log('\n=== UPSERT OPERATION ===');
+      for (const org of orgs) {
+        console.log(`\nUpserting organization: ${org.id || org.sourceIdentifier || org.name || 'unknown'}`);
+        const input = mapper.map([org], CrudOperation.CREATE);
+        const result = await dataTarget.upsertOne({ data: input.fieldSets[0] });
         results.push(result);
         console.log(`Result: ${result.status} - ${result.message}`);
       }

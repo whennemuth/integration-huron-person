@@ -279,6 +279,40 @@ if `stopAtFirstPartial`, `isOffsetPastKnownEnd` discard, or non-batchable single
 even when that last batch was a partial. Consumers in `integration-huron-person-fargate`
 (`BigJsonFetch` -> `partialChunkEncountered`) inherit this semantics.
 
+## Organization Bulk Load and Upsert
+
+`src/data-target/OrganizationBulkLoad.ts` loads a json dump of all orgs from one Huron environment
+(`ReadOrganizations.ts`, task `pages`, which writes the raw org objects to `OUTPUT_FILE_PATH`) into
+another. Orgs are loaded level by level (roots, children, grandchildren...) because a child's
+`parent` must be the **target** hrn of its parent - hrns of the same org differ between
+environments. A parent is found by `parent.id` (fallback: `parent.hrn` matching a dump org).
+- Payload (`toFieldSet`): the api schema has `additionalProperties: false`, so `hrn`, `dateCreated`,
+  `dateModified`, `links` and all nulls are dropped, and hrn refs (category/functions/tags/state/
+  country) are reduced to `{hrn}`. The api has no lists endpoint, so list hrns can't be validated
+  up front - the load logs the distinct ones, and `LIST_HRN_OVERRIDES_FILE_PATH` remaps them.
+- `ON_EXISTING=update|skip` decides what happens to orgs already in the target (matched by `id`;
+  all target orgs are read once up front, not looked up per org).
+- Orphans (parent not in the dump) load as top-level orgs. If an org fails, its descendants are
+  skipped and reported (not loaded as roots, which would silently misplace them).
+- The `id -> target hrn` map is written to `HRN_MAP_FILE_PATH` after every level and in a `finally`,
+  and read back on start, so an interrupted load resumes without re-pushing. `DRY_RUN=true` makes no
+  target calls and uses placeholder hrns. Delete the map file to start over.
+- Auto-retry: after the first pass, if orgs failed (the target api returns transient 500s such as
+  `Endpoint request timed out`) or were skipped under a failed ancestor, `load()` waits
+  (`RETRY_BASE_DELAY_MS`, doubling per pass, capped at 5 minutes) and reruns the same level loop over
+  orgs not yet in the hrn map, up to `MAX_RETRY_PASSES` (default 5, 0 disables; never on dry run).
+  Ancestors go first by construction (level order + the `blocked` map). Each pass prints its own
+  "BULK LOAD (retry N) SUMMARY", then an overall one. Retry passes never use `skipLookup`: a create
+  that timed out at the gateway may have been applied, and the up-front existing-orgs list is stale,
+  so a blind POST would hit a duplicate - the lookup by id finds it and treats it as loaded. Dump
+  problems (duplicate ids, parent cycles) are not retried. Implemented in the loader rather than via
+  `ApiRetryStrategy` because `ApiErrorRetryStrategy.ts` lives in integration-huron-person-fargate
+  (which depends on this package) and `pushOne` discards the HTTP status.
+
+`HuronOrganizationDataTarget.upsertOne()` (create, or update/skip if the org exists) is implemented
+there rather than as a `CrudOperation.UPSERT` to avoid a change to `integration-core`. Note
+`pushOne` CREATE previously dropped the new org's hrn from its result; it now returns it.
+
 ## Patterns to Follow
 
 ### Adding a New Harness

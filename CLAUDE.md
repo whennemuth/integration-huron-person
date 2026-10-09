@@ -77,6 +77,8 @@ A bug existed in `MockPersonDataTarget.getPersonId()` (used to key records for t
 
 This was caught while adding `getPersonByBuid()` for mock-mode existence lookups, and fixed by adding `sourceIdentifier` as the first-checked field. The lesson: verify the actual field/property names a producer emits (e.g. via `grep_search` on the producing code) rather than assuming names based on similar-sounding conventions elsewhere in the codebase.
 
+(`MockPersonDataTarget`, `DataTargetFactory` and the `useMockTarget` flag have since been removed: the fargate pipeline's mock landscapes now point `dataTarget.endpointConfig.baseUrl` at a target simulator - an HTTP stand-in for the Huron API - so this package always talks to the target through `HuronPersonDataTarget`. The lesson stands.)
+
 ### Real Example: infoValidationFailureMessage / infoValidationErrorMessage Naming Mismatch
 
 `DataMapper` originally exposed a getter/setter pair named `infoValidationFailureMessage`, while `SyncPerson.ts`'s `getMappingError()` destructured a differently-named property, `infoValidationErrorMessage`, off the same `dataMapper` instance:

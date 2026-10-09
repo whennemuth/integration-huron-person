@@ -7,8 +7,6 @@ import { getDataMapper } from "../../data-mapper/DataMapper";
 import { BasicCache } from "../../Cache";
 import { SinglePersonSync } from "../../SyncPerson";
 import { DeltaStrategyFactory } from "../DeltaStrategyFactory";
-import { MockPersonDataTarget } from "../../data-target/MockPersonDataTarget";
-import { DataTargetFlags } from "../../data-target/DataTargetFactory";
 
 /**
  * Delta strategy implementation for upsert operations. Unlike traditional delta strategies that
@@ -29,21 +27,15 @@ import { DataTargetFlags } from "../../data-target/DataTargetFactory";
  */
 export class UpsertDeltaStrategy implements DeltaStrategy {
   parms: DeltaStrategyParams;
-  private readPerson?: ReadPerson;
-  private mockTarget?: MockPersonDataTarget;
+  private readPerson: ReadPerson;
 
   constructor(
     private deltaStrategy: DeltaStrategy,
     private config: Config,
-    private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>, // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
-    private flags?: DataTargetFlags
+    private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any> // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
   ) {
     this.parms = deltaStrategy.parms;
-    if (flags?.useMockTarget) {
-      this.mockTarget = new MockPersonDataTarget({ config });
-    } else {
-      this.readPerson = new ReadPerson({ config });
-    }
+    this.readPerson = new ReadPerson({ config });
   }
 
   get storage(): DeltaStorage {
@@ -124,13 +116,9 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
       return undefined;
     }
 
-    if (this.mockTarget) {
-      return await this.mockTarget.getPersonByBuid(sourceIdentifier) as HuronPerson | undefined;
-    }
-
     try {
       // Query target system by sourceIdentifier
-      const results = await this.readPerson!.readPersonBySourceIdentifier(
+      const results = await this.readPerson.readPersonBySourceIdentifier(
         sourceIdentifier,
         ['hrn', 'id', 'sourceIdentifier'] // Only fetch minimal fields for existence check
       );

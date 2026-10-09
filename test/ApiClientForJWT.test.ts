@@ -159,12 +159,33 @@ describe('ApiClientForJWT', () => {
 
       it('should set correct token expiry for external tokens (60 minutes)', async () => {
         const client = new ApiClientForJWT(externalConfig);
-        
+
         // Trigger authentication
         await (client as any).ensureValidToken();
-        
+
         // Verify that authentication occurred and token was set
         expect(client.getCurrentToken()).toBe('mock-jwt-token-from-hrs');
+      });
+
+      it('should scope cached tokens to the target host, so one target\'s token is never sent to another', async () => {
+        const store = new Map<string, string>();
+        const sharedCache = {
+          get: (key: string) => store.get(key),
+          set: (key: string, value: string) => { store.set(key, value); },
+          delete: (key: string) => store.delete(key),
+        } as any;
+
+        await (new ApiClientForJWT(externalConfig, sharedCache) as any).ensureValidToken();
+        mockedAxios.get.mockResolvedValueOnce({ ...await mockedAxios.get.mock.results[0].value, data: 'token-from-simulator' });
+        const simulatorClient = new ApiClientForJWT({ ...externalConfig, baseUrl: 'https://abc.lambda-url.us-east-2.on.aws' }, sharedCache);
+        await (simulatorClient as any).ensureValidToken();
+
+        // The second target did not reuse the first target's cached token
+        expect(simulatorClient.getCurrentToken()).toBe('token-from-simulator');
+        expect([...store.keys()].sort()).toEqual([
+          `${ApiClientForJWT.JWT_EXTERNAL_TOKEN_CACHE_KEY}:abc.lambda-url.us-east-2.on.aws`,
+          `${ApiClientForJWT.JWT_EXTERNAL_TOKEN_CACHE_KEY}:test-api.example.com`,
+        ]);
       });
     });
   });

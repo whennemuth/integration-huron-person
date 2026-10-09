@@ -13,7 +13,6 @@ import {
   isS3Config
 } from 'integration-core';
 import { Config } from '../config/Config';
-import { DataTargetFlags } from '../data-target/DataTargetFactory';
 import { ChunkedDeltaStrategy } from './decorators/Chunked';
 import { IgnoreRemovalsDeltaStrategy } from './decorators/IgnoreRemovals';
 import { IntegratedDeltaClientIdDeltaStrategy } from './decorators/IntegratedDeltaClientId';
@@ -29,7 +28,6 @@ export interface CreateStrategyParams {
   bulkReset?: boolean;
   trustPreviousStorage?: boolean; // If false, forces UpsertDeltaStrategy even if bulkReset is false. Defaults to true (trusts previous storage).
   lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>; // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
-  flags?: DataTargetFlags; // Optional flags (e.g. useMockTarget) so UpsertDeltaStrategy's fallback lookup can target the mock system
 }
 
 /**
@@ -49,7 +47,7 @@ export class DeltaStrategyFactory {
    */
   static createStrategy(params: CreateStrategyParams): DeltaStrategy {
     const { 
-      config, chunkId, bulkReset = false, trustPreviousStorage = true, lookupPersonInTargetSystemCache, ignoreRemovals = false, flags
+      config, chunkId, bulkReset = false, trustPreviousStorage = true, lookupPersonInTargetSystemCache, ignoreRemovals = false
     } = params;
     const { storage } = config;
 
@@ -185,7 +183,7 @@ export class DeltaStrategyFactory {
     /** Wrap with UpsertDeltaStrategy if effective bulkReset is enabled (bulkReset=true OR trustPreviousStorage=false) */
     if (effectiveBulkReset) {
       console.log('🔄  Bulk reset mode enabled - wrapping strategy with UpsertDeltaStrategy');
-      deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache, flags);
+      deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
     }
 
     /**

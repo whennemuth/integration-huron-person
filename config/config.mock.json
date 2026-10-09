@@ -70,7 +70,7 @@
   },
   "preLoadedMaps": {
     "orgMap": false,
-    "stateMap": false,
-    "countryMap": false
+    "stateMap": true,
+    "countryMap": true
   }
 }

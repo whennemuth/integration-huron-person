@@ -53,6 +53,25 @@ export class ApiClientForJWT implements IApiClient {
   public static JWT_BASIC_TOKEN_CACHE_KEY = 'jwt-basic-token-cache';
   public static JWT_EXTERNAL_TOKEN_CACHE_KEY = 'jwt-external-token-cache';
 
+  /**
+   * Cache key for this client's JWT. Scoped to the target host as well as the auth method, so a
+   * token issued by one target (e.g. the real Huron API) is never presented to another (e.g. a
+   * mock landscape's target simulator) when both are used from the same process or cache file.
+   */
+  private get tokenCacheKey(): string {
+    const { authMethod, baseUrl } = this.endpointConfig;
+    const base = authMethod === 'basic'
+      ? ApiClientForJWT.JWT_BASIC_TOKEN_CACHE_KEY
+      : ApiClientForJWT.JWT_EXTERNAL_TOKEN_CACHE_KEY;
+    let host: string;
+    try {
+      host = new URL(baseUrl).host;
+    } catch {
+      host = `${baseUrl}`;
+    }
+    return `${base}:${host}`;
+  }
+
   constructor(private endpointConfig: EndpointConfigForJWT, private cache?:Cache<string,string>) {
     this.endpointConfig = endpointConfig;
     this.axiosInstance = axios.create({
@@ -129,9 +148,7 @@ export class ApiClientForJWT implements IApiClient {
             
             // Clear any cached token
             if (this.cache) {
-              const cacheKey = this.endpointConfig.authMethod === 'basic' 
-                ? ApiClientForJWT.JWT_BASIC_TOKEN_CACHE_KEY 
-                : ApiClientForJWT.JWT_EXTERNAL_TOKEN_CACHE_KEY;
+              const { tokenCacheKey: cacheKey } = this;
               this.cache.delete(cacheKey);
               console.log(`[ApiClientForJWT] Cleared cached token (key: ${cacheKey})`);
             }
@@ -253,13 +270,11 @@ export class ApiClientForJWT implements IApiClient {
   public async ensureValidToken(): Promise<void> {
     const now = Date.now();
     const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
-    const { endpointConfig: { authMethod }, decodeTokenExpiry } = this;
-    const { JWT_BASIC_TOKEN_CACHE_KEY, JWT_EXTERNAL_TOKEN_CACHE_KEY } = ApiClientForJWT;
+    const { decodeTokenExpiry, tokenCacheKey } = this;
 
     // Check cache first if caching is enabled
     if (this.cache) {
-      const cacheKey = authMethod === 'basic' ? JWT_BASIC_TOKEN_CACHE_KEY : JWT_EXTERNAL_TOKEN_CACHE_KEY;
-      const cachedJwt = this.cache.get(cacheKey);
+      const cachedJwt = this.cache.get(tokenCacheKey);
       const cachedJwtExpiry = cachedJwt ? decodeTokenExpiry(cachedJwt) : 0;
       if (cachedJwt && now < (cachedJwtExpiry - bufferTime)) {
         console.log(`Using cached JWT token with ${Math.round((cachedJwtExpiry - now) / 60000)} minutes until expiry`);
@@ -283,8 +298,7 @@ export class ApiClientForJWT implements IApiClient {
       // Cache the new token if caching is enabled
       if (this.jwtToken && this.cache) {
         console.log(`Caching new JWT token with ${expiryMinutes()} minutes until expiry`);
-        const cacheKey = authMethod === 'basic' ? JWT_BASIC_TOKEN_CACHE_KEY : JWT_EXTERNAL_TOKEN_CACHE_KEY;
-        this.cache.set(cacheKey, this.jwtToken);
+        this.cache.set(tokenCacheKey, this.jwtToken);
       }
       else {
         console.log(`Caching disabled.Acquired new JWT token with ${expiryMinutes()} minutes until expiry`);

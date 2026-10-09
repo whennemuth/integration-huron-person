@@ -8,7 +8,6 @@ import { FieldFilter, FieldFilterParams } from './data-mapper/FieldFilter';
 import { getDataSource } from './data-source/DataSource';
 import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
-import { DataTargetFactory, DataTargetFlags } from './data-target/DataTargetFactory';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
@@ -51,16 +50,6 @@ type HuronPersonIntegrationParams = {
   cleanupPreviousData?: boolean; // Optional flag to control whether previous data should be cleaned up after update
   ignoreRemovals?: boolean; // Optional flag to control whether person removals should be ignored in delta computation (used for chunked processing where removals are determined by merger)
   /**
-   * flags: Optional flags for controlling target behavior (e.g., useMockTarget for testing)
-   * Typically read from chunk metadata FLAGS record in processor context
-   */
-  flags?: DataTargetFlags;
-  /**
-   * syncRunId: Optional ISO timestamp identifying the current sync run
-   * Used by mock target for tracking which run last modified a person
-   */
-  syncRunId?: string;
-  /**
    * personRecordProcessor: Optional per-person async hook invoked once per record encountered
    * during mapping (success or failure) regardless of whether the sync itself ultimately
    * succeeds. Only runs if provided (dependency injection - no-op otherwise).
@@ -82,8 +71,6 @@ class HuronPersonIntegration {
   private retryStrategy?: ApiRetryStrategy;
   private cleanupPreviousData?: boolean;
   private ignoreRemovals: boolean;
-  private flags?: DataTargetFlags;
-  private syncRunId?: string;
   private personRecordProcessor?: PersonRecordProcessor;
   private errorEventProcessor?: TargetApiErrorEventProcessor;
 
@@ -91,7 +78,7 @@ class HuronPersonIntegration {
     const { 
       configPath, cache, config, staticMapUsage, bulkReset = false, trustPreviousStorage = true, errorEventProcessor, 
       retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false,
-      flags, syncRunId, personRecordProcessor
+      personRecordProcessor
     } = params;
 
     console.log(`⚙️  HuronPersonIntegration params: ${JSON.stringify({
@@ -104,9 +91,7 @@ class HuronPersonIntegration {
       lookupPersonInTargetSystemCache: !!lookupPersonInTargetSystemCache ? 'provided' : 'not provided',
       ignoreRemovals,
       retryStrategy: !!retryStrategy ? retryStrategy : 'not provided',
-      cleanupPreviousData: !!cleanupPreviousData ? cleanupPreviousData : 'not provided',
-      flags: flags ? JSON.stringify(flags) : 'not provided',
-      syncRunId: syncRunId || 'not provided'
+      cleanupPreviousData: !!cleanupPreviousData ? cleanupPreviousData : 'not provided'
     })}`);
     
     this.staticMapUsage = staticMapUsage;
@@ -117,8 +102,6 @@ class HuronPersonIntegration {
     this.retryStrategy = retryStrategy;
     this.cleanupPreviousData = cleanupPreviousData;
     this.ignoreRemovals = ignoreRemovals;
-    this.flags = flags;
-    this.syncRunId = syncRunId;
     this.personRecordProcessor = personRecordProcessor;
     
     // Use provided config or load from environment/filesystem
@@ -182,7 +165,7 @@ class HuronPersonIntegration {
       const { 
         staticMapUsage: { countryMap=false, orgMap=false, stateMap=false } = {},
         errorEventProcessor, bulkReset, trustPreviousStorage, ignoreRemovals,
-        lookupPersonInTargetSystemCache, cleanupPreviousData, flags
+        lookupPersonInTargetSystemCache, cleanupPreviousData
       } = this;
 
       // Ensure personDeleteType ALWAYS reflects the Huron soft-delete requirement
@@ -203,24 +186,17 @@ class HuronPersonIntegration {
       }
       let dataSource: DataSource = getDataSource(config, responseFilter, this.retryStrategy) as DataSource;
       
-      // Use DataTargetFactory to support mock target for testing
-      const targetFlags = this.flags || {};
-      const targetFactory = new DataTargetFactory({
+      const dataTarget = new HuronPersonDataTarget({
         config,
-        flags: targetFlags,
         cache: config.cache as any,
-        errorEventProcessor,
-        syncRunId: this.syncRunId
+        errorEventProcessor
       });
-      const dataTarget = targetFactory.create();
       
-      // JWT Safeguard: Ensure valid token before any data operations (only for real target)
+      // JWT Safeguard: Ensure valid token before any data operations
       // This guarantees that we have a JWT token acquired and cached before we start processing
-      if (dataTarget instanceof HuronPersonDataTarget) {
-        console.log('[SyncPeople] Acquiring JWT token for data target API...');
-        await dataTarget.ensureValidToken();
-        console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
-      }
+      console.log('[SyncPeople] Acquiring JWT token for data target API...');
+      await dataTarget.ensureValidToken();
+      console.log(`[SyncPeople] JWT token acquired and ready. Expires in ${dataTarget.getTokenExpiryMinutes()} minutes`);
       
       // Calculate effective bulkReset: use upsert (cache-based lookup) if bulkReset is true OR if trustPreviousStorage is false
       const effectiveBulkReset = bulkReset || !trustPreviousStorage;
@@ -230,8 +206,7 @@ class HuronPersonIntegration {
         bulkReset: effectiveBulkReset,
         trustPreviousStorage,
         lookupPersonInTargetSystemCache,
-        ignoreRemovals,
-        flags
+        ignoreRemovals
       });
 
       const fieldFilterParms = {

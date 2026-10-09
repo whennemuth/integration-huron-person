@@ -213,18 +213,15 @@ async function main() {
   const task = process.env.HURON_ORGS_TASK;
 
   const outputAsJson = (orgs: HuronOrganization[], asMap: boolean = false) => {
-    const outputFileDir = `${OUTPUT_FILE_PATH}`.split('/').slice(0, -1).join('/');
     const fs = require('fs');
 
     const outputOrgs = asMap ? 
       orgs.map(org => ( { [org.id]: org.hrn } )) :
       orgs;
 
-    const outputFileName = asMap ? 
-      `read-all-organizations-map-${LANDSCAPE || 'default'}.json` : 
-      `read-all-organizations-${LANDSCAPE || 'default'}.json`;
+    const outputFilePath = OUTPUT_FILE_PATH || `data/read-all-organizations${asMap ? '-map' : ''}-${LANDSCAPE || 'default'}.json`;
 
-    fs.writeFileSync(`${outputFileDir}/${outputFileName}`, JSON.stringify(outputOrgs, null, 2));
+    fs.writeFileSync(outputFilePath, JSON.stringify(outputOrgs, null, 2));
   };
 
   try {
@@ -236,7 +233,7 @@ async function main() {
         console.log(`Found ${allOrganizations.length} organizations`);
 
         // Write all organizations out to a json file
-        outputAsJson(allOrganizations, true);
+        outputAsJson(allOrganizations, false);
 
         // Print all organization ids that are not numeric
         const nonNumericOrgs = allOrganizations.filter(org => isNaN(Number(org.id)));
@@ -294,8 +291,9 @@ if (require.main === module) {
     'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVarOrEmptyString);
 
+  // The 'pages' task writes json to OUTPUT_FILE_PATH, so console output must not be redirected there.
   const logFilePath = process.env.OUTPUT_FILE_PATH;
-  if (logFilePath) {
+  if (logFilePath && process.env.HURON_ORGS_TASK !== 'pages') {
     setFileLogging(logFilePath);
   }
 

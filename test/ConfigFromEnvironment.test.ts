@@ -68,6 +68,7 @@ describe('ConfigFromEnvironment', () => {
     delete process.env[ConfigFromEnvironment.ENV_VARS.CLIENT_ID];
     delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED];
     delete process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH];
+    Object.values(ConfigFromEnvironment.STORAGE_ENV_VARS).forEach(envVar => delete process.env[envVar]);
   });
 
   describe('getConfig', () => {
@@ -326,6 +327,54 @@ describe('ConfigFromEnvironment', () => {
         fail('Expected S3DataSourceConfig');
       }
       expect(result.dataSource?.person).toBeUndefined(); // Person should not be overridden
+    });
+  });
+
+  describe('storage overrides (opt-in)', () => {
+    const setDynamoEnv = () => {
+      process.env.PREVIOUS_STORAGE_TYPE = 'DynamoDB';
+      process.env.DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME = 'person-current-state';
+      process.env.DYNAMODB_PERSON_HISTORY_TABLE_NAME = 'person-history';
+      process.env.REGION = 'us-east-2';
+    };
+
+    it('ignores the storage variables unless the storage option is set', () => {
+      setDynamoEnv();
+      expect(new ConfigFromEnvironment(validConfig).getConfig().storage).toBeUndefined();
+    });
+
+    it('maps the storage variables into storage when the storage option is set', () => {
+      setDynamoEnv();
+      expect(new ConfigFromEnvironment(validConfig, { storage: true }).getConfig().storage).toEqual({
+        type: 'dynamodb',
+        config: {
+          personCurrentStateTableName: 'person-current-state',
+          personHistoryTableName: 'person-history',
+          region: 'us-east-2'
+        }
+      });
+    });
+
+    describe('getStorageOverrides', () => {
+      it('returns undefined when no storage variables are set', () => {
+        expect(ConfigFromEnvironment.getStorageOverrides()).toBeUndefined();
+      });
+
+      it('treats empty strings as unset', () => {
+        process.env.PREVIOUS_STORAGE_TYPE = '  ';
+        process.env.REGION = '';
+        expect(ConfigFromEnvironment.getStorageOverrides()).toBeUndefined();
+      });
+
+      it('omits the type when PREVIOUS_STORAGE_TYPE is not set', () => {
+        process.env.REGION = 'us-east-2';
+        expect(ConfigFromEnvironment.getStorageOverrides()).toEqual({ config: { region: 'us-east-2' } });
+      });
+
+      it('rejects an unknown storage type', () => {
+        process.env.PREVIOUS_STORAGE_TYPE = 'redis';
+        expect(() => ConfigFromEnvironment.getStorageOverrides()).toThrow('Invalid PREVIOUS_STORAGE_TYPE: redis');
+      });
     });
   });
 });

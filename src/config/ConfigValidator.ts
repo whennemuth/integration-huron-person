@@ -1,4 +1,4 @@
-import { FileConfig, DatabaseConfig, S3Config } from 'integration-core';
+import { FileConfig, DatabaseConfig, S3Config, DynamoDBConfig } from 'integration-core';
 import { Config, ExecutionMode } from './Config';
 
 /**
@@ -176,6 +176,15 @@ export class ConfigValidator {
         const s3Config = storage.config as S3Config;
         if (!s3Config.bucketName) {
           throw new Error('S3 storage requires bucketName configuration');
+        }
+        break;
+
+      case 'dynamodb':
+        const dynamoConfig = storage.config as DynamoDBConfig;
+        for (const field of ['region', 'personCurrentStateTableName', 'personHistoryTableName'] as const) {
+          if (!dynamoConfig[field]) {
+            throw new Error(`DynamoDB storage requires ${field} configuration`);
+          }
         }
         break;
 

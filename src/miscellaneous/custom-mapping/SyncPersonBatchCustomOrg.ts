@@ -180,7 +180,7 @@ async function _main({ config, innerMapper }: { config?: Config; innerMapper?: D
     const configManager = ConfigManager.getInstance();
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
     config = configManager.reset()
-      .fromEnvironment()
+      .fromEnvironment({ storage: true })
       .fromFileSystem(localConfigPath)
       .getConfig('person');
   }

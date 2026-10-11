@@ -1,4 +1,18 @@
+import { DynamoDBConfig } from 'integration-core';
 import { Config } from './Config';
+
+type StorageType = Config['storage']['type'];
+
+const STORAGE_TYPES: StorageType[] = ['file', 'database', 's3', 'dynamodb'];
+
+export type ConfigFromEnvironmentOptions = {
+  /**
+   * Also read the storage variables (STORAGE_ENV_VARS). Off by default: importing pipeline projects
+   * set these same variables on their tasks and resolve storage their own way, so reading them is
+   * opt-in for callers that want storage selected through the environment.
+   */
+  storage?: boolean;
+};
 
 /**
  * Configuration provider that reads configuration values from environment variables
@@ -38,10 +52,59 @@ export class ConfigFromEnvironment {
     CACHE_PATH: 'CACHE_PATH'
   } as const;
 
-  private baseConfig?: Config;
+  /**
+   * Storage environment variable names, read only when the storage option is set
+   * (same names as the pipeline task definitions of importing projects)
+   */
+  static readonly STORAGE_ENV_VARS = {
+    PREVIOUS_STORAGE_TYPE: 'PREVIOUS_STORAGE_TYPE',
+    DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME: 'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
+    DYNAMODB_PERSON_HISTORY_TABLE_NAME: 'DYNAMODB_PERSON_HISTORY_TABLE_NAME',
+    REGION: 'REGION'
+  } as const;
 
-  constructor(baseConfig?: Config) {
+  private baseConfig?: Config;
+  private options: ConfigFromEnvironmentOptions;
+
+  constructor(baseConfig?: Config, options: ConfigFromEnvironmentOptions = {}) {
     this.baseConfig = baseConfig;
+    this.options = options;
+  }
+
+  /**
+   * Storage settings from the STORAGE_ENV_VARS environment variables:
+   * - PREVIOUS_STORAGE_TYPE: storage.type (e.g. "dynamodb")
+   * - DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME, DYNAMODB_PERSON_HISTORY_TABLE_NAME, REGION:
+   *   DynamoDB storage settings
+   * Empty values count as unset.
+   *
+   * @returns undefined if none of the variables are set
+   * @throws if PREVIOUS_STORAGE_TYPE is not a known storage type
+   */
+  static getStorageOverrides(): { type?: StorageType, config: Partial<DynamoDBConfig> } | undefined {
+    const envValue = (key: string): string | undefined => {
+      const value = `${process.env[key] ?? ''}`.trim();
+      return value === '' ? undefined : value;
+    }
+    const { STORAGE_ENV_VARS: VARS } = ConfigFromEnvironment;
+
+    const type = envValue(VARS.PREVIOUS_STORAGE_TYPE)?.toLowerCase() as StorageType | undefined;
+    if (type && !STORAGE_TYPES.includes(type)) {
+      throw new Error(`Invalid ${VARS.PREVIOUS_STORAGE_TYPE}: ${type}. Must be one of: ${STORAGE_TYPES.join(', ')}`);
+    }
+
+    const config: Partial<DynamoDBConfig> = {};
+    const personCurrentStateTableName = envValue(VARS.DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME);
+    const personHistoryTableName = envValue(VARS.DYNAMODB_PERSON_HISTORY_TABLE_NAME);
+    const region = envValue(VARS.REGION);
+    if (personCurrentStateTableName) config.personCurrentStateTableName = personCurrentStateTableName;
+    if (personHistoryTableName) config.personHistoryTableName = personHistoryTableName;
+    if (region) config.region = region;
+
+    if (!type && Object.keys(config).length === 0) {
+      return undefined;
+    }
+    return { ...(type ? { type } : {}), config };
   }
 
   /**
@@ -299,6 +362,14 @@ export class ConfigFromEnvironment {
         ...(process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED] && { enabled: process.env[ConfigFromEnvironment.ENV_VARS.CACHE_ENABLED] === 'true' }),
         ...(process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH] && { path: process.env[ConfigFromEnvironment.ENV_VARS.CACHE_PATH] })
       } as any;
+    }
+
+    // Storage overrides (opt-in)
+    if (this.options.storage) {
+      const storageOverrides = ConfigFromEnvironment.getStorageOverrides();
+      if (storageOverrides) {
+        envOverrides.storage = storageOverrides as Config['storage'];
+      }
     }
 
     return envOverrides;

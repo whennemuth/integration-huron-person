@@ -64,6 +64,9 @@ describe('ConfigManager', () => {
     Object.values(ConfigFromEnvironment.ENV_VARS).forEach((envVar) => {
       delete process.env[envVar];
     });
+    Object.values(ConfigFromEnvironment.STORAGE_ENV_VARS).forEach((envVar) => {
+      delete process.env[envVar];
+    });
   });
 
 
@@ -119,6 +122,26 @@ describe('ConfigManager', () => {
         
         // Clean up
         delete process.env.CLIENT_ID;
+      });
+
+      it('should apply storage variables over file config, before validation, only when opted in', () => {
+        mockedFs.existsSync.mockReturnValue(true);
+        mockedFs.readFileSync.mockReturnValue(JSON.stringify(validConfig));
+        process.env.PREVIOUS_STORAGE_TYPE = 'dynamodb';
+        process.env.DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME = 'person-current-state';
+        process.env.DYNAMODB_PERSON_HISTORY_TABLE_NAME = 'person-history';
+        process.env.REGION = 'us-east-2';
+
+        const optedOut = configManager.reset().fromEnvironment().fromFileSystem(mockConfigPath).getConfig('person');
+        expect(optedOut.storage.type).toBe(validConfig.storage.type);
+
+        const optedIn = configManager.reset().fromEnvironment({ storage: true }).fromFileSystem(mockConfigPath).getConfig('person');
+        expect(optedIn.storage.type).toBe('dynamodb');
+        expect(optedIn.storage.config).toEqual(expect.objectContaining({
+          region: 'us-east-2',
+          personCurrentStateTableName: 'person-current-state',
+          personHistoryTableName: 'person-history'
+        }));
       });
     });
 

@@ -1,5 +1,5 @@
 import { Config, ExecutionMode } from './Config';
-import { ConfigFromEnvironment } from './ConfigFromEnvironment';
+import { ConfigFromEnvironment, ConfigFromEnvironmentOptions } from './ConfigFromEnvironment';
 import { ConfigFromFileSystem } from './ConfigFromFileSystem';
 import { ConfigFromSecretsManager } from './ConfigFromSecretsManager';
 import { ConfigValidator } from './ConfigValidator';
@@ -65,9 +65,10 @@ export class ConfigManager {
   /**
    * Load configuration from environment variables and merge with existing config
    * Earlier sources take precedence over later sources
+   * @param options.storage - Also read the storage variables (see ConfigFromEnvironment.STORAGE_ENV_VARS)
    */
-  fromEnvironment(): ConfigManager {
-    this.operations.push({ type: 'environment', params: {} });
+  fromEnvironment(options: ConfigFromEnvironmentOptions = {}): ConfigManager {
+    this.operations.push({ type: 'environment', params: { options } });
     this.operationsExecuted = false;
     return this;
   }
@@ -116,7 +117,7 @@ export class ConfigManager {
           await this.executeFileSystem(operation.params.configPath);
           break;
         case 'environment':
-          await this.executeEnvironment();
+          await this.executeEnvironment(operation.params.options);
           break;
         case 'json':
           await this.executeJsonString(operation.params.envVarName);
@@ -170,9 +171,9 @@ export class ConfigManager {
   /**
    * Execute environment config load
    */
-  private async executeEnvironment(): Promise<void> {
+  private async executeEnvironment(options?: ConfigFromEnvironmentOptions): Promise<void> {
     try {
-      const envLoader = new ConfigFromEnvironment(this.config as Config);
+      const envLoader = new ConfigFromEnvironment(this.config as Config, options);
       const envConfig = envLoader.getConfig() ?? {};
       if (typeof envConfig === 'object' && Object.keys(envConfig).length === 0) {
         console.warn('No valid configuration to load from individual environment variables.');
@@ -253,7 +254,7 @@ export class ConfigManager {
             this.executeFileSystemSync(operation.params.configPath);
             break;
           case 'environment':
-            this.executeEnvironmentSync();
+            this.executeEnvironmentSync(operation.params.options);
             break;
           case 'json':
             this.executeJsonStringSync(operation.params.envVarName);
@@ -337,9 +338,9 @@ export class ConfigManager {
     }
   }
 
-  private executeEnvironmentSync(): void {
+  private executeEnvironmentSync(options?: ConfigFromEnvironmentOptions): void {
     try {
-      const envLoader = new ConfigFromEnvironment(this.config as Config);
+      const envLoader = new ConfigFromEnvironment(this.config as Config, options);
       const envConfig = envLoader.getConfig() ?? {};
       if (typeof envConfig === 'object' && Object.keys(envConfig).length === 0) {
         console.warn('No valid configuration to load from individual environment variables.');

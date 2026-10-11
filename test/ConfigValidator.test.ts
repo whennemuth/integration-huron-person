@@ -611,6 +611,37 @@ describe('ConfigValidator', () => {
         });
       });
 
+      describe('dynamodb storage validation', () => {
+        const dynamoStorage = () => ({
+          type: 'dynamodb' as const,
+          config: {
+            region: 'us-east-2',
+            personCurrentStateTableName: 'person-current-state',
+            personHistoryTableName: 'person-history'
+          }
+        });
+
+        it('should validate dynamodb storage configuration successfully', () => {
+          const config = getValidConfig();
+          config.storage = dynamoStorage();
+
+          const validator = new ConfigValidator(config);
+          expect(() => validator.validateConfig('person')).not.toThrow();
+        });
+
+        it.each(['region', 'personCurrentStateTableName', 'personHistoryTableName'])(
+          'should throw error when dynamodb %s is missing', (field) => {
+            const config = getValidConfig();
+            const storage = dynamoStorage();
+            delete (storage.config as any)[field];
+            config.storage = storage;
+
+            const validator = new ConfigValidator(config);
+            expect(() => validator.validateConfig('person')).toThrow(`DynamoDB storage requires ${field} configuration`);
+          }
+        );
+      });
+
       it('should throw error for unsupported storage type', () => {
         const config = getValidConfig();
         (config as any).storage = {

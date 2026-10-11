@@ -1,7 +1,8 @@
-import { CrudOperation, DataSource, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, isS3Config, SinglePushResult, Status, TestEnvironment } from 'integration-core';
+import { CrudOperation, DataSource, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
+import { isDynamoDbStorage, prepareStorageConfig } from './config/StorageOverrides';
 import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { FieldFilter } from './data-mapper/FieldFilter';
 import { ReverseDataMapper } from './data-mapper/ReverseDataMapper';
@@ -485,27 +486,30 @@ async function main() {
     // Load configuration
     const configManager = ConfigManager.getInstance();
     const localConfigPath = HURON_PERSON_CONFIG_PATH || getLocalConfig();
-    const config = configManager.reset().fromEnvironment().fromFileSystem(localConfigPath).getConfig('person');
+    const config = configManager.reset()
+      .fromEnvironment({ storage: true })
+      .fromFileSystem(localConfigPath)
+      .getConfig('person');
+    prepareStorageConfig(config);
 
     // Instantiate a single DataMapper to be shared across all syncs in this execution.
-    const dataMapper = await getDataMapper(config, { orgMap: true, stateMap: true, countryMap: true });
+    // Use the same static map usage as the bulk sync pipeline, so hashes computed here match its hashes.
+    const dataMapper = await getDataMapper(config, config.preLoadedMaps ?? { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
-    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, DELTA_STORAGE_BUCKET } = process.env;
+    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
     let buid = SYNC_BUID;
     let crudOperation = SYNC_CRUD;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
 
-    if(DELTA_STORAGE_BUCKET && isS3Config(config.storage.config)) {
-      console.log(`Using custom delta storage bucket from environment variable: ${DELTA_STORAGE_BUCKET}`);
-      config.storage.config.bucketName = DELTA_STORAGE_BUCKET;
+    // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
+    if ( ! isDynamoDbStorage(config)) {
+      IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
+        config, 
+        'SYNC_PERSON_INTEGRATED_DELTA_CLIENT_ID'
+      ); 
     }
-
-    IntegratedDeltaClientIdDeltaStrategy.customizeConfig(
-      config, 
-      'SYNC_PERSON_INTEGRATED_DELTA_CLIENT_ID'
-    ); 
 
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
@@ -567,7 +571,11 @@ if (require.main === module) {
     'SYNC_PREVIEW',
     'SYNC_UPDATE_HASH',
     'INTEGRATED_DELTA_CLIENT_ID',
-    'DELTA_STORAGE_BUCKET'
+    'DELTA_STORAGE_BUCKET',
+    'PREVIOUS_STORAGE_TYPE',
+    'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
+    'DYNAMODB_PERSON_HISTORY_TABLE_NAME',
+    'REGION'
   ].forEach(testEnvironment.getVarOrEmptyString);
   main();
 }

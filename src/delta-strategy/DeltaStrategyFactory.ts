@@ -54,7 +54,7 @@ export class DeltaStrategyFactory {
     // Compute effective bulkReset: use UpsertDeltaStrategy if bulkReset is true OR if trustPreviousStorage is false
     // This ensures cache-based lookups are used when:
     // 1) bulkReset = true (explicit bulk reset requested), OR
-    // 2) trustPreviousStorage = false (previous.ndjson is not trustworthy, use cached lookups instead)
+    // 2) trustPreviousStorage = false (previous-input.ndjson is not trustworthy, use cached lookups instead)
     const effectiveBulkReset = bulkReset || !trustPreviousStorage;
 
     console.log(`Creating delta strategy: ${

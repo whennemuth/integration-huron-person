@@ -40,7 +40,17 @@ export interface CreateStrategyParams {
  * - bulkReset (forces UpsertDeltaStrategy for cache-based lookups)
  * - integratedDeltaClientId (redirects baseline reads to shared integrated delta path)
  */
-export class DeltaStrategyFactory {  
+export class DeltaStrategyFactory {
+  /**
+   * Whether previously stored state (hashes) can be trusted to determine what changed, rather than
+   * looking the persons up in the target system: only if trustPreviousStorage is true (the default)
+   * and bulkReset is false (the default).
+   */
+  static trustsPreviousStorage(params: { bulkReset?: boolean, trustPreviousStorage?: boolean }): boolean {
+    const { bulkReset = false, trustPreviousStorage = true } = params;
+    return trustPreviousStorage && !bulkReset;
+  }
+
   /**
    * Create delta strategy based on storage configuration
    * @param params - Parameters object containing config, optional chunkId, optional bulkReset flag, and optional trustPreviousStorage flag
@@ -55,7 +65,7 @@ export class DeltaStrategyFactory {
     // This ensures cache-based lookups are used when:
     // 1) bulkReset = true (explicit bulk reset requested), OR
     // 2) trustPreviousStorage = false (previous-input.ndjson is not trustworthy, use cached lookups instead)
-    const effectiveBulkReset = bulkReset || !trustPreviousStorage;
+    const effectiveBulkReset = !DeltaStrategyFactory.trustsPreviousStorage({ bulkReset, trustPreviousStorage });
 
     console.log(`Creating delta strategy: ${
       JSON.stringify({

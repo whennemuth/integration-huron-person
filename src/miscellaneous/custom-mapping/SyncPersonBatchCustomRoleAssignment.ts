@@ -265,6 +265,15 @@ if (require.main === module) {
     'OUTPUT_FILE_PATH'
   ].forEach(testEnvironment.getVar);
 
+  [
+    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_BULK_RESET',
+    'PREVIOUS_STORAGE_TYPE',
+    'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
+    'DYNAMODB_PERSON_HISTORY_TABLE_NAME',
+    'REGION'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
   const logFilePath = process.env.OUTPUT_FILE_PATH || 'data/sync_person_batch_custom_role_assignments.json';
   setFileLogging(logFilePath);
 

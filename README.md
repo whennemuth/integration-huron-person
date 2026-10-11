@@ -607,6 +607,40 @@ npm start
 }
 ```
 
+### DynamoDB Storage
+Person hashes are kept in a PersonCurrentState table (one record per person) and a PersonHistory
+table (append-only audit trail), both created by the importing infrastructure project.
+```json
+{
+  "storage": {
+    "type": "dynamodb",
+    "config": {
+      "region": "us-east-2",
+      "personCurrentStateTableName": "<person-current-state-table-name>",
+      "personHistoryTableName": "<person-history-table-name>"
+    }
+  }
+}
+```
+
+`SyncPerson` and `SyncPersonBatch` can also select DynamoDB storage through environment variables,
+which take precedence over the config file (they opt in with `fromEnvironment({ storage: true })`):
+
+| Variable | Purpose |
+|----------|---------|
+| `PREVIOUS_STORAGE_TYPE` | Storage type override, e.g. `dynamodb` |
+| `DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME` | PersonCurrentState table |
+| `DYNAMODB_PERSON_HISTORY_TABLE_NAME` | PersonHistory table |
+| `REGION` | AWS region of the tables |
+| `SYNC_UPDATE_HASH` | `true` to record each synced person's hash (and deactivations) in storage |
+| `SYNC_TRUST_PREVIOUS_STORAGE` | `true` to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none |
+| `SYNC_BULK_RESET` | `true` to always compare with the target, even if `SYNC_TRUST_PREVIOUS_STORAGE` is set |
+
+In DynamoDB mode each run stamps one `syncRunId` on everything it writes, each person's state and
+history are written right after their push (also in batches), and persons deactivated because they
+are gone from the source are marked deleted (`DELETED:`-prefixed hash). See
+`src/delta-strategy/TODO.md` for open questions about the stored-state flags.
+
 ## Integration Workflow
 
 ### Complete Integration Flow

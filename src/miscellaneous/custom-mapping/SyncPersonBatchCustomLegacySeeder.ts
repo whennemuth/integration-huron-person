@@ -364,6 +364,15 @@ if (require.main === module) {
   ].forEach(testEnvironment.getVar);
 
   [
+    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_BULK_RESET',
+    'PREVIOUS_STORAGE_TYPE',
+    'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
+    'DYNAMODB_PERSON_HISTORY_TABLE_NAME',
+    'REGION'
+  ].forEach(testEnvironment.getVarOrEmptyString);
+
+  [
     'SYNC_BUIDS_AND_ROLES_FILE_PATH',
     'SYNC_BUIDS_AND_ROLES'
   ].forEach(testEnvironment.getVarOrEmptyString);

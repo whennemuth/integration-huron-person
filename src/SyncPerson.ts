@@ -1,4 +1,4 @@
-import { CrudOperation, DataSource, DeltaStrategy, DynamoDBConfig, DynamoDBDeltaStorage, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
+import { CrudOperation, DataSource, DeltaStrategy, DynamoDBConfig, DynamoDBDeltaStorage, FieldSet, Input, InputParser, InputUtilsDecorator, isDeletedHash, SinglePushResult, Status, TestEnvironment } from 'integration-core';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
@@ -30,6 +30,14 @@ type PersonSyncParams = {
   hashStorage?: {
     enabled: boolean;
     deltaStrategy?: DeltaStrategy;
+    /**
+     * Use the hash in storage, when there is one, to decide whether a person is already in sync,
+     * instead of comparing with the target - unless bulkReset is set (same rule as
+     * DeltaStrategyFactory.trustsPreviousStorage(), except that it defaults to false here).
+     * DynamoDB storage only.
+     */
+    trustPreviousStorage?: boolean;
+    bulkReset?: boolean;
   };
   forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
 };
@@ -378,6 +386,49 @@ class SinglePersonSync {
   }
 
   /**
+   * Compares the person's source hash with the hash stored for them, when stored state can be
+   * trusted (hashStorage.trustPreviousStorage and not hashStorage.bulkReset), so that the comparison
+   * with the target can be skipped. DynamoDB storage only: other storage would have to read the
+   * whole baseline for one person.
+   *
+   * @returns 'in-sync' or 'out-of-sync', or 'unavailable' when stored state is not trusted or not
+   *   usable (no stored record, a DELETED: marked hash, or a read error) - the caller then compares
+   *   with the target instead.
+   */
+  private compareWithStoredHash = async (mappedPerson: Input): Promise<'in-sync' | 'out-of-sync' | 'unavailable'> => {
+    const { instanceParams: { config, buid, hashStorage } } = this;
+    const { deltaStrategy, bulkReset, trustPreviousStorage = false } = hashStorage ?? {};
+    if (!deltaStrategy || !isDynamoDbStorage(config) || !DeltaStrategyFactory.trustsPreviousStorage({ bulkReset, trustPreviousStorage })) {
+      return 'unavailable';
+    }
+
+    try {
+      const primaryKeyFields = new InputUtilsDecorator(mappedPerson).getPrimaryKeys();
+      const [sourceFieldSet] = mappedPerson.fieldSets;
+      const keyFieldSet: FieldSet = {
+        fieldValues: sourceFieldSet.fieldValues.filter(fv => primaryKeyFields.has(Object.keys(fv)[0]))
+      };
+      const [stored] = await deltaStrategy.storage.fetchPreviousData({
+        clientId: config.integration.clientId,
+        limitTo: [keyFieldSet]
+      });
+
+      if (!stored?.hash) {
+        console.log(`No hash in storage for BUID: ${buid} - comparing with target instead.`);
+        return 'unavailable';
+      }
+      if (isDeletedHash(stored.hash)) {
+        console.log(`BUID: ${buid} is marked deleted in storage - comparing with target instead.`);
+        return 'unavailable';
+      }
+      return stored.hash === sourceFieldSet.hash ? 'in-sync' : 'out-of-sync';
+    } catch (error) {
+      console.warn(`Error reading hash storage for BUID: ${buid} - comparing with target instead:`, error);
+      return 'unavailable';
+    }
+  }
+
+  /**
    * Execute the single person synchronization
    * @param params - Optional parameters
    * @param params.crudOperation - The CRUD operation to perform
@@ -478,9 +529,30 @@ class SinglePersonSync {
         return true;
       };
 
-      // Check if source and target are already in sync (UPDATE operations only)
+      // Check if source and target are already in sync (UPDATE operations only), using the hash in
+      // storage when it can be trusted, otherwise comparing with the target
       let skipPush = false;
-      if (mustAssessSyncedState()) {
+      const assessSyncedState = mustAssessSyncedState();
+      const storedHashComparison = assessSyncedState ? await this.compareWithStoredHash(mappedPerson) : 'unavailable';
+
+      if (storedHashComparison === 'in-sync') {
+        console.log(`Source matches the hash in storage for BUID: ${buid} - already in sync.`);
+        const huronPerson = await this.getTargetPerson();
+        if(huronPerson && !huronPerson.active) {
+          console.log(`For some reason, in-sync person is currently inactive in target. Attempting to activate...`);
+          await this.activateTargetPersonIfExists();
+        }
+        skipPush = true;
+      }
+      else if (storedHashComparison === 'out-of-sync') {
+        console.log(`Source differs from the hash in storage for BUID: ${buid} - pushing without comparing with target.`);
+        if ( ! await this.getTargetPerson()) {
+          crudOperation = CrudOperation.CREATE;
+          console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
+        }
+      }
+
+      if (assessSyncedState && storedHashComparison === 'unavailable') {
         try {
           const sourcePersonParams: SourcePersonParms = {
             config,
@@ -586,11 +658,13 @@ async function main() {
     const dataMapper = await getDataMapper(config, config.preLoadedMaps ?? { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
-    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH } = process.env;
+    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE, SYNC_BULK_RESET } = process.env;
     let buid = SYNC_BUID;
     let crudOperation = SYNC_CRUD;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
+    const trustPreviousStorage = `${SYNC_TRUST_PREVIOUS_STORAGE}`.trim().toLowerCase() === 'true';
+    const bulkReset = `${SYNC_BULK_RESET}`.trim().toLowerCase() === 'true';
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
     if ( ! isDynamoDbStorage(config)) {
@@ -603,11 +677,14 @@ async function main() {
     // Create hash storage config if enabled
     const hashStorage = updateHashStorage ? {
       enabled: true,
-      deltaStrategy: DeltaStrategyFactory.createStrategy({ 
-        config, 
+      deltaStrategy: DeltaStrategyFactory.createStrategy({
+        config,
         ignoreRemovals: true,
-        trustPreviousStorage: false // default 
-      })
+        trustPreviousStorage,
+        bulkReset
+      }),
+      trustPreviousStorage,
+      bulkReset
     } : undefined;
 
     // Disable source person lookup field filtering for this single sync
@@ -659,6 +736,8 @@ if (require.main === module) {
     'SYNC_CRUD',
     'SYNC_PREVIEW',
     'SYNC_UPDATE_HASH',
+    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_BULK_RESET',
     'INTEGRATED_DELTA_CLIENT_ID',
     'DELTA_STORAGE_BUCKET',
     'PREVIOUS_STORAGE_TYPE',

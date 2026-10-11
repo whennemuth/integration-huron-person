@@ -647,6 +647,18 @@ describe('DeltaStrategyFactory', () => {
     });
   });
 
+  describe('trustsPreviousStorage', () => {
+    it.each([
+      [{}, true],
+      [{ trustPreviousStorage: true }, true],
+      [{ trustPreviousStorage: false }, false],
+      [{ bulkReset: true }, false],
+      [{ trustPreviousStorage: true, bulkReset: true }, false]
+    ])('trusts previous storage for %j: %s', (params, expected) => {
+      expect(DeltaStrategyFactory.trustsPreviousStorage(params)).toBe(expected);
+    });
+  });
+
   describe('trustPreviousStorage parameter', () => {
     let mockStrategy: any;
     let mockCreateFileStrategy: jest.Mock;

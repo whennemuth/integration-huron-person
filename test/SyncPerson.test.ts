@@ -8,6 +8,7 @@ import { Status, CrudOperation, DynamoDBDeltaStorage } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
 import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
+import * as SyncEvaluator from '../src/delta-storage/SyncEvaluator';
 
 // Mock the external dependencies
 jest.mock('../src/config/ConfigManager');
@@ -980,6 +981,83 @@ describe('SinglePersonSync', () => {
         expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(expect.objectContaining({
           newPreviousData: [expect.objectContaining({ fieldValues: [{ id: 'U12345678' }] })]
         }));
+      });
+    });
+
+    describe('stored hash in-sync check', () => {
+      let liveCheck: jest.SpyInstance;
+
+      beforeEach(() => {
+        // DeltaStrategyFactory is auto-mocked in this file - use the real rule
+        const actual = jest.requireActual('../src/delta-strategy/DeltaStrategyFactory');
+        DeltaStrategyFactory.trustsPreviousStorage = actual.DeltaStrategyFactory.trustsPreviousStorage;
+        liveCheck = jest.spyOn(SyncEvaluator, 'SourcePerson').mockImplementation(() => ({
+          isInSyncWith: jest.fn().mockResolvedValue(false)
+        }) as any);
+      });
+
+      /** Store the hash the source person maps to (or a different one), then sync as an UPDATE */
+      const syncWithStoredHash = async (hashStorageFlags: object, stored: 'same' | 'different' | 'none' | 'deleted', config = dynamoConfig) => {
+        const sync = buildSync({
+          config,
+          hashStorage: { enabled: true, deltaStrategy: { storage: mockStorage } as any, ...hashStorageFlags }
+        });
+        const sourceHash = (await sync.getMappedPerson({ crudOperation: CrudOperation.UPDATE })).fieldSets[0].hash;
+        const storedHash = { same: sourceHash, different: 'different-hash', deleted: `DELETED:${sourceHash}`, none: undefined }[stored];
+        mockStorage.fetchPreviousData.mockResolvedValue(storedHash ? [{ fieldValues: [{ id: 'U12345678' }], hash: storedHash }] : []);
+        await sync.sync({ crudOperation: CrudOperation.UPDATE });
+      };
+
+      it('compares with the target when trustPreviousStorage is not set', async () => {
+        await syncWithStoredHash({}, 'same');
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(liveCheck).toHaveBeenCalled();
+      });
+
+      it('skips the target comparison and the push when the stored hash matches', async () => {
+        await syncWithStoredHash({ trustPreviousStorage: true }, 'same');
+
+        expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(expect.objectContaining({
+          limitTo: [{ fieldValues: [{ id: 'U12345678' }] }]
+        }));
+        expect(liveCheck).not.toHaveBeenCalled();
+        expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+      });
+
+      it('pushes without the target comparison when the stored hash differs', async () => {
+        await syncWithStoredHash({ trustPreviousStorage: true }, 'different');
+
+        expect(liveCheck).not.toHaveBeenCalled();
+        expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.UPDATE }));
+      });
+
+      it('creates the person when the stored hash differs but the person is not in the target', async () => {
+        (ReadPerson as jest.Mock).mockImplementation(() => ({
+          readPersonBySourceIdentifier: jest.fn().mockResolvedValue([])
+        }));
+        await syncWithStoredHash({ trustPreviousStorage: true }, 'different');
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.CREATE }));
+      });
+
+      it.each(['none', 'deleted'] as const)('falls back to the target comparison when the stored hash is %s', async (stored) => {
+        await syncWithStoredHash({ trustPreviousStorage: true }, stored);
+
+        expect(mockStorage.fetchPreviousData).toHaveBeenCalled();
+        expect(liveCheck).toHaveBeenCalled();
+      });
+
+      it('compares with the target when bulkReset is set', async () => {
+        await syncWithStoredHash({ trustPreviousStorage: true, bulkReset: true }, 'same');
+
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(liveCheck).toHaveBeenCalled();
+      });
+
+      it('compares with the target for S3/file storage', async () => {
+        await syncWithStoredHash({ trustPreviousStorage: true }, 'same', mockConfig);
+
+        expect(liveCheck).toHaveBeenCalled();
       });
     });
   });

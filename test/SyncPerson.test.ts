@@ -1,10 +1,10 @@
-import { SinglePersonSync } from '../src/SyncPerson';
+import { SinglePersonSync, SinglePersonSyncParams } from '../src/SyncPerson';
 import { BuCdmPersonDataSource } from '../src/data-source/PersonDataSource';
 import { HuronPersonDataTarget } from '../src/data-target/PersonDataTarget';
 import { ConfigManager } from '../src/config/ConfigManager';
-import { DataMapper } from '../src/data-mapper/DataMapper';
+import { _fieldDefinitions, DataMapper } from '../src/data-mapper/DataMapper';
 import { Config } from '../src/config/Config';
-import { Status, CrudOperation } from 'integration-core';
+import { Status, CrudOperation, DynamoDBDeltaStorage } from 'integration-core';
 import { BuCdmCurrentTermsDataSource, Term } from '../src/data-source/CurrentTermsDataSource';
 import { ReadPerson } from '../src/data-target/crud/ReadPerson';
 import { DeltaStrategyFactory } from '../src/delta-strategy/DeltaStrategyFactory';
@@ -816,6 +816,166 @@ describe('SinglePersonSync', () => {
       // Verify source was NOT called again (cache reused)
       expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
       expect(hashedResult).toEqual(mockInput);
+    });
+  });
+
+  describe('hash storage for deactivations and DynamoDB storage', () => {
+    let mockStorage: any;
+    const dynamoConfig: Config = {
+      ...mockConfig,
+      storage: {
+        type: 'dynamodb',
+        config: {
+          region: 'us-east-2',
+          personCurrentStateTableName: 'person-current-state',
+          personHistoryTableName: 'person-history',
+          syncRunId: '2026-10-11T12:00:00.000Z'
+        }
+      }
+    };
+
+    beforeAll(() => {
+      // The DataMapper module is auto-mocked, which empties its exported field definitions
+      if (!(_fieldDefinitions as any[]).some(fd => fd.isPrimaryKey)) {
+        (_fieldDefinitions as any[]).push({ name: 'sourceIdentifier', type: 'string', required: true, isPrimaryKey: true });
+      }
+    });
+
+    beforeEach(() => {
+      jest.spyOn(console, 'log').mockImplementation();
+      mockStorage = {
+        name: 'Mock Storage',
+        description: 'Mock storage for testing',
+        fetchPreviousData: jest.fn().mockResolvedValue([
+          { fieldValues: [{ sourceIdentifier: 'U12345678' }], hash: 'stored-hash' },
+          { fieldValues: [{ sourceIdentifier: 'U00000002' }], hash: 'other-hash' }
+        ]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
+        updatePreviousData: jest.fn().mockResolvedValue(undefined)
+      };
+      (DeltaStrategyFactory.createStrategy as jest.Mock) = jest.fn().mockReturnValue({ storage: mockStorage });
+      (ReadPerson as jest.Mock).mockImplementation(() => ({
+        readPersonBySourceIdentifier: jest.fn().mockResolvedValue([{ hrn: 'hrn:hrs:persons:U12345678', active: true }])
+      }));
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      delete process.env.DRY_RUN;
+    });
+
+    const goneFromSource = () => mockDataSource.fetchRaw.mockResolvedValue([]);
+
+    const buildSync = (overrides: Partial<SinglePersonSyncParams> = {}) => new SinglePersonSync({
+      buid: 'U12345678',
+      config: mockConfig,
+      dataMapper: mockDataMapper,
+      hashStorage: { enabled: true, deltaStrategy: { storage: mockStorage } as any },
+      ...overrides
+    });
+
+    describe('S3/file storage', () => {
+      it('marks the stored hash of a person deactivated in the target as deleted', async () => {
+        goneFromSource();
+        const sync = buildSync();
+
+        await sync.sync();
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.DELETE }));
+        expect(sync.wasDeactivated()).toBe(true);
+        expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(expect.objectContaining({
+          newPreviousData: [
+            expect.objectContaining({ fieldValues: [{ sourceIdentifier: 'U12345678' }], hash: 'DELETED:stored-hash' }),
+            expect.objectContaining({ fieldValues: [{ sourceIdentifier: 'U00000002' }], hash: 'other-hash' })
+          ]
+        }));
+      });
+
+      it('marks a person who is already inactive in the target', async () => {
+        goneFromSource();
+        (ReadPerson as jest.Mock).mockImplementation(() => ({
+          readPersonBySourceIdentifier: jest.fn().mockResolvedValue([{ hrn: 'hrn:hrs:persons:U12345678', active: false }])
+        }));
+        const sync = buildSync();
+
+        await sync.sync();
+
+        expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).toHaveBeenCalled();
+      });
+
+      it('does not mark the person when the deactivation push fails', async () => {
+        goneFromSource();
+        mockDataTarget.pushOne.mockResolvedValue({
+          status: Status.FAILURE, message: 'failed', timestamp: new Date(), primaryKey: [], crud: CrudOperation.DELETE
+        });
+        const sync = buildSync();
+
+        await sync.sync();
+
+        expect(sync.wasDeactivated()).toBe(false);
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+
+      it('does not mark the person in preview mode', async () => {
+        goneFromSource();
+        await buildSync({ preview: true }).sync();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+
+      it('leaves marking to the caller when suppressHashUpdate is set', async () => {
+        goneFromSource();
+        const sync = buildSync();
+
+        await sync.sync({ suppressHashUpdate: true });
+
+        expect(sync.wasDeactivated()).toBe(true);
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+
+      it('does not rewrite the baseline when the person has no stored record', async () => {
+        goneFromSource();
+        mockStorage.fetchPreviousData.mockResolvedValue([
+          { fieldValues: [{ sourceIdentifier: 'U00000002' }], hash: 'other-hash' }
+        ]);
+
+        await buildSync().sync();
+
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('DynamoDB storage', () => {
+      it('marks a person deactivated in the target as deleted through DynamoDBDeltaStorage', async () => {
+        goneFromSource();
+        const markDeleted = jest.spyOn(DynamoDBDeltaStorage.prototype, 'markDeleted').mockResolvedValue({ marked: ['U12345678'] });
+
+        await buildSync({ config: dynamoConfig }).sync();
+
+        expect(markDeleted).toHaveBeenCalledWith({ personIds: ['U12345678'] });
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+
+      it('does not write to DynamoDB on a dry run', async () => {
+        goneFromSource();
+        process.env.DRY_RUN = 'true';
+        const markDeleted = jest.spyOn(DynamoDBDeltaStorage.prototype, 'markDeleted').mockResolvedValue({ marked: [] });
+
+        await buildSync({ config: dynamoConfig }).sync();
+
+        expect(markDeleted).not.toHaveBeenCalled();
+      });
+
+      it('writes only the synced person\'s key and hash after a successful push, without reading the baseline', async () => {
+        await buildSync({ config: dynamoConfig }).sync({ crudOperation: CrudOperation.CREATE });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(expect.objectContaining({
+          newPreviousData: [expect.objectContaining({ fieldValues: [{ id: 'U12345678' }] })]
+        }));
+      });
     });
   });
 });

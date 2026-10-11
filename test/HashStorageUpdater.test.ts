@@ -335,4 +335,72 @@ describe('HashStorageUpdater', () => {
       expect(result).toBe('');
     });
   });
+
+  describe('incremental storage', () => {
+    it('writes only the pruned field sets to update, without reading the baseline', async () => {
+      const fieldSetsToUpdate = new Map([
+        ['U123', { fieldValues: [{ id: 'U123' }, { name: 'John' }], hash: 'new-hash' } as FieldSet]
+      ]);
+      const primaryKeyFields = new Set(['id']);
+
+      const count = await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate, primaryKeyFields, incremental: true
+      }).updateStorage();
+
+      expect(count).toBe(1);
+      expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledWith({
+        clientId,
+        newPreviousData: [{ fieldValues: [{ id: 'U123' }], hash: 'new-hash', validationMessages: undefined }],
+        primaryKeyFields
+      });
+    });
+
+    it('rejects personIdsToMarkDeleted, which incremental storage marks through its own API', async () => {
+      const updater = new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate: new Map(), primaryKeyFields: new Set(['id']),
+        personIdsToMarkDeleted: new Set(['U123']), incremental: true
+      });
+      await expect(updater.updateStorage()).rejects.toThrow('not supported for incremental storage');
+      expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('personIdsToMarkDeleted', () => {
+    beforeEach(() => {
+      mockStorage.fetchPreviousData.mockResolvedValue([
+        { fieldValues: [{ id: 'U123' }], hash: 'hash-123' },
+        { fieldValues: [{ id: 'U456' }], hash: 'hash-456' },
+        { fieldValues: [{ id: 'U789' }], hash: 'DELETED:hash-789' }
+      ]);
+    });
+
+    it('marks matching baseline records in the same write as the updates', async () => {
+      const fieldSetsToUpdate = new Map([
+        ['U456', { fieldValues: [{ id: 'U456' }], hash: 'new-hash-456' } as FieldSet]
+      ]);
+
+      await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate, primaryKeyFields: new Set(['id']),
+        personIdsToMarkDeleted: new Set(['U123', 'U789'])
+      }).updateStorage();
+
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledTimes(1);
+      const { newPreviousData } = mockStorage.updatePreviousData.mock.calls[0][0];
+      expect(newPreviousData.map((fs: FieldSet) => fs.hash)).toEqual([
+        'DELETED:hash-123', 'new-hash-456', 'DELETED:hash-789'
+      ]);
+    });
+
+    it('skips the write when nothing is updated and no record needed marking', async () => {
+      const count = await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate: new Map(), primaryKeyFields: new Set(['id']),
+        personIdsToMarkDeleted: new Set(['U789', 'U000'])
+      }).updateStorage();
+
+      expect(count).toBe(0);
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalled();
+      expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+    });
+  });
 });

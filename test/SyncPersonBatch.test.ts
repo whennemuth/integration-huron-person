@@ -1,5 +1,5 @@
 import { CrudOperation, Status } from 'integration-core';
-import { SinglePersonSync } from '../src/SyncPerson';
+import { personPrimaryKeyFields, SinglePersonSync } from '../src/SyncPerson';
 import { BatchPersonSync } from '../src/SyncPersonBatch';
 import { Config } from '../src/config/Config';
 import { DataMapper } from '../src/data-mapper/DataMapper';
@@ -167,6 +167,7 @@ describe('BatchPersonSync', () => {
         const mockInstance = {
           sync: jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -221,6 +222,7 @@ describe('BatchPersonSync', () => {
         const mockInstance = {
           sync: jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -265,6 +267,7 @@ describe('BatchPersonSync', () => {
             ? jest.fn().mockRejectedValue(new Error('Network error'))
             : jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -304,6 +307,7 @@ describe('BatchPersonSync', () => {
             ? jest.fn().mockRejectedValue(new Error('Network error'))
             : jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -378,6 +382,7 @@ describe('BatchPersonSync', () => {
         const mockInstance = {
           sync: jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -427,6 +432,7 @@ describe('BatchPersonSync', () => {
       (SinglePersonSync as jest.Mock).mockClear().mockImplementation((params) => ({
         sync: jest.fn().mockResolvedValue(undefined),
         getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+        wasDeactivated: jest.fn().mockReturnValue(false),
         getPushResult: jest.fn().mockReturnValue({
           status: Status.SUCCESS,
           message: 'Person pushed successfully',
@@ -458,6 +464,7 @@ describe('BatchPersonSync', () => {
       (SinglePersonSync as jest.Mock).mockClear().mockImplementation((params) => ({
         sync: jest.fn().mockResolvedValue(undefined),
         getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+        wasDeactivated: jest.fn().mockReturnValue(false),
         getPushResult: jest.fn().mockReturnValue({
           status: Status.SUCCESS,
           message: 'Person pushed successfully',
@@ -502,6 +509,7 @@ describe('BatchPersonSync', () => {
         const mockInstance = {
           sync: jest.fn().mockResolvedValue(undefined),
           getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -563,6 +571,7 @@ describe('BatchPersonSync', () => {
       (SinglePersonSync as jest.Mock).mockClear().mockImplementation((params) => ({
         sync: jest.fn().mockResolvedValue(undefined),
         getMappedPerson: jest.fn().mockResolvedValue(mockInput),
+        wasDeactivated: jest.fn().mockReturnValue(false),
         getPushResult: jest.fn().mockReturnValue({
           status: Status.SUCCESS,
           message: 'Person pushed successfully',
@@ -617,6 +626,7 @@ describe('BatchPersonSync', () => {
         const mockInstance = {
           sync: jest.fn().mockResolvedValue(undefined),
           getMappedPerson: getMappedPersonMock,
+          wasDeactivated: jest.fn().mockReturnValue(false),
           getPushResult: jest.fn().mockReturnValue({
             status: Status.SUCCESS,
             message: 'Person pushed successfully',
@@ -653,6 +663,98 @@ describe('BatchPersonSync', () => {
       mockSyncInstances.forEach(instance => {
         expect(instance.getMappedPerson).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  describe('hash storage for deactivations and DynamoDB storage', () => {
+    let mockStorage: any;
+    let mockSyncInstances: any[];
+
+    beforeEach(() => {
+      jest.spyOn(console, 'log').mockImplementation();
+      mockStorage = {
+        fetchPreviousData: jest.fn().mockResolvedValue([
+          { fieldValues: [{ id: 'U11111111' }], hash: 'hash-1' },
+          { fieldValues: [{ id: 'U22222222' }], hash: 'hash-2' }
+        ]),
+        wouldOverwritePreviousData: jest.fn().mockResolvedValue(true),
+        updatePreviousData: jest.fn().mockResolvedValue(undefined)
+      };
+      (personPrimaryKeyFields as jest.Mock).mockReturnValue(new Set(['id']));
+
+      // U22222222 is gone from the source and gets deactivated; U11111111 syncs normally
+      mockSyncInstances = [];
+      (SinglePersonSync as jest.Mock).mockClear().mockImplementation((params) => {
+        const deactivated = params.buid === 'U22222222';
+        const mockInstance = {
+          buid: params.buid,
+          sync: jest.fn().mockResolvedValue(undefined),
+          getMappedPerson: jest.fn().mockResolvedValue({
+            ...mockInput,
+            fieldSets: [{ fieldValues: [{ id: params.buid }], hash: `new-hash-${params.buid}` }]
+          }),
+          wasDeactivated: jest.fn().mockReturnValue(deactivated),
+          getPushResult: jest.fn().mockReturnValue({
+            status: Status.SUCCESS,
+            message: 'ok',
+            timestamp: new Date(),
+            primaryKey: [{ id: params.buid }],
+            crud: deactivated ? CrudOperation.DELETE : CrudOperation.UPDATE
+          })
+        };
+        mockSyncInstances.push(mockInstance);
+        return mockInstance;
+      });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    const buildBatch = (overrides: any = {}) => new BatchPersonSync({
+      config: mockConfig,
+      buids: ['U11111111', 'U22222222'],
+      dataMapper: {} as any,
+      hashStorage: { enabled: true, deltaStrategy: { storage: mockStorage } as any },
+      ...overrides
+    });
+
+    it('marks deactivated persons as deleted in the same end-of-run write as the successful syncs', async () => {
+      await buildBatch().syncAll();
+
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledTimes(1);
+      const { newPreviousData } = mockStorage.updatePreviousData.mock.calls[0][0];
+      expect(newPreviousData.map((fs: any) => fs.hash)).toEqual(['new-hash-U11111111', 'DELETED:hash-2']);
+
+      // The deactivated person's (empty) mapped data is not re-fetched
+      const deactivatedInstance = mockSyncInstances.find(instance => instance.buid === 'U22222222');
+      expect(deactivatedInstance.getMappedPerson).not.toHaveBeenCalled();
+    });
+
+    it('does not mark deactivated persons in preview mode', async () => {
+      await buildBatch({ preview: true }).syncAll();
+
+      const { newPreviousData } = mockStorage.updatePreviousData.mock.calls[0][0];
+      expect(newPreviousData.map((fs: any) => fs.hash)).toEqual(['new-hash-U11111111', 'hash-2']);
+    });
+
+    it('lets each person write their own DynamoDB state, with no end-of-run batch write', async () => {
+      const dynamoConfig = {
+        ...mockConfig,
+        storage: {
+          type: 'dynamodb',
+          config: { region: 'us-east-2', personCurrentStateTableName: 'state', personHistoryTableName: 'history' }
+        }
+      } as Config;
+
+      await buildBatch({ config: dynamoConfig }).syncAll();
+
+      mockSyncInstances.forEach(instance => {
+        expect(instance.sync).toHaveBeenCalledWith(expect.objectContaining({ suppressHashUpdate: false }));
+        expect(instance.getMappedPerson).not.toHaveBeenCalled();
+      });
+      expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+      expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
     });
   });
 });

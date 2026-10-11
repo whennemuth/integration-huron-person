@@ -1,9 +1,9 @@
-import { CrudOperation, DataSource, DeltaStrategy, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
+import { CrudOperation, DataSource, DeltaStrategy, DynamoDBConfig, DynamoDBDeltaStorage, FieldSet, Input, InputParser, InputUtilsDecorator, SinglePushResult, Status, TestEnvironment } from 'integration-core';
 import { BasicCache, Cache } from './Cache';
 import { Config } from './config/Config';
 import { ConfigManager } from './config/ConfigManager';
 import { isDynamoDbStorage, prepareStorageConfig } from './config/StorageOverrides';
-import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
+import { _fieldDefinitions, DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { FieldFilter } from './data-mapper/FieldFilter';
 import { ReverseDataMapper } from './data-mapper/ReverseDataMapper';
 import { BuCdmPersonDataSource } from './data-source/PersonDataSource';
@@ -39,6 +39,14 @@ type SinglePersonSyncParams = PersonSyncParams & {
   hrn?: string;
 };
 
+/**
+ * Names of the primary key field(s) of a mapped person (sourceIdentifier), for keying hash storage
+ * records when there is no mapped person to read them from (e.g. a person gone from the source).
+ */
+const personPrimaryKeyFields = (): Set<string> => new Set(
+  _fieldDefinitions.filter(fd => 'isPrimaryKey' in fd && fd.isPrimaryKey).map(fd => fd.name)
+);
+
 
 
 /**
@@ -54,11 +62,13 @@ class SinglePersonSync {
   private rawPersonData: any[] | undefined;
   private mappedPerson: Input | undefined;
   private logPrefix: string;
+  private dryRun: boolean;
+  private deactivated = false;
 
   constructor(private instanceParams: SinglePersonSyncParams) {
     const { config, cache, buid, hrn } = instanceParams;
-    const dryRun = `${process.env.DRY_RUN}`.trim().toLowerCase() === 'true';
-    this.logPrefix = dryRun ? '[DRY RUN]: ' : '';
+    this.dryRun = `${process.env.DRY_RUN}`.trim().toLowerCase() === 'true';
+    this.logPrefix = this.dryRun ? '[DRY RUN]: ' : '';
     let responseFilter: ResponseProcessor | undefined;
     if (config.dataSource.person?.fieldsOfInterest) {
       responseFilter = new AxiosResponseStreamFilter({ fieldsOfInterest: config.dataSource.person.fieldsOfInterest });
@@ -202,6 +212,7 @@ class SinglePersonSync {
     if(targetPerson) {
       if(targetPerson.active === false) {
         console.log(`No-op: need to deactivate ${buid} in target system, but already inactive.`);
+        this.deactivated = true;
         return;
       }
       console.log(`Deactivating ${buid} in target system...`);
@@ -216,10 +227,12 @@ class SinglePersonSync {
         crud: CrudOperation.DELETE
       });
       this.pushResult = result;
+      this.deactivated = result.status === Status.SUCCESS;
       console.log(`${logPrefix}Deactivation push result for ${buid}:`, result.status, result.message);
     }
     else {
       console.log(`No-op: need to deactivate ${buid} in target system, but person does not exist.`);
+      this.deactivated = true;
     }
   }
 
@@ -257,6 +270,14 @@ class SinglePersonSync {
   }
 
   /**
+   * True if this sync found no data to push and left the person inactive (or absent) in the target:
+   * deactivated now, already inactive, or not in the target at all.
+   */
+  public wasDeactivated = (): boolean => {
+    return this.deactivated;
+  }
+
+  /**
    * Updates the hash storage for this person in storage.
    * 
    * Uses HashStorageUpdater utility to perform the update operation,
@@ -286,7 +307,8 @@ class SinglePersonSync {
         storage,
         clientId,
         fieldSetsToUpdate,
-        primaryKeyFields
+        primaryKeyFields,
+        incremental: isDynamoDbStorage(config)
       });
       await hashStorageUpdater.updateStorage();
 
@@ -296,6 +318,58 @@ class SinglePersonSync {
       console.log(`${this.logPrefix}Hash storage updated successfully for person ${primaryKeyValue}`);
     } catch (error) {
       console.warn(`${this.logPrefix}Failed to update hash storage: ${error}. Sync to target was successful, but hash storage was not updated.`);
+    }
+  }
+
+  /**
+   * Records in hash storage that this person was soft-deleted in the target, the same way bulk sync
+   * deferred delete handling does, so later bulk syncs don't select them for deletion again and
+   * classify them UPDATED (reactivating them) if they reappear in the source:
+   * - DynamoDB: DynamoDBDeltaStorage.markDeleted() (DELETED:-prefixed hash + deletedAt in
+   *   PersonCurrentState, DELETED record in PersonHistory). Built directly from the storage config,
+   *   because strategy storage wrappers only expose the DeltaStorage interface - so DRY_RUN is
+   *   honored here.
+   * - S3/file: the stored baseline hash gets the DELETED: prefix (via HashStorageUpdater).
+   * - Database: not supported, skipped.
+   *
+   * Only applies when hash storage is enabled, outside preview mode, and the deactivation succeeded
+   * (or the person was already inactive or absent in the target).
+   */
+  private markDeletedInStorage = async (): Promise<void> => {
+    const { instanceParams: { config, buid, hashStorage, preview }, logPrefix, dryRun } = this;
+    if (!hashStorage?.enabled || preview || !this.deactivated) {
+      return;
+    }
+
+    try {
+      if (isDynamoDbStorage(config)) {
+        if (dryRun) {
+          console.log(`${logPrefix}Would mark ${buid} as deleted in DynamoDB hash storage`);
+          return;
+        }
+        const storage = new DynamoDBDeltaStorage(config.storage.config as DynamoDBConfig);
+        const { marked } = await storage.markDeleted({ personIds: [buid] });
+        console.log(marked.length > 0
+          ? `Marked ${buid} as deleted in hash storage`
+          : `No-op: ${buid} has no hash storage record to mark as deleted, or is already marked`);
+        return;
+      }
+
+      if (config.storage.type === 'database') {
+        console.log(`Marking deleted persons is not supported for database hash storage - skipping for ${buid}`);
+        return;
+      }
+
+      const { storage } = DeltaStrategyFactory.createStrategy({ config });
+      await new HashStorageUpdater({
+        storage,
+        clientId: config.integration.clientId,
+        fieldSetsToUpdate: new Map(),
+        primaryKeyFields: personPrimaryKeyFields(),
+        personIdsToMarkDeleted: new Set([buid])
+      }).updateStorage();
+    } catch (error) {
+      console.warn(`${logPrefix}Failed to mark ${buid} as deleted in hash storage: ${error}. Deactivation in target was successful, but hash storage was not updated.`);
     }
   }
 
@@ -345,17 +419,28 @@ class SinglePersonSync {
         }
       }
 
+      /**
+       * Deactivate the person in the target, and record that in hash storage. Skip the hash storage
+       * update if suppressHashUpdate is true (batch operations collect deactivations instead).
+       */
+      const deactivate = async () => {
+        await this.deactivateTargetPersonIfExists();
+        if (!suppressHashUpdate) {
+          await this.markDeletedInStorage();
+        }
+      }
+
       // Bail out if no data to push
       if(isEmpty(mappedPerson)) {
         console.log(`No valid data to push for BUID: ${buid}.`);
-        await this.deactivateTargetPersonIfExists();
+        await deactivate();
         return;
       }
 
       // Validate single person sync has exactly one field set
       if (!mappedPerson.fieldSets || mappedPerson.fieldSets.length === 0) {
         console.log(`No field sets found for BUID: ${buid}.`);
-        await this.deactivateTargetPersonIfExists();
+        await deactivate();
         return;
       }
 
@@ -580,5 +665,5 @@ if (require.main === module) {
   main();
 }
 
-export { PersonSyncParams, SinglePersonSync, SinglePersonSyncParams };
+export { personPrimaryKeyFields, PersonSyncParams, SinglePersonSync, SinglePersonSyncParams };
 

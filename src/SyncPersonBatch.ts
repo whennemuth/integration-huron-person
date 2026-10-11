@@ -9,7 +9,7 @@ import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
-import { PersonSyncParams, SinglePersonSync } from './SyncPerson';
+import { personPrimaryKeyFields, PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { setFileLogging } from './Utils';
 
 type BatchPersonSyncParams = PersonSyncParams & {
@@ -27,23 +27,27 @@ type BatchPersonSyncParams = PersonSyncParams & {
  * Key responsibilities:
  * - Orchestrate sync operations across multiple BUIDs
  * - Handle errors gracefully, continuing to next person on failure
- * - Perform efficient batch hash storage updates (single read/write cycle)
+ * - Perform efficient batch hash storage updates (single read/write cycle) for baseline file
+ *   storage (S3/file). DynamoDB storage is written per person instead, right after each push,
+ *   since it writes individual records rather than rewriting a whole baseline.
  */
 class BatchPersonSync {
   constructor(private batchParams: BatchPersonSyncParams) {}
 
   /**
-   * Batch updates the hash storage with multiple successful sync results.
-   * 
+   * Batch updates the hash storage with multiple successful sync results, and marks the persons
+   * deactivated in the target as deleted.
+   *
    * Uses HashStorageUpdater utility to perform efficient batch updates,
    * eliminating code duplication with single update logic. This performs a single
-   * read-modify-write cycle for all successful syncs, rather than individual updates.
+   * read-modify-write cycle for all successful syncs and deactivations, rather than individual updates.
    */
   private updateHashStorageBatch = async (
     successfulSyncs: Map<string, FieldSet>,
-    primaryKeyFields: Set<string>
+    primaryKeyFields: Set<string>,
+    deactivatedBuids: Set<string>
   ): Promise<void> => {
-    if (successfulSyncs.size === 0) {
+    if (successfulSyncs.size === 0 && deactivatedBuids.size === 0) {
       console.log('No successful syncs to update in hash storage');
       return;
     }
@@ -62,7 +66,8 @@ class BatchPersonSync {
         storage,
         clientId,
         fieldSetsToUpdate: successfulSyncs,
-        primaryKeyFields
+        primaryKeyFields,
+        personIdsToMarkDeleted: deactivatedBuids
       });
       const updateCount = await hashStorageUpdater.updateStorage();
 
@@ -76,16 +81,21 @@ class BatchPersonSync {
    * Execute synchronization for multiple people.
    * 
    * This method uses composition to create and orchestrate SinglePersonSync instances,
-   * processing each BUID independently while collecting successful results for
-   * optional batch hash storage update.
-   * 
+   * processing each BUID independently while collecting successful results and
+   * deactivations for optional batch hash storage update.
+   *
    * Error handling: continues to next BUID on individual sync failure.
    */
   public syncAll = async (): Promise<void> => {
     const { batchParams } = this;
-    const { buids, hashStorage } = batchParams;
+    const { buids, hashStorage, config, preview } = batchParams;
     const successfulSyncs = new Map<string, FieldSet>();
+    const deactivatedBuids = new Set<string>();
     let primaryKeyFields: Set<string> | undefined;
+
+    // DynamoDB storage records each person's state right after their push (so a failure part way
+    // through a batch loses nothing already synced); baseline file storage is rewritten once at the end.
+    const perPersonHashUpdates = isDynamoDbStorage(config);
     
     for (let i = 0; i < buids.length; i++) {
       try {
@@ -95,15 +105,27 @@ class BatchPersonSync {
           buid: buids[i] 
         });
         
-        // Perform sync with suppressHashUpdate to prevent individual updates
-        // (hash storage will be updated in batch at the end for efficiency)
-        await singleSync.sync({ 
-          suppressHashUpdate: true,
-          forceUpdate: batchParams.forceUpdate 
+        // Unless updating hash storage per person, perform sync with suppressHashUpdate to prevent
+        // individual updates (hash storage will be updated in batch at the end for efficiency)
+        await singleSync.sync({
+          suppressHashUpdate: !perPersonHashUpdates,
+          forceUpdate: batchParams.forceUpdate
         });
-        
-        // If hash storage update is enabled and sync succeeded, collect the result
-        if (hashStorage?.enabled === true && singleSync.getPushResult()?.status === Status.SUCCESS) {
+
+        if (perPersonHashUpdates || hashStorage?.enabled !== true) {
+          continue;
+        }
+
+        // Collect deactivations, to be marked as deleted in hash storage (never in preview mode)
+        if (singleSync.wasDeactivated()) {
+          if (!preview) {
+            deactivatedBuids.add(buids[i]);
+          }
+          continue;
+        }
+
+        // If sync succeeded, collect the result
+        if (singleSync.getPushResult()?.status === Status.SUCCESS) {
           // Re-fetch the mapped person with hashing to get the fieldSet with hash
           const hashedInput = await singleSync.getMappedPerson({ 
             crudOperation: CrudOperation.UPDATE
@@ -128,9 +150,9 @@ class BatchPersonSync {
       }
     }
 
-    // Perform batch hash storage update for all successful syncs
-    if (hashStorage?.enabled && hashStorage.deltaStrategy && primaryKeyFields) {
-      await this.updateHashStorageBatch(successfulSyncs, primaryKeyFields);
+    // Perform batch hash storage update for all successful syncs and deactivations
+    if (!perPersonHashUpdates && hashStorage?.enabled && hashStorage.deltaStrategy) {
+      await this.updateHashStorageBatch(successfulSyncs, primaryKeyFields ?? personPrimaryKeyFields(), deactivatedBuids);
     }
   }
 }

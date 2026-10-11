@@ -208,11 +208,15 @@ class SinglePersonSync {
    */
   private deactivateTargetPersonIfExists = async (): Promise<void> => {
     const targetPerson = await this.getTargetPerson();
-    const { instanceParams: { config, buid, cache }, logPrefix } = this;
+    const { instanceParams: { config, buid, cache, preview }, logPrefix } = this;
     if(targetPerson) {
       if(targetPerson.active === false) {
         console.log(`No-op: need to deactivate ${buid} in target system, but already inactive.`);
         this.deactivated = true;
+        return;
+      }
+      if(preview) {
+        console.log(`Preview mode enabled - skipping deactivation of ${buid} in target system.`);
         return;
       }
       console.log(`Deactivating ${buid} in target system...`);

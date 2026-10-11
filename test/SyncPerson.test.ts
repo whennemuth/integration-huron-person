@@ -917,9 +917,14 @@ describe('SinglePersonSync', () => {
         expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
       });
 
-      it('does not mark the person in preview mode', async () => {
+      it('neither deactivates nor marks the person in preview mode', async () => {
         goneFromSource();
-        await buildSync({ preview: true }).sync();
+        const sync = buildSync({ preview: true });
+
+        await sync.sync();
+
+        expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        expect(sync.wasDeactivated()).toBe(false);
         expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
       });
 

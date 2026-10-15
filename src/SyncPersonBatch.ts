@@ -189,11 +189,13 @@ export async function main(params?: MainParams): Promise<void> {
     }
 
     // Get environment variables for batch sync
-    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE, SYNC_BULK_RESET } = process.env;
+    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE } = process.env;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
     const trustPreviousStorage = `${SYNC_TRUST_PREVIOUS_STORAGE}`.trim().toLowerCase() === 'true';
-    const bulkReset = `${SYNC_BULK_RESET}`.trim().toLowerCase() === 'true';
+    if (trustPreviousStorage && !updateHashStorage) {
+      console.warn('SYNC_TRUST_PREVIOUS_STORAGE=true has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+    }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
     if ( ! isDynamoDbStorage(config)) {
@@ -209,11 +211,9 @@ export async function main(params?: MainParams): Promise<void> {
       deltaStrategy: DeltaStrategyFactory.createStrategy({
         config,
         ignoreRemovals: true,
-        trustPreviousStorage,
-        bulkReset
+        trustPreviousStorage
       } satisfies CreateStrategyParams),
-      trustPreviousStorage,
-      bulkReset
+      trustPreviousStorage
     } : undefined;
 
     const buidsFilePath = `${SYNC_BUIDS_FILE_PATH || ''}`.trim();
@@ -289,7 +289,6 @@ if (require.main === module) {
     'SYNC_BUIDS_FILE_PATH',
     'SYNC_BUIDS',
     'SYNC_TRUST_PREVIOUS_STORAGE',
-    'SYNC_BULK_RESET',
     'PREVIOUS_STORAGE_TYPE',
     'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
     'DYNAMODB_PERSON_HISTORY_TABLE_NAME',

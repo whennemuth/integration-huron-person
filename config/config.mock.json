@@ -59,8 +59,8 @@
   "storage": {
     "type": "dynamodb",
     "config": {
-      "_bucketName": "huron-person-file-drop-dev",
-      "bucketName": "huron-person-chunks-mock",
+      "personCurrentStateTableName": "huron-person-fargate-processor-person-current-state-mock",
+      "personHistoryTableName": "huron-person-fargate-processor-person-history-mock",
       "region": "us-east-2"
     }
   },

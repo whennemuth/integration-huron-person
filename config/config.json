@@ -1,5 +1,5 @@
 {
-  "landscape": "preview",
+  "landscape": "mock",
   "dataSource": {
     "person": {
       "endpointConfig": {
@@ -39,7 +39,7 @@
   },
   "dataTarget": {
     "endpointConfig": {
-      "baseUrl": "https://bu.hrs-preview.com",
+      "baseUrl": "https://mock-target.invalid",
       "authMethod": "externalToken",
       "externalToken": "your-external-token-here",
       "userId": "bu-sso_wrh@bu.edu",
@@ -59,8 +59,8 @@
   "storage": {
     "type": "dynamodb",
     "config": {
-      "_bucketName": "huron-person-file-drop-dev",
-      "bucketName": "huron-person-chunks-preview",
+      "personCurrentStateTableName": "huron-person-fargate-processor-person-current-state-mock",
+      "personHistoryTableName": "huron-person-fargate-processor-person-history-mock",
       "region": "us-east-2"
     }
   },

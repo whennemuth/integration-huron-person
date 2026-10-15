@@ -988,9 +988,6 @@ describe('SinglePersonSync', () => {
       let liveCheck: jest.SpyInstance;
 
       beforeEach(() => {
-        // DeltaStrategyFactory is auto-mocked in this file - use the real rule
-        const actual = jest.requireActual('../src/delta-strategy/DeltaStrategyFactory');
-        DeltaStrategyFactory.trustsPreviousStorage = actual.DeltaStrategyFactory.trustsPreviousStorage;
         liveCheck = jest.spyOn(SyncEvaluator, 'SourcePerson').mockImplementation(() => ({
           isInSyncWith: jest.fn().mockResolvedValue(false)
         }) as any);
@@ -1047,18 +1044,61 @@ describe('SinglePersonSync', () => {
         expect(liveCheck).toHaveBeenCalled();
       });
 
-      it('compares with the target when bulkReset is set', async () => {
-        await syncWithStoredHash({ trustPreviousStorage: true, bulkReset: true }, 'same');
-
-        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
-        expect(liveCheck).toHaveBeenCalled();
-      });
-
       it('compares with the target for S3/file storage', async () => {
         await syncWithStoredHash({ trustPreviousStorage: true }, 'same', mockConfig);
 
         expect(liveCheck).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('supplied CRUD operation and completion logging', () => {
+    let logSpy: jest.SpyInstance;
+    let warnSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      logSpy = jest.spyOn(console, 'log').mockImplementation();
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('creates a person who is not in the target, even if UPDATE was supplied', async () => {
+      await singlePersonSync.sync({ crudOperation: CrudOperation.UPDATE });
+
+      expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.CREATE }));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('does not exist in target, changing operation to create'));
+    });
+
+    it('keeps a supplied UPDATE for a person who is in the target', async () => {
+      (ReadPerson as jest.Mock).mockImplementation(() => ({
+        readPersonBySourceIdentifier: jest.fn().mockResolvedValue([{ hrn: 'hrn:hrs:persons:U12345678', active: true }])
+      }));
+
+      await singlePersonSync.sync({ crudOperation: CrudOperation.UPDATE });
+
+      expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.UPDATE }));
+    });
+
+    it('reports a failed push instead of success', async () => {
+      mockDataTarget.pushOne.mockResolvedValue({
+        status: Status.FAILURE, message: 'Push failed', timestamp: new Date(), primaryKey: [], crud: CrudOperation.CREATE
+      });
+
+      await singlePersonSync.sync();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('completed with a failed push for BUID: U12345678: Push failed'));
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('completed successfully'));
+    });
+
+    it('reports success after a successful push', async () => {
+      await singlePersonSync.sync();
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Single Person Sync completed successfully for BUID: U12345678'));
+      expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('failed push'));
     });
   });
 });

@@ -32,12 +32,9 @@ type PersonSyncParams = {
     deltaStrategy?: DeltaStrategy;
     /**
      * Use the hash in storage, when there is one, to decide whether a person is already in sync,
-     * instead of comparing with the target - unless bulkReset is set (same rule as
-     * DeltaStrategyFactory.trustsPreviousStorage(), except that it defaults to false here).
-     * DynamoDB storage only.
+     * instead of comparing with the target. DynamoDB storage only. Defaults to false.
      */
     trustPreviousStorage?: boolean;
-    bulkReset?: boolean;
   };
   forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
 };
@@ -387,9 +384,9 @@ class SinglePersonSync {
 
   /**
    * Compares the person's source hash with the hash stored for them, when stored state can be
-   * trusted (hashStorage.trustPreviousStorage and not hashStorage.bulkReset), so that the comparison
-   * with the target can be skipped. DynamoDB storage only: other storage would have to read the
-   * whole baseline for one person.
+   * trusted (hashStorage.trustPreviousStorage), so that the comparison with the target can be
+   * skipped. DynamoDB storage only: other storage would have to read the whole baseline for one
+   * person.
    *
    * @returns 'in-sync' or 'out-of-sync', or 'unavailable' when stored state is not trusted or not
    *   usable (no stored record, a DELETED: marked hash, or a read error) - the caller then compares
@@ -397,8 +394,8 @@ class SinglePersonSync {
    */
   private compareWithStoredHash = async (mappedPerson: Input): Promise<'in-sync' | 'out-of-sync' | 'unavailable'> => {
     const { instanceParams: { config, buid, hashStorage } } = this;
-    const { deltaStrategy, bulkReset, trustPreviousStorage = false } = hashStorage ?? {};
-    if (!deltaStrategy || !isDynamoDbStorage(config) || !DeltaStrategyFactory.trustsPreviousStorage({ bulkReset, trustPreviousStorage })) {
+    const { deltaStrategy, trustPreviousStorage = false } = hashStorage ?? {};
+    if (!deltaStrategy || !isDynamoDbStorage(config) || !trustPreviousStorage) {
       return 'unavailable';
     }
 
@@ -455,6 +452,11 @@ class SinglePersonSync {
       if( ! crudOperation ) {
         const hrn = await getHrn();       
         crudOperation = hrn ? CrudOperation.UPDATE : CrudOperation.CREATE;
+      }
+      else if (crudOperation === CrudOperation.UPDATE && ! await getHrn()) {
+        // A supplied UPDATE cannot succeed for a person who is not in the target
+        crudOperation = CrudOperation.CREATE;
+        console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
       }
       
       /**
@@ -625,7 +627,12 @@ class SinglePersonSync {
 
       await processHashStorage();
       
-      console.log(`${logPrefix}Single Person Sync completed successfully for BUID: ${buid}`);
+      if (this.pushResult?.status === Status.FAILURE) {
+        console.warn(`${logPrefix}Single Person Sync completed with a failed push for BUID: ${buid}: ${this.pushResult.message}`);
+      }
+      else {
+        console.log(`${logPrefix}Single Person Sync completed successfully for BUID: ${buid}`);
+      }
     } catch (error) {
       console.error(`${logPrefix}Single Person Sync failed for BUID: ${buid}:`, error);
       throw error;
@@ -658,13 +665,15 @@ async function main() {
     const dataMapper = await getDataMapper(config, config.preLoadedMaps ?? { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
-    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE, SYNC_BULK_RESET } = process.env;
+    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE } = process.env;
     let buid = SYNC_BUID;
     let crudOperation = SYNC_CRUD;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
     const trustPreviousStorage = `${SYNC_TRUST_PREVIOUS_STORAGE}`.trim().toLowerCase() === 'true';
-    const bulkReset = `${SYNC_BULK_RESET}`.trim().toLowerCase() === 'true';
+    if (trustPreviousStorage && !updateHashStorage) {
+      console.warn('SYNC_TRUST_PREVIOUS_STORAGE=true has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+    }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
     if ( ! isDynamoDbStorage(config)) {
@@ -680,11 +689,9 @@ async function main() {
       deltaStrategy: DeltaStrategyFactory.createStrategy({
         config,
         ignoreRemovals: true,
-        trustPreviousStorage,
-        bulkReset
+        trustPreviousStorage
       }),
-      trustPreviousStorage,
-      bulkReset
+      trustPreviousStorage
     } : undefined;
 
     // Disable source person lookup field filtering for this single sync
@@ -737,7 +744,6 @@ if (require.main === module) {
     'SYNC_PREVIEW',
     'SYNC_UPDATE_HASH',
     'SYNC_TRUST_PREVIOUS_STORAGE',
-    'SYNC_BULK_RESET',
     'INTEGRATED_DELTA_CLIENT_ID',
     'DELTA_STORAGE_BUCKET',
     'PREVIOUS_STORAGE_TYPE',

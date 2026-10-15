@@ -265,6 +265,27 @@
     "completed": false
   },
   {
+    "buid": "U54382341",
+    "name": "Samantha McGarrigle",
+    "role-hrns": [
+        "hrn:hrs:lists:roles/agreements-general-user",
+        "hrn:hrs:lists:roles/content-manager",
+        "hrn:hrs:lists:roles/data-manager",
+        "hrn:hrs:lists:roles/grnts-general-user",
+        "hrn:hrs:lists:roles/grnts-global-viewer",
+        "hrn:hrs:lists:roles/irb-general-user",
+        "hrn:hrs:lists:roles/irb-global-viewer",
+        "hrn:hrs:lists:roles/it-administrator",
+        "hrn:hrs:lists:roles/bu~impersonate",
+        "hrn:hrs:lists:roles/profile-manager",
+        "hrn:hrs:lists:roles/query-manager",
+        "hrn:hrs:lists:roles/settings-manager",
+        "hrn:hrs:lists:roles/site-user",
+        "hrn:hrs:lists:roles/suite-business-analyst"
+    ],
+    "completed": false
+  },
+  {
     "buid": "U21967744",
     "name": "Warren Hennemuth",
     "role-hrns": [

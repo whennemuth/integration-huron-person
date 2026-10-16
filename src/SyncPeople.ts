@@ -48,7 +48,7 @@ type HuronPersonIntegrationParams = {
    */
   retryStrategy?: ApiRetryStrategy;
   cleanupPreviousData?: boolean; // Optional flag to control whether previous data should be cleaned up after update
-  ignoreRemovals?: boolean; // Optional flag to control whether person removals should be ignored in delta computation (used for chunked processing where removals are determined by merger)
+  ignoreRemovals?: boolean; // Optional flag to control whether person removals should be ignored in delta computation (used for chunked processing where removals are determined by post-processor)
   /**
    * personRecordProcessor: Optional per-person async hook invoked once per record encountered
    * during mapping (success or failure) regardless of whether the sync itself ultimately

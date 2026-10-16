@@ -287,7 +287,7 @@ Phase 1 (Chunking) outputs chunks
   ↓
 SyncPeople/SyncPersonBatch processes chunks
   ↓
-Phase 3 (Merging) consolidates results
+Phase 3 (Post-processing) consolidates results
 ```
 
 ### Standalone Usage

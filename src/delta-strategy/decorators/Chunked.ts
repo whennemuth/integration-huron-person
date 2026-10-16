@@ -8,7 +8,7 @@ import { Config } from "../../config/Config";
  * 
  * When processing chunks in parallel, each chunk writes its delta to a chunk-specific
  * path (e.g., deltas/person-full/2026-04-08/chunk-0000.ndjson), but ALL chunks read
- * from the same integrated previous-input.ndjson file created by the merger.
+ * from the same integrated previous-input.ndjson file created by the post-processor.
  * 
  * This strategy ensures:
  * - Reading: Uses integratedDeltaClientId (e.g., "deltas") to find previous-input.ndjson
@@ -25,7 +25,7 @@ export class ChunkedDeltaStrategy implements DeltaStrategy {
     this.parms = deltaStrategy.parms;
     
     // Extract integrated delta client ID from config
-    // This is the path where previous-input.ndjson exists (created by merger)
+    // This is the path where previous-input.ndjson exists (created by post-processor)
     this.integratedDeltaClientId = config.integratedDeltaClientId || config.integration.clientId;
     
     console.log(`ChunkedDeltaStrategy: Reading integrated delta from: ${this.integratedDeltaClientId}`);
@@ -51,9 +51,9 @@ export class ChunkedDeltaStrategy implements DeltaStrategy {
    * 
    * In chunked mode:
    * - Each chunk processes ONLY the records it contains (additions and updates)
-   * - Removals can ONLY be determined by the merger after consolidating ALL chunks
+   * - Removals can ONLY be determined by the post-processor after consolidating ALL chunks
    * - If a person is truly removed from source, it will be absent from ALL chunks
-   * - The merger compares the consolidated result against shared previous-input.ndjson
+   * - The post-processor compares the consolidated result against shared previous-input.ndjson
    * 
    * Therefore, we return removed: [] to prevent chunks from incorrectly soft-deleting
    * records that are most likely being processed by other parallel chunks.

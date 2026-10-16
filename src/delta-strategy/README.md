@@ -57,7 +57,7 @@ Decorator for parallel chunk processing that separates integrated delta storage 
 
 **Problem it solves:**
 When processing person data in parallel chunks:
-- **All chunks** must read from the same baseline: `deltas/previous-input.ndjson` (created by merger)
+- **All chunks** must read from the same baseline: `deltas/previous-input.ndjson` (created by post-processor)
 - **Each chunk** writes its output to a separate path: `deltas/person-full/2026-04-08/chunk-0042.ndjson`
 
 **How it works:**

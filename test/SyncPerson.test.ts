@@ -876,6 +876,19 @@ describe('SinglePersonSync', () => {
     });
 
     describe('S3/file storage', () => {
+      it('does not rewrite the baseline when the person\'s stored hash is unchanged', async () => {
+        const sync = buildSync();
+        const { fieldSets: [{ hash }] } = await sync.getMappedPerson({ crudOperation: CrudOperation.CREATE });
+        mockStorage.fetchPreviousData.mockResolvedValue([{ fieldValues: [{ id: 'U12345678' }], hash }]);
+
+        await sync.sync({ crudOperation: CrudOperation.CREATE });
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        expect(mockStorage.fetchPreviousData).toHaveBeenCalled();
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Hash storage unchanged for person U12345678 - baseline not rewritten'));
+      });
+
       it('marks the stored hash of a person deactivated in the target as deleted', async () => {
         goneFromSource();
         const sync = buildSync();
@@ -981,6 +994,9 @@ describe('SinglePersonSync', () => {
         expect(mockStorage.updatePreviousData).toHaveBeenCalledWith(expect.objectContaining({
           newPreviousData: [expect.objectContaining({ fieldValues: [{ id: 'U12345678' }] })]
         }));
+        // DynamoDB storage decides whether to write, so the sync doesn't claim it updated anything
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Hash storage checked for person U12345678 (written only if new or changed)'));
+        expect(console.log).not.toHaveBeenCalledWith(expect.stringContaining('Hash storage updated successfully'));
       });
     });
 
@@ -1019,6 +1035,20 @@ describe('SinglePersonSync', () => {
         }));
         expect(liveCheck).not.toHaveBeenCalled();
         expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('No push for U12345678: source and target already in sync'));
+        // The matching hash is not written again
+        expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+      });
+
+      it('still writes hash storage when the target comparison finds the person in sync', async () => {
+        liveCheck.mockImplementation(() => ({ isInSyncWith: jest.fn().mockResolvedValue(true) }) as any);
+
+        await syncWithStoredHash({}, 'none');
+
+        expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('No push for U12345678: source and target already in sync'));
+        // Creates or repairs the stored record
+        expect(mockStorage.updatePreviousData).toHaveBeenCalled();
       });
 
       it('pushes without the target comparison when the stored hash differs', async () => {

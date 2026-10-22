@@ -287,18 +287,27 @@ class SinglePersonSync {
   }
 
   /**
+   * The hash storage to read and write: the storage of the delta strategy this sync was given
+   * (hashStorage.deltaStrategy), or one created from the config if none was given.
+   */
+  private getHashStorage = () => {
+    const { instanceParams: { config, hashStorage } } = this;
+    return (hashStorage?.deltaStrategy ?? DeltaStrategyFactory.createStrategy({ config })).storage;
+  }
+
+  /**
    * Updates the hash storage for this person in storage.
    * 
    * Uses HashStorageUpdater utility to perform the update operation,
    * eliminating code duplication with batch update logic.
    */
   private updateHashStorage = async (input: Input): Promise<void> => {
-    const { instanceParams: { config, buid }, logPrefix } = this;
+    const { instanceParams: { config, buid }, logPrefix, getHashStorage } = this;
     
     try {
-      const deltaStrategy = DeltaStrategyFactory.createStrategy({ config });
-      const { storage } = deltaStrategy;
+      const storage = getHashStorage();
       const clientId = config.integration.clientId;
+      const incremental = isDynamoDbStorage(config);
 
       // Get primary key fields from the input's field definitions
       const inputUtils = new InputUtilsDecorator(input);
@@ -317,14 +326,22 @@ class SinglePersonSync {
         clientId,
         fieldSetsToUpdate,
         primaryKeyFields,
-        incremental: isDynamoDbStorage(config)
+        incremental
       });
-      await hashStorageUpdater.updateStorage();
+      const changedCount = await hashStorageUpdater.updateStorage();
 
-      // Log success with primary key value
+      // Log the outcome with primary key value. Incremental storage writes the record only if it is
+      // new or changed (it logs its own NEW/UPDATED/UNCHANGED counts), so don't claim an update there.
       const primaryKeyValue = hashStorageUpdater.getPrimaryKeyValue(newFieldSet);
-
-      console.log(`${this.logPrefix}Hash storage updated successfully for person ${primaryKeyValue}`);
+      if (incremental) {
+        console.log(`${this.logPrefix}Hash storage checked for person ${primaryKeyValue} (written only if new or changed)`);
+      }
+      else if (changedCount > 0) {
+        console.log(`${this.logPrefix}Hash storage updated successfully for person ${primaryKeyValue}`);
+      }
+      else {
+        console.log(`${this.logPrefix}Hash storage unchanged for person ${primaryKeyValue} - baseline not rewritten`);
+      }
     } catch (error) {
       console.warn(`${this.logPrefix}Failed to update hash storage: ${error}. Sync to target was successful, but hash storage was not updated.`);
     }
@@ -369,7 +386,7 @@ class SinglePersonSync {
         return;
       }
 
-      const { storage } = DeltaStrategyFactory.createStrategy({ config });
+      const storage = this.getHashStorage();
       await new HashStorageUpdater({
         storage,
         clientId: config.integration.clientId,
@@ -466,12 +483,16 @@ class SinglePersonSync {
       const mappedPerson: Input = await this.getMappedPerson({ rawData, crudOperation });
       const cdmPerson = this.rawPersonData; // Set in getMappedPerson 
 
+      // Set when the stored hash already equals the source hash, so writing it again would change nothing
+      let storedHashMatched = false;
+
       /**
        * Update hash storage if enabled and sync was successful (including when push was skipped)
-       * Skip individual update if suppressHashUpdate is true (used in batch operations)
+       * Skip individual update if suppressHashUpdate is true (used in batch operations), or if the
+       * stored hash was found to match already (nothing to write)
        */
       const processHashStorage = async () => {
-        if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate) {
+        if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate && !storedHashMatched) {
           await this.updateHashStorage(mappedPerson);
         }
       }
@@ -538,13 +559,14 @@ class SinglePersonSync {
       const storedHashComparison = assessSyncedState ? await this.compareWithStoredHash(mappedPerson) : 'unavailable';
 
       if (storedHashComparison === 'in-sync') {
-        console.log(`Source matches the hash in storage for BUID: ${buid} - already in sync.`);
+        console.log(`Source matches the hash in storage for BUID: ${buid} - already in sync, hash storage left as is.`);
         const huronPerson = await this.getTargetPerson();
         if(huronPerson && !huronPerson.active) {
           console.log(`For some reason, in-sync person is currently inactive in target. Attempting to activate...`);
           await this.activateTargetPersonIfExists();
         }
         skipPush = true;
+        storedHashMatched = true;
       }
       else if (storedHashComparison === 'out-of-sync') {
         console.log(`Source differs from the hash in storage for BUID: ${buid} - pushing without comparing with target.`);
@@ -582,7 +604,7 @@ class SinglePersonSync {
               await this.activateTargetPersonIfExists();
             }
             skipPush = true;
-            console.log(`Hash storage will still be updated to ensure consistency.`);
+            console.log(`Hash storage will still be checked, and written if its record is missing or stale.`);
             // NOTE: Currently, hash storage updates will occur even when source/target are in sync.
             // This handles cases where the hash storage record may be missing or out of date.
             // In the future, once the system is fully mature, we expect that ANY person found in
@@ -615,7 +637,7 @@ class SinglePersonSync {
           }),
           crud: crudOperation!
         };
-        console.log(`${this.logPrefix}Push result for ${buid}:`, this.pushResult.status, this.pushResult.message);
+        console.log(`${this.logPrefix}No push for ${buid}: source and target already in sync`);
       } else {
         const result = await this.dataTarget.pushOne({
           data: mappedPerson.fieldSets[0],

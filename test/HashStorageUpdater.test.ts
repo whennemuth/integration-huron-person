@@ -403,4 +403,62 @@ describe('HashStorageUpdater', () => {
       expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
     });
   });
+
+  describe('skipping no-op baseline rewrites', () => {
+    const primaryKeyFields = new Set(['id']);
+
+    beforeEach(() => {
+      mockStorage.fetchPreviousData.mockResolvedValue([
+        { fieldValues: [{ id: 'U123' }], hash: 'hash-123' },
+        { fieldValues: [{ id: 'U456' }], hash: 'hash-456' }
+      ]);
+    });
+
+    it('does not rewrite the baseline when every record already has its stored hash', async () => {
+      const fieldSetsToUpdate = new Map([
+        ['U123', { fieldValues: [{ id: 'U123' }, { name: 'John' }], hash: 'hash-123' } as FieldSet]
+      ]);
+
+      const count = await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate, primaryKeyFields
+      }).updateStorage();
+
+      expect(count).toBe(0);
+      expect(mockStorage.fetchPreviousData).toHaveBeenCalled();
+      expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+    });
+
+    it('rewrites the baseline, counting only changed records, when some records changed', async () => {
+      const fieldSetsToUpdate = new Map([
+        ['U123', { fieldValues: [{ id: 'U123' }], hash: 'hash-123' } as FieldSet],
+        ['U456', { fieldValues: [{ id: 'U456' }], hash: 'new-hash-456' } as FieldSet],
+        ['U789', { fieldValues: [{ id: 'U789' }], hash: 'hash-789' } as FieldSet]
+      ]);
+
+      const count = await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate, primaryKeyFields
+      }).updateStorage();
+
+      expect(count).toBe(2); // U456 changed, U789 added; U123 unchanged
+      expect(mockStorage.updatePreviousData).toHaveBeenCalledTimes(1);
+      const { newPreviousData } = mockStorage.updatePreviousData.mock.calls[0][0];
+      expect(newPreviousData.map((fs: FieldSet) => fs.hash)).toEqual(['hash-123', 'new-hash-456', 'hash-789']);
+    });
+
+    it('treats a record replacing a DELETED: marked hash as changed', async () => {
+      mockStorage.fetchPreviousData.mockResolvedValue([
+        { fieldValues: [{ id: 'U123' }], hash: 'DELETED:hash-123' }
+      ]);
+      const fieldSetsToUpdate = new Map([
+        ['U123', { fieldValues: [{ id: 'U123' }], hash: 'hash-123' } as FieldSet]
+      ]);
+
+      const count = await new HashStorageUpdater({
+        storage: mockStorage, clientId, fieldSetsToUpdate, primaryKeyFields
+      }).updateStorage();
+
+      expect(count).toBe(1);
+      expect(mockStorage.updatePreviousData).toHaveBeenCalled();
+    });
+  });
 });

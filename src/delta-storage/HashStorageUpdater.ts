@@ -46,7 +46,12 @@ export class HashStorageUpdater {
   /**
    * Update hash storage with one or more field sets, and mark any personIdsToMarkDeleted.
    *
-   * @returns Count of records updated (marked deletions are not counted)
+   * For baseline file storage the baseline is rewritten only if something changed: a record that is
+   * new, whose hash differs from the stored one, or that gets marked deleted.
+   *
+   * @returns For baseline file storage, the count of records added or with a changed hash (marked
+   *   deletions are not counted) - 0 when the baseline was not rewritten. For incremental storage,
+   *   the count of records offered, since the storage itself decides which to write.
    */
   public async updateStorage(): Promise<number> {
     const { storage, clientId, fieldSetsToUpdate, primaryKeyFields, incremental } = this.params;
@@ -72,8 +77,9 @@ export class HashStorageUpdater {
     // Fetch all stored data
     const allStoredData = await storage.fetchPreviousData({ clientId });
 
-    // Track which identifiers were updated vs added
+    // Track which identifiers were updated vs added, and how many records actually changed
     const identifiersUpdated = new Set<string>();
+    let changedCount = 0;
 
     // Update existing records by matching primary keys
     const updateStore = allStoredData.map(existingFs => {
@@ -83,6 +89,9 @@ export class HashStorageUpdater {
       for (const [identifier, newFieldSet] of fieldSetsToUpdate.entries()) {
         if (existingPkKey === this.getPrimaryKeyValue(newFieldSet)) {
           identifiersUpdated.add(identifier);
+          if (newFieldSet.hash !== existingFs.hash) {
+            changedCount++;
+          }
           return newFieldSet;
         }
       }
@@ -93,6 +102,7 @@ export class HashStorageUpdater {
     for (const [identifier, fieldSet] of fieldSetsToUpdate.entries()) {
       if (!identifiersUpdated.has(identifier)) {
         updateStore.push(fieldSet);
+        changedCount++;
       }
     }
 
@@ -109,7 +119,7 @@ export class HashStorageUpdater {
       console.log(`Marking ${markedCount} of ${personIdsToMarkDeleted.size} person(s) as deleted in hash storage`);
     }
 
-    if (fieldSetsToUpdate.size === 0 && markedCount === 0) {
+    if (changedCount === 0 && markedCount === 0) {
       return 0; // Nothing changed - skip rewriting the baseline
     }
 
@@ -120,7 +130,7 @@ export class HashStorageUpdater {
       primaryKeyFields
     });
 
-    return fieldSetsToUpdate.size;
+    return changedCount;
   }
 
   /**

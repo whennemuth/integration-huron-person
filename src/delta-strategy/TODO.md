@@ -55,6 +55,13 @@ The fast path is DynamoDB-only because `fetchPreviousData()` for baseline file s
 whole `previous-input.ndjson` to find one person. A keyed lookup (or a per-run cache of the baseline,
 for batches) would make it viable there too.
 
+That cost argument is weaker than it looks for single-person syncs with `SYNC_UPDATE_HASH=true`: the
+hash storage step (`HashStorageUpdater`) already reads the whole baseline once per sync, to compare
+and (only if something changed) rewrite it. A stored-hash check could reuse that single read - read
+the baseline before deciding whether to push, compare the person's stored hash, then write only if
+needed - adding no read at all. It means moving the read ahead of the push decision and passing the
+baseline through to the write, so it's a restructuring rather than a small change.
+
 ## Keep the `DELETED:` marker out of PersonHistory, and record reactivation explicitly
 
 The `DELETED:` hash prefix is a PersonCurrentState device: it keeps deletion detection from selecting

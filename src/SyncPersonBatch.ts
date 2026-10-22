@@ -71,7 +71,9 @@ class BatchPersonSync {
       });
       const updateCount = await hashStorageUpdater.updateStorage();
 
-      console.log(`Successfully updated hash storage with ${updateCount} person record(s)`);
+      console.log(updateCount > 0
+        ? `Successfully updated hash storage with ${updateCount} person record(s)`
+        : 'Hash storage unchanged - baseline not rewritten');
     } catch (error) {
       console.warn(`Failed to update hash storage in batch: ${error}. Syncs to target succeeded, but hash storage was not updated.`);
     }

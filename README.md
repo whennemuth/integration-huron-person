@@ -8,21 +8,22 @@ This project is an independently versioned npm package with its own Git reposito
 
 It depends on `integration-core` as a package dependency. The workspace groups related repositories for development convenience, but each project remains a separate source-control and release unit.
 
-## Shared Copilot Skills Setup (VS Code Configuration)
+## Shared Skills Setup
 
-*NOTE: The following assumes a VS Code development environment - adapt as needed for other editors.*
+Shared agent skills are maintained in a separate repository at `integration-workspace-skills/.claude/skills/`. This is a native skill location that both VS Code (GitHub Copilot) and Claude Code discover without any custom settings. See `integration-workspace-skills/README.md` for full setup details.
 
-Shared skills are maintained in a separate repository at `integration-workspace-skills/` and discovered by VS Code's Copilot using the `chat.agentSkillsLocations` setting.
+### Claude Code
 
-Add this setting to your [**`.code-workspace`** file](https://code.visualstudio.com/docs/editing/workspaces/workspaces#_workspace-settings) to enable skill discovery. **Important**: In [**multi-root**](https://code.visualstudio.com/docs/editing/workspaces/workspaces#_multiroot-workspaces) `.code-workspace` configurations, paths in `chat.agentSkillsLocations` are resolved relative to each workspace root folder.
+Claude Code has no multi-root workspace. Load the skills repository with `--add-dir` (or `/add-dir` in a running session):
 
-Use this canonical settings entry:
-
-```json
-"chat.agentSkillsLocations": {
-  "../integration-workspace-skills/skills": true
-}
+```bash
+# From the workspace root
+claude --add-dir integration-workspace-skills
 ```
+
+### VS Code
+
+VS Code discovers `.claude/skills/` in every root folder of a [**multi-root**](https://code.visualstudio.com/docs/editing/workspaces/workspaces#_multiroot-workspaces) workspace and makes those skills available across the whole workspace. Include `integration-workspace-skills` as a root folder in your [**`.code-workspace`** file](https://code.visualstudio.com/docs/editing/workspaces/workspaces#_workspace-settings), as in the scenarios below.
 
 ### Scenario 1: Working only on integration-core
 
@@ -45,9 +46,6 @@ Use this canonical settings entry:
   "settings": {
     "chat.tools.terminal.autoApprove": {
       "npm test": true
-    },
-    "chat.agentSkillsLocations": {
-      "../integration-workspace-skills/skills": true
     }
   }
 }
@@ -82,9 +80,6 @@ Use this canonical settings entry:
   "settings": {
     "chat.tools.terminal.autoApprove": {
       "npm test": true
-    },
-    "chat.agentSkillsLocations": {
-      "../integration-workspace-skills/skills": true
     }
   }
 }

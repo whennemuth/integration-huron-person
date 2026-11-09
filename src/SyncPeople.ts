@@ -1,4 +1,4 @@
-import { DataSource, EndToEnd, FieldSet, IntegrationResult, isS3Config, TestEnvironment, Timer } from 'integration-core';
+import { DataSource, DeltaStrategy, EndToEnd, FieldSet, IntegrationResult, isS3Config, TestEnvironment, Timer } from 'integration-core';
 import { getLocalConfig } from '../bin';
 import { Cache } from './Cache';
 import { Config, TargetPersonDeleteType } from './config/Config';
@@ -10,6 +10,8 @@ import { TargetApiErrorEventProcessor } from './data-target/ApiClientForJWT';
 import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
+import { PushedChangeTypesDeltaStrategy } from './delta-strategy/decorators/PushedChangeTypes';
+import { PushedChanges } from './delta-strategy/PushedChanges';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
 import { ApiRetryStrategy } from './ApiRetryStrategy';
 
@@ -131,6 +133,16 @@ class HuronPersonIntegration {
   }
 
   /**
+   * The delta strategy to run with: for DynamoDB storage, one whose storage records in person history each
+   * person's change as the push made it (PushedChangeTypesDeltaStrategy), so the changes it lists for a run
+   * agree with the run's figures however the delta was computed. Other storages keep only a baseline, so
+   * their strategy is returned as it is.
+   */
+  static recordingPushedChanges(deltaStrategy: DeltaStrategy, storageType: string | undefined, pushedChanges: PushedChanges): DeltaStrategy {
+    return storageType === 'dynamodb' ? new PushedChangeTypesDeltaStrategy(deltaStrategy, pushedChanges) : deltaStrategy;
+  }
+
+  /**
    * Execute the complete integration process
    * @param taskName - Optional custom task name for logging
    * @param chunkId - Optional chunk identifier for parallel processing
@@ -186,10 +198,14 @@ class HuronPersonIntegration {
       }
       let dataSource: DataSource = getDataSource(config, responseFilter, this.retryStrategy) as DataSource;
       
+      // Each successful push, so that DynamoDB storage records in person history what the push did
+      const pushedChanges = new PushedChanges();
+
       const dataTarget = new HuronPersonDataTarget({
         config,
         cache: config.cache as any,
-        errorEventProcessor
+        errorEventProcessor,
+        pushRecorder: pushedChanges
       });
       
       // JWT Safeguard: Ensure valid token before any data operations
@@ -200,14 +216,15 @@ class HuronPersonIntegration {
       
       // Calculate effective bulkReset: use upsert (cache-based lookup) if bulkReset is true OR if trustPreviousStorage is false
       const effectiveBulkReset = bulkReset || !trustPreviousStorage;
-      const deltaStrategy = DeltaStrategyFactory.createStrategy({ 
-        config, 
-        chunkId, 
+      let deltaStrategy = DeltaStrategyFactory.createStrategy({
+        config,
+        chunkId,
         bulkReset: effectiveBulkReset,
         trustPreviousStorage,
         lookupPersonInTargetSystemCache,
         ignoreRemovals
       });
+      deltaStrategy = HuronPersonIntegration.recordingPushedChanges(deltaStrategy, type, pushedChanges);
 
       const fieldFilterParms = {
         stateMappings: dataMapper.stateMappings,

@@ -37,6 +37,14 @@ export interface PersonPushResponse {
 }
 
 /**
+ * Told of each record pushAll() pushed successfully, with the operation it was pushed with (see
+ * PushedChanges in src/delta-strategy/PushedChanges.ts)
+ */
+export interface PushRecorder {
+  recordSuccess(record: FieldSet, crud: CrudOperation): void;
+}
+
+/**
  * DataTarget implementation for pushing person data to Huron API
  */
 export class HuronPersonDataTarget implements DataTarget {
@@ -49,12 +57,19 @@ export class HuronPersonDataTarget implements DataTarget {
   private hrn: string | undefined;
   private errorEventProcessor: TargetApiErrorEventProcessor | undefined;
   private lastValidationResult: { result?: SinglePushResult | undefined, deactivate: boolean };
+  private pushRecorder: PushRecorder | undefined;
 
-  constructor(params: { config: Config, cache?: Cache<string, string>, hrn?: string, errorEventProcessor?: TargetApiErrorEventProcessor }) {
-  // constructor(config: Config, cache?: Cache<string, string>) {
-    const { config, cache, hrn, errorEventProcessor } = params;
+  /**
+   * @param params.pushRecorder - Optional: told of each record pushAll() pushes successfully
+   */
+  constructor(params: {
+    config: Config, cache?: Cache<string, string>, hrn?: string, errorEventProcessor?: TargetApiErrorEventProcessor,
+    pushRecorder?: PushRecorder
+  }) {
+    const { config, cache, hrn, errorEventProcessor, pushRecorder } = params;
     this.config = config;
     this.hrn = hrn;
+    this.pushRecorder = pushRecorder;
     this.errorEventProcessor = errorEventProcessor || config.dataTarget.endpointConfig.errorEventProcessor;
     const endpointConfig: EndpointConfigForJWT = {
       ...config.dataTarget.endpointConfig,
@@ -270,6 +285,7 @@ export class HuronPersonDataTarget implements DataTarget {
         if (result.status === Status.SUCCESS) {
           console.log(`✓ Successfull ${crud} for: ${JSON.stringify(result)}`);
           successes.push(result);
+          this.pushRecorder?.recordSuccess(record, crud);
         } else {
           console.error(`✗ Failed ${crud} for: ${JSON.stringify(result)}`);
           failures.push(result);

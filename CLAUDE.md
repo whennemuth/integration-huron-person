@@ -255,6 +255,29 @@ storage backend (DynamoDB table vs. S3), provisioning it via fargate's CDK
 stack, implementing a concrete processor there, and refreshing fargate's
 installed `integration-huron-person` tgz dependency.
 
+## Person History Records What the Push Did (DynamoDB storage)
+
+DynamoDB delta storage (integration-core's `DynamoDBDeltaStorage.updatePreviousData()`) writes a person
+history item per changed person, classifying each by comparing its hash with the stored baseline (no stored
+record: NEW; different hash: UPDATED; same: nothing written). That matches the push only when the delta came
+from the baseline. With `UpsertDeltaStrategy` (bulk reset, or previous storage not trusted) the delta comes
+from the target: a person already in Huron is updated even when the baseline has no record of them, and a
+person created there may already be in the baseline. History then disagreed with the run's figures (preview's
+bulk reset of 2026-11-06 counted 3 updates; history held none).
+
+So for DynamoDB storage `HuronPersonIntegration.run()` records each successful push and has history record
+the push's own change:
+- `PushedChanges` (`src/delta-strategy/PushedChanges.ts`, a `PushRecorder`) is given to `HuronPersonDataTarget`,
+  whose `pushAll()` tells it of each success with its `CrudOperation` (create: NEW, update: UPDATED; deletes
+  aren't recorded, `markDeleted()` writes those).
+- `PushedChangeTypesDeltaStrategy` (`src/delta-strategy/decorators/PushedChangeTypes.ts`, applied by
+  `HuronPersonIntegration.recordingPushedChanges()`) serves a `PushedChangeTypesStorage`, which adds a
+  `changeType` field (and for an update the stored hash as `previousHash`, since storage looks hashes up only for
+  records it classifies itself) to each pushed person's FieldSet before delegating `updatePreviousData()`.
+  Storage honors those fields over its own classification. Records not pushed, or whose push failed, pass
+  through unchanged.
+- Not applied to other storages: their baselines would keep the extra fields.
+
 ## End-of-Records Detection in BuCdmPeopleDataSourceBatch (stopAtFirstPartial)
 
 The BU CDM people API occasionally returns a "partial" batch (0 < length < `recordCount`)

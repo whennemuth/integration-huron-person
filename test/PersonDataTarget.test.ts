@@ -831,11 +831,23 @@ describe('HuronPersonDataTarget', () => {
         updated: updatedData,
         removed: removedData
       };
+      const recordSuccess = jest.fn();
+      (dataTarget as any).pushRecorder = { recordSuccess };
       const result = await dataTarget.pushAll(params);
 
       expect(result.status).toBe(BatchStatus.PARTIAL);
       expect(result.successes).toHaveLength(2);
       expect(result.failures).toHaveLength(1);
+      // Only the successes are recorded, each with the operation it was pushed with
+      expect(recordSuccess.mock.calls).toEqual([
+        [addedData[0], CrudOperation.CREATE],
+        [updatedData[0], CrudOperation.UPDATE]
+      ]);
+    });
+
+    it('takes a push recorder from its parameters', () => {
+      const pushRecorder = { recordSuccess: jest.fn() };
+      expect((new HuronPersonDataTarget({ config: mockConfig, pushRecorder }) as any).pushRecorder).toBe(pushRecorder);
     });
 
     it('should handle complete batch failure', async () => {

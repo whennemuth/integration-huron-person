@@ -419,11 +419,11 @@ If you want to use this integration package in another project:
 ```bash
 # First, build the package from this repository
 cd integration-huron-person
-npm run pack  # Creates integration-huron-person-1.0.0.tgz
+npm run pack  # Creates integration-huron-person-1.0.1.tgz
 
 # Then in your consuming project, install the package
 # integration-core will be installed automatically as a dependency
-npm install ./path/to/integration-huron-person-1.0.0.tgz
+npm install ./path/to/integration-huron-person-1.0.1.tgz
 
 # Verify installation
 npm list integration-core

@@ -16,12 +16,6 @@ export type DataSourceConfig = {
   /** Endpoint for fetching person data */
   fetchPath: string;
   /** Optional fields to keep during response filtering */
-  fetchSchedule?: {
-    /** Enable or disable scheduled fetch */
-    enabled: boolean;
-    /** Cron expression for scheduling the fetch */
-    cronExpression: string;
-  };
   fieldsOfInterest?: string[];
 };
 

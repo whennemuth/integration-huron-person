@@ -29,8 +29,6 @@ export class ConfigFromEnvironment {
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_API_KEY',
     DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH: 'DATASOURCE_ENDPOINTCONFIG_PEOPLE_PATH',
     DATASOURCE_PEOPLE_FETCH_BATCHED: 'DATASOURCE_PEOPLE_FETCH_BATCHED',
-    DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED: 'DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED',
-    DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION: 'DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION',
     DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_BASE_URL',
     DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_API_KEY',
     DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH: 'DATASOURCE_ENDPOINTCONFIG_CURRENT_TERMS_PATH',
@@ -183,29 +181,6 @@ export class ConfigFromEnvironment {
       (envOverrides.dataSource as any).people = {
         ...(envOverrides.dataSource as any).people,
         fetchBatched: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_BATCHED]
-      };
-    }
-
-    // People fetchSchedule overrides
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED]) {
-      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
-      (envOverrides.dataSource as any).people = {
-        ...(envOverrides.dataSource as any).people,
-        fetchSchedule: {
-          ...(envOverrides.dataSource as any).people?.fetchSchedule,
-          enabled: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_SCHEDULE_ENABLED] === 'true'
-        }
-      };
-    }
-
-    if (process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION]) {
-      envOverrides.dataSource = (envOverrides.dataSource || {}) as any;
-      (envOverrides.dataSource as any).people = {
-        ...(envOverrides.dataSource as any).people,
-        fetchSchedule: {
-          ...(envOverrides.dataSource as any).people?.fetchSchedule,
-          cronExpression: process.env[ConfigFromEnvironment.ENV_VARS.DATASOURCE_PEOPLE_FETCH_SCHEDULE_CRON_EXPRESSION]
-        }
       };
     }
 

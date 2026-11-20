@@ -20,11 +20,7 @@
         "apiKey": "your-api-key-here",
         "timeout": 7200000
       },
-      "fetchPath": "/api/1/rest/feed/run/task/BUProd/Admin-Integration-Services/GenericGets/huronIRBgetPersonByPopulation",
-      "fetchSchedule": {
-        "enabled": false,
-        "cronExpression": "cron(0 2 * * ? *)"
-      }
+      "fetchPath": "/api/1/rest/feed/run/task/BUProd/Admin-Integration-Services/GenericGets/huronIRBgetPersonByPopulation"
     },
     "terms": {
       "endpointConfig": {

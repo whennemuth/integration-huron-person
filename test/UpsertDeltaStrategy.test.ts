@@ -197,11 +197,11 @@ describe('UpsertDeltaStrategy', () => {
       expect(result.updated).toContain(persons[2]); // SRC003
     });
 
-    it('should treat lookup errors as new persons for safety', async () => {
+    it('should classify a person whose lookup fails as UPDATE, never CREATE (existence unknown)', async () => {
       const persons = [createMockPerson('SRC001', 'John', 'Doe')];
 
-      // Mock API error
-      mockReadPerson.readPersonBySourceIdentifier.mockRejectedValue(new Error('API connection failed'));
+      // Mock API error (not a 404): we can't tell whether the person exists
+      mockReadPerson.readPersonBySourceIdentifier.mockRejectedValue(new Error('500 Internal Server Error'));
 
       const result = await strategy.computeDelta({
         storage: mockStorage,
@@ -210,9 +210,31 @@ describe('UpsertDeltaStrategy', () => {
         clientId: 'test-client'
       });
 
-      expect(result.added).toHaveLength(1);
-      expect(result.updated).toHaveLength(0);
+      // The update path re-checks the target and fails if the person is absent (see PersonDataTarget tests)
+      expect(result.added).toHaveLength(0);
+      expect(result.updated).toEqual([persons[0]]);
       expect(result.removed).toHaveLength(0);
+    });
+
+    it('should go on to the next person after one lookup fails', async () => {
+      const persons = [
+        createMockPerson('SRC001', 'John', 'Doe'),
+        createMockPerson('SRC002', 'Jane', 'Smith')
+      ];
+
+      mockReadPerson.readPersonBySourceIdentifier
+        .mockRejectedValueOnce(new Error('429 Too Many Requests'))
+        .mockResolvedValueOnce([]);
+
+      const result = await strategy.computeDelta({
+        storage: mockStorage,
+        currentFieldSets: persons,
+        inputUtils: {},
+        clientId: 'test-client'
+      });
+
+      expect(result.updated).toEqual([persons[0]]);
+      expect(result.added).toEqual([persons[1]]);
     });
 
     it('should handle 404 errors as person not found', async () => {
@@ -380,13 +402,10 @@ describe('UpsertDeltaStrategy', () => {
       expect(mockReadPerson.readPersonBySourceIdentifier).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle cache lookup errors gracefully', async () => {
+    it('should fall back to a direct lookup when the cache lookup fails (person not in target)', async () => {
       const persons = [createMockPerson('SRC001', 'John', 'Doe')];
 
-      // Cache lookup throws error
       mockCacheLookup.mockRejectedValue(new Error('Cache connection failed'));
-
-      // API lookup should not be called - error is caught and person treated as new
       mockReadPerson.readPersonBySourceIdentifier.mockResolvedValue([]);
 
       const result = await strategy.computeDelta({
@@ -396,12 +415,44 @@ describe('UpsertDeltaStrategy', () => {
         clientId: 'test-client'
       });
 
-      // Should treat cache error as lookup failure and person as new (for safety)
-      expect(result.added).toHaveLength(1);
-      expect(result.updated).toHaveLength(0);
       expect(mockCacheLookup).toHaveBeenCalled();
-      // API should NOT be called because the entire try block failed
-      expect(mockReadPerson.readPersonBySourceIdentifier).not.toHaveBeenCalled();
+      expect(mockReadPerson.readPersonBySourceIdentifier).toHaveBeenCalledWith('SRC001', ['hrn', 'id', 'sourceIdentifier']);
+      expect(result.added).toEqual([persons[0]]);
+      expect(result.updated).toHaveLength(0);
+    });
+
+    it('should fall back to a direct lookup when the cache lookup fails (person in target)', async () => {
+      const persons = [createMockPerson('SRC001', 'John', 'Doe')];
+
+      mockCacheLookup.mockRejectedValue(new Error('Timeout waiting for cache creation'));
+      mockReadPerson.readPersonBySourceIdentifier.mockResolvedValue([{ hrn: 'HRN001', id: 'ID001', sourceIdentifier: 'SRC001' } as any]);
+
+      const result = await strategy.computeDelta({
+        storage: mockStorage,
+        currentFieldSets: persons,
+        inputUtils: {},
+        clientId: 'test-client'
+      });
+
+      expect(result.updated).toEqual([persons[0]]);
+      expect(result.added).toHaveLength(0);
+    });
+
+    it('should classify as UPDATE when both the cache and the direct lookup fail', async () => {
+      const persons = [createMockPerson('SRC001', 'John', 'Doe')];
+
+      mockCacheLookup.mockRejectedValue(new Error('Cache connection failed'));
+      mockReadPerson.readPersonBySourceIdentifier.mockRejectedValue(new Error('503 Service Unavailable'));
+
+      const result = await strategy.computeDelta({
+        storage: mockStorage,
+        currentFieldSets: persons,
+        inputUtils: {},
+        clientId: 'test-client'
+      });
+
+      expect(result.updated).toEqual([persons[0]]);
+      expect(result.added).toHaveLength(0);
     });
 
     it('should handle cache returning empty string', async () => {

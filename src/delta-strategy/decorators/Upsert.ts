@@ -64,34 +64,46 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
 
     // Query target system for each person to determine if they exist
     for (const person of currentFieldSets) {
-      try {
-        let existingPerson:any;
-        if (this.lookupPersonInTargetSystemCache) {
+      // The cache is only a short cut: a person it doesn't hold, or any error reading it, falls through to a
+      // direct lookup in the target.
+      let existingPerson: any;
+      if (this.lookupPersonInTargetSystemCache) {
+        try {
           const sourceIdentifier = await this.lookupPersonInTargetSystemCache(person);
           if (sourceIdentifier) {
             console.log(`  → Found sourceIdentifier ${sourceIdentifier} in cache for person.`);
-            existingPerson = { sourceIdentifier};
+            existingPerson = { sourceIdentifier };
           }
+        } catch (error) {
+          console.warn(`  → Cache lookup failed for person ${this.getPersonIdentifier(person)}, querying target system directly:`, error);
         }
+      }
 
+      try {
         if( ! existingPerson) {
           console.log(`  → SourceIdentifier not found in cache for person, querying target system directly...`);
           existingPerson = await this.lookupPersonInTargetSystem(person);
         }
-        
-        if (existingPerson) {
-          // Person exists - should be updated
-          updated.push(person);
-          console.log(`  → Person ${this.getPersonIdentifier(person)} exists in target (will UPDATE)`);
-        } else {
-          // Person doesn't exist - should be added
-          added.push(person);
-          console.log(`  → Person ${this.getPersonIdentifier(person)} not found in target (will CREATE)`);
-        }
       } catch (error) {
-        // If lookup fails (e.g., API error), treat as new person to be safe
-        console.warn(`  → Failed to lookup person ${this.getPersonIdentifier(person)}, treating as new:`, error);
+        // Existence unknown. Classify as UPDATE, not CREATE: the update path looks the person up in the target
+        // again to find their HRN (HuronPersonDataTargetUpdate), so a person who exists is updated, and one who
+        // doesn't fails ("Cannot determine HRN") as a push failure, which keeps their hash out of hash storage so a
+        // later run creates them. A wrongly guessed CREATE would instead be rejected as a duplicate (409) at best,
+        // or create a second record for the person at worst.
+        console.warn(`  → Failed to look up person ${this.getPersonIdentifier(person)} in the target; existence ` +
+          `unknown, so will UPDATE (the update re-checks the target, and fails if the person is not there):`, error);
+        updated.push(person);
+        continue;
+      }
+
+      if (existingPerson) {
+        // Person exists - should be updated
+        updated.push(person);
+        console.log(`  → Person ${this.getPersonIdentifier(person)} exists in target (will UPDATE)`);
+      } else {
+        // Person doesn't exist - should be added
         added.push(person);
+        console.log(`  → Person ${this.getPersonIdentifier(person)} not found in target (will CREATE)`);
       }
     }
 

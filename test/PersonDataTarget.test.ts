@@ -618,6 +618,22 @@ describe('HuronPersonDataTarget', () => {
       expect(mockReadPersonByHailMary).toHaveBeenCalledWith('U99999999');
     });
 
+    it('keys a "Cannot determine HRN" failure by the primary key (sourceIdentifier) alone', async () => {
+      (ReadPerson as jest.MockedClass<typeof ReadPerson>).mockImplementation(() => ({
+        readPersonByHailMary: jest.fn().mockResolvedValue([])
+      } as any));
+
+      // As DataMapper maps a person: id and sourceIdentifier both carry the BUID, id first
+      const fieldSet: FieldSet = { fieldValues: [
+        { id: 'U99999999' }, { sourceIdentifier: 'U99999999' }, { firstName: 'Unknown' }, { lastName: 'Person' }
+      ] } as FieldSet;
+
+      const result = await dataTarget.pushOne({ data: fieldSet, crud: CrudOperation.UPDATE });
+
+      expect(result.status).toBe(Status.FAILURE);
+      expect(result.primaryKey).toEqual([{ sourceIdentifier: 'U99999999' }]);
+    });
+
     it('should return FAILURE when UPDATE has no HRN and readPersonByHailMary returns person without HRN', async () => {
       // Mock ReadPerson to return person but without HRN
       const mockReadPersonByHailMary = jest.fn().mockResolvedValue([

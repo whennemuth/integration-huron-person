@@ -23,6 +23,16 @@ wrapping) uses that rule. Concerns:
 Consider replacing them with one explicit mode, e.g.
 `previousStateSource: 'storage' | 'target' | 'storage-then-target'`.
 
+A concrete case for `'storage-then-target'`: with trusted stored state, a person missing from storage is
+classified added and CREATEd without any lookup in the target. If they are in the target anyway (a lost or
+partial baseline, a person created by other means), the create is rejected (presumably a 409 on the
+`sourceIdentifier` unique key), the failure keeps them out of storage, and every later trusted run tries the
+same create again, until a bulk reset. Looking up only the people missing from storage (few, in a daily
+run) would classify them correctly. When designing it, decide whether that mode needs the bulk pipeline's
+full-population person cache at all (cheap for a bulk reset, wasteful for a handful of lookups), and keep
+`UpsertDeltaStrategy`'s rule for a lookup that fails: classify UPDATE, never CREATE (see its catch, and
+`test/UpsertUnknownExistence.test.ts`).
+
 When doing so, keep in mind:
 
 - **Reading stored state depends on writing it.** For manual runs (`SyncPerson`, `SyncPersonBatch`

@@ -63,12 +63,18 @@ export class HuronPersonDataTargetUpdate {
       const result:HuronPerson[] = await reader.readPersonByHailMary(personRequest.data?.sourceIdentifier);
       this._hrn = result?.[0]?.hrn;
       if( ! this._hrn) {
+        // Keyed by sourceIdentifier alone, the person's primary key (DataMapper's field definitions), so that
+        // EndToEnd's restorePreviousHashesForFailures() (integration-core) matches this failure to the person and
+        // keeps their new hash out of hash storage. Keyed by id AND sourceIdentifier (as it was until 2026-11-23),
+        // the failure's key ("U1|U1") matched no stored record, so the person was recorded as in sync although
+        // nothing was pushed. UpsertDeltaStrategy relies on this: a person whose existence couldn't be checked is
+        // classified UPDATE, and lands here when they turn out not to be in the target.
         return {
           result: {
             status: Status.FAILURE,
             message: `Cannot determine HRN for UPDATE operation for ${personRequest.data?.sourceIdentifier}`,
             timestamp: new Date(),
-            primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv || 'id' in fv),
+            primaryKey: data.fieldValues.filter((fv: any) => 'sourceIdentifier' in fv),
             crud
           }
         };

@@ -21,8 +21,7 @@ import { PreviousStateSourceParams, previousStateSourceOf } from './PreviousStat
 
 /**
  * Parameters for creating a delta strategy. Where previous state comes from is previousStateSource (default
- * `storage`); the deprecated bulkReset / trustPreviousStorage are still accepted, and translated by
- * previousStateSourceOf().
+ * `storage`).
  */
 export interface CreateStrategyParams extends PreviousStateSourceParams {
   config: Config;
@@ -43,19 +42,11 @@ export interface CreateStrategyParams extends PreviousStateSourceParams {
  */
 export class DeltaStrategyFactory {
   /**
-   * Whether previously stored state (hashes) can be trusted to determine what changed, rather than
-   * looking the persons up in the target system.
-   * @deprecated Use previousStateSourceOf(params) === 'storage'
-   */
-  static trustsPreviousStorage(params: PreviousStateSourceParams): boolean {
-    return previousStateSourceOf(params) === 'storage';
-  }
-
-  /**
    * Create delta strategy based on storage configuration
-   * @param params - config, and optionally chunkId, previousStateSource (or the deprecated bulkReset /
-   *   trustPreviousStorage), lookupPersonInTargetSystemCache and ignoreRemovals
-   * @throws if previousStateSource is invalid or contradicts the deprecated pair (previousStateSourceOf())
+   * @param params - config, and optionally chunkId, previousStateSource, lookupPersonInTargetSystemCache and
+   *   ignoreRemovals
+   * @throws if previousStateSource is invalid, or the params carry the removed bulkReset / trustPreviousStorage
+   *   (previousStateSourceOf())
    */
   static createStrategy(params: CreateStrategyParams): DeltaStrategy {
     const { config, chunkId, lookupPersonInTargetSystemCache, ignoreRemovals = false } = params;

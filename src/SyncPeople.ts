@@ -38,10 +38,6 @@ type HuronPersonIntegrationParams = {
    * lookupPersonInTargetSystemCache when given.
    */
   previousStateSource?: PreviousStateSource;
-  /** @deprecated Use previousStateSource: true means `target` */
-  bulkReset?: boolean;
-  /** @deprecated Use previousStateSource: false means `target` */
-  trustPreviousStorage?: boolean;
   lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any>
   errorEventProcessor?: TargetApiErrorEventProcessor;
   /**
@@ -81,7 +77,8 @@ class HuronPersonIntegration {
       retryStrategy, cleanupPreviousData=true, lookupPersonInTargetSystemCache, ignoreRemovals = false,
       personRecordProcessor
     } = params;
-    // Resolved (and checked) up front, so a contradictory or invalid setting fails before any work
+    // Resolved (and checked) up front, so an invalid setting, or the removed bulkReset / trustPreviousStorage, fails
+    // before any work
     const previousStateSource = previousStateSourceOf(params);
 
     console.log(`⚙️  HuronPersonIntegration params: ${JSON.stringify({

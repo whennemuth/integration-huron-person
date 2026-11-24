@@ -6,8 +6,8 @@
  * - `target`: the target itself. Every person is looked up there (UpsertDeltaStrategy), so records changed in the
  *   target directly are put right, at the cost of a lookup per person. This is a "bulk reset".
  *
- * It replaces the two booleans bulkReset and trustPreviousStorage, which only ever acted together: `target` whenever
- * bulkReset is true or trustPreviousStorage is false (previousStateSourceOf()).
+ * It replaced the two booleans bulkReset and trustPreviousStorage, which only ever acted together (`target` whenever
+ * bulkReset was true or trustPreviousStorage false). They are no longer accepted.
  */
 export const PREVIOUS_STATE_SOURCES = ['storage', 'target'] as const;
 
@@ -18,38 +18,32 @@ export const isPreviousStateSource = (value: unknown): value is PreviousStateSou
 
 export type PreviousStateSourceParams = {
   previousStateSource?: PreviousStateSource;
-  /** @deprecated Use previousStateSource: true means `target` */
-  bulkReset?: boolean;
-  /** @deprecated Use previousStateSource: false means `target` */
-  trustPreviousStorage?: boolean;
 };
 
+/** The two booleans previousStateSource replaced, refused if a caller (untyped, or not yet moved over) still sends them */
+const REMOVED_PARAMS = ['bulkReset', 'trustPreviousStorage'] as const;
+
 /**
- * The previous state source the params ask for: previousStateSource when given, otherwise the old pair translated
- * (`target` if bulkReset is true or trustPreviousStorage is false), otherwise the fallback.
+ * The previous state source the params ask for: previousStateSource when given, otherwise the fallback.
  *
- * @throws if previousStateSource is not one of PREVIOUS_STATE_SOURCES, or if the old pair is also given and asks for
- *   something else (a caller half way through moving to the new setting).
+ * @throws if previousStateSource is not one of PREVIOUS_STATE_SOURCES, or if the params carry bulkReset or
+ *   trustPreviousStorage, which are no longer read: ignoring them would quietly change what the caller asked for.
  */
 export const previousStateSourceOf = (
   params: PreviousStateSourceParams, fallback: PreviousStateSource = 'storage'
 ): PreviousStateSource => {
-  const { previousStateSource, bulkReset, trustPreviousStorage } = params;
-  const hasOldPair = bulkReset !== undefined || trustPreviousStorage !== undefined;
-  const fromOldPair: PreviousStateSource | undefined = hasOldPair
-    ? (bulkReset === true || trustPreviousStorage === false ? 'target' : 'storage')
-    : undefined;
-
+  const removed = REMOVED_PARAMS.filter(name => (params as Record<string, unknown>)[name] !== undefined);
+  if (removed.length > 0) {
+    throw new Error(`${removed.join(' and ')} ${removed.length > 1 ? 'are' : 'is'} no longer accepted: ` +
+      `send previousStateSource ('storage', or 'target' for a bulk reset) instead.`);
+  }
+  const { previousStateSource } = params;
   if (previousStateSource === undefined) {
-    return fromOldPair ?? fallback;
+    return fallback;
   }
   if (!isPreviousStateSource(previousStateSource)) {
     throw new Error(`Invalid previousStateSource: ${JSON.stringify(previousStateSource)}. ` +
       `Expected one of ${PREVIOUS_STATE_SOURCES.join(', ')}.`);
-  }
-  if (fromOldPair !== undefined && fromOldPair !== previousStateSource) {
-    throw new Error(`previousStateSource=${previousStateSource} contradicts ` +
-      `${JSON.stringify({ bulkReset, trustPreviousStorage })}, which means ${fromOldPair}. Send previousStateSource alone.`);
   }
   return previousStateSource;
 };

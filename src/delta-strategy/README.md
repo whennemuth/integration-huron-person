@@ -50,10 +50,10 @@ const strategy = DeltaStrategyFactory.createStrategy({
 ```
 
 **Where previous state comes from** (`PreviousStateSource.ts`): `storage` means the hashes stored at earlier syncs
-decide what changed; `target` means every person is looked up in the target. It replaces the deprecated
-`bulkReset` / `trustPreviousStorage` pair, which only ever acted together (`target` when `bulkReset` is true or
-`trustPreviousStorage` is false). The pair is still accepted and translated by `previousStateSourceOf()`, and
-giving both with different meanings is refused. `HuronPersonIntegration` resolves it the same way, once, when it is
+decide what changed; `target` means every person is looked up in the target. It replaced the
+`bulkReset` / `trustPreviousStorage` pair, which only ever acted together (`target` when `bulkReset` was true or
+`trustPreviousStorage` false). The pair is no longer accepted: `previousStateSourceOf()` refuses params that carry
+either, rather than quietly ignore them. `HuronPersonIntegration` resolves it the same way, once, when it is
 constructed.
 
 ---

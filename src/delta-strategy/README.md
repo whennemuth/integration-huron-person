@@ -38,6 +38,7 @@ Factory class responsible for creating and configuring delta strategies based on
 - Applies decorators based on runtime conditions:
   - Wraps with `ChunkedDeltaStrategy` when `chunkId` is provided (parallel processing)
   - Wraps with `UpsertDeltaStrategy` when `previousStateSource` is `target` (a bulk reset)
+  - Wraps with `StorageThenTargetDeltaStrategy` when `previousStateSource` is `storage-then-target`
 - Handles dry-run mode by wrapping storage to prevent writes
 
 **Usage:**
@@ -45,12 +46,16 @@ Factory class responsible for creating and configuring delta strategies based on
 const strategy = DeltaStrategyFactory.createStrategy({ 
   config, 
   chunkId: '0042',               // Optional: enables chunked processing
-  previousStateSource: 'target'  // Optional: 'storage' (the default) or 'target' (a bulk reset)
+  previousStateSource: 'target'  // Optional: 'storage' (the default), 'target' (a bulk reset) or 'storage-then-target'
 });
 ```
 
 **Where previous state comes from** (`PreviousStateSource.ts`): `storage` means the hashes stored at earlier syncs
-decide what changed; `target` means every person is looked up in the target. It replaced the
+decide what changed; `target` means every person is looked up in the target; `storage-then-target` means the stored
+hashes decide, and then only the people with no stored hash are looked up in the target, directly (no person cache):
+one found there is updated rather than created (a create would fail, and keep failing every run, for a person already
+in the target), and one whose lookup fails is updated, never created. `UpsertDeltaStrategy` and
+`StorageThenTargetDeltaStrategy` share these lookup rules (`PersonTargetLookup.ts`). It replaced the
 `bulkReset` / `trustPreviousStorage` pair, which only ever acted together (`target` when `bulkReset` was true or
 `trustPreviousStorage` false). The pair is no longer accepted: `previousStateSourceOf()` refuses params that carry
 either, rather than quietly ignore them. `HuronPersonIntegration` resolves it the same way, once, when it is

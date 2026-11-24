@@ -5,11 +5,14 @@
  *   person with no stored hash is created, without looking anyone up in the target.
  * - `target`: the target itself. Every person is looked up there (UpsertDeltaStrategy), so records changed in the
  *   target directly are put right, at the cost of a lookup per person. This is a "bulk reset".
+ * - `storage-then-target`: the stored hashes, as for `storage`, and then the target for the people with no stored
+ *   hash (StorageThenTargetDeltaStrategy): one who is in the target anyway is updated rather than created. A lookup
+ *   only per person missing from storage, usually a handful per run.
  *
  * It replaced the two booleans bulkReset and trustPreviousStorage, which only ever acted together (`target` whenever
  * bulkReset was true or trustPreviousStorage false). They are no longer accepted.
  */
-export const PREVIOUS_STATE_SOURCES = ['storage', 'target'] as const;
+export const PREVIOUS_STATE_SOURCES = ['storage', 'target', 'storage-then-target'] as const;
 
 export type PreviousStateSource = typeof PREVIOUS_STATE_SOURCES[number];
 
@@ -62,7 +65,8 @@ export const previousStateSourceFromEnvironment = (value: string | undefined, na
   }
   if (!isPreviousStateSource(trimmed)) {
     throw new Error(`Invalid ${name}: ${JSON.stringify(trimmed)}. Expected one of ${PREVIOUS_STATE_SOURCES.join(', ')} ` +
-      `(storage: decide whether a person is in sync from their stored hash; target: compare with the target).`);
+      `(storage or storage-then-target: decide whether a person is in sync from their stored hash, comparing with ` +
+      `the target when there is none; target: always compare with the target).`);
   }
   return trimmed;
 };

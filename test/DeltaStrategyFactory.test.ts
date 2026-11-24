@@ -665,6 +665,16 @@ describe('DeltaStrategyFactory', () => {
       expect(result).toBe(mockStrategy);
     });
 
+    it('wraps with StorageThenTargetDeltaStrategy for storage-then-target, with direct lookups only (no cache)', () => {
+      const cache = jest.fn();
+      const result = DeltaStrategyFactory.createStrategy({
+        config: mockConfig, previousStateSource: 'storage-then-target', lookupPersonInTargetSystemCache: cache
+      });
+      expect(result.constructor.name).toBe('StorageThenTargetDeltaStrategy');
+      expect((result as any).deltaStrategy).toBe(mockStrategy);
+      expect((result as any).targetLookup.lookupPersonInTargetSystemCache).toBeUndefined();
+    });
+
     it.each([{ bulkReset: true }, { trustPreviousStorage: false }, { previousStateSource: 'storage', bulkReset: false }])(
       'refuses %j: the pair previousStateSource replaced is no longer accepted', removed => {
       expect(() => DeltaStrategyFactory.createStrategy({ config: mockConfig, ...removed } as any))

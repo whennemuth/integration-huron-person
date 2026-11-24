@@ -32,9 +32,9 @@ type PersonSyncParams = {
     enabled: boolean;
     deltaStrategy?: DeltaStrategy;
     /**
-     * Where the person's previous state comes from. `storage`: the hash in storage, when there is one, decides
-     * whether the person is already in sync, instead of comparing with the target (DynamoDB storage only).
-     * `target` (the default): compare with the target.
+     * Where the person's previous state comes from. `storage` or `storage-then-target` (the same for one person):
+     * the hash in storage, when there is one, decides whether the person is already in sync, instead of comparing
+     * with the target (DynamoDB storage only). `target` (the default): compare with the target.
      */
     previousStateSource?: PreviousStateSource;
   };
@@ -414,7 +414,8 @@ class SinglePersonSync {
   private compareWithStoredHash = async (mappedPerson: Input): Promise<'in-sync' | 'out-of-sync' | 'unavailable'> => {
     const { instanceParams: { config, buid, hashStorage } } = this;
     const { deltaStrategy, previousStateSource = 'target' } = hashStorage ?? {};
-    if (!deltaStrategy || !isDynamoDbStorage(config) || previousStateSource !== 'storage') {
+    // storage-then-target is the same here: with no stored hash, the caller compares with the target anyway
+    if (!deltaStrategy || !isDynamoDbStorage(config) || previousStateSource === 'target') {
       return 'unavailable';
     }
 
@@ -695,9 +696,9 @@ async function main() {
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
     const previousStateSource = previousStateSourceFromEnvironment(SYNC_PREVIOUS_STATE_SOURCE, 'SYNC_PREVIOUS_STATE_SOURCE');
-    if (previousStateSource === 'storage' && !updateHashStorage) {
+    if (previousStateSource !== 'target' && !updateHashStorage) {
       // Deliberate: a manual run reads stored hashes only if it also writes them (the hash storage this creates)
-      console.warn('SYNC_PREVIOUS_STATE_SOURCE=storage has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+      console.warn(`SYNC_PREVIOUS_STATE_SOURCE=${previousStateSource} has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.`);
     }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID

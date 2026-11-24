@@ -17,6 +17,7 @@ import { ChunkedDeltaStrategy } from './decorators/Chunked';
 import { IgnoreRemovalsDeltaStrategy } from './decorators/IgnoreRemovals';
 import { IntegratedDeltaClientIdDeltaStrategy } from './decorators/IntegratedDeltaClientId';
 import { UpsertDeltaStrategy } from './decorators/Upsert';
+import { StorageThenTargetDeltaStrategy } from './decorators/StorageThenTarget';
 import { PreviousStateSourceParams, previousStateSourceOf } from './PreviousStateSource';
 
 /**
@@ -37,7 +38,8 @@ export interface CreateStrategyParams extends PreviousStateSourceParams {
  * Key configuration parameters that influence the strategy composition include:
  * - storage.type (file, database, s3, dynamodb)
  * - chunkId (presence indicates chunked processing)
- * - previousStateSource (`target`, a bulk reset, wraps with UpsertDeltaStrategy for lookups in the target)
+ * - previousStateSource (`target`, a bulk reset, wraps with UpsertDeltaStrategy for lookups in the target;
+ *   `storage-then-target` with StorageThenTargetDeltaStrategy, for lookups of the people with no stored hash)
  * - integratedDeltaClientId (redirects baseline reads to shared integrated delta path)
  */
 export class DeltaStrategyFactory {
@@ -178,6 +180,15 @@ export class DeltaStrategyFactory {
     if (previousStateSource === 'target') {
       console.log('🔄  Previous state from the target (bulk reset) - wrapping strategy with UpsertDeltaStrategy');
       deltaStrategy = new UpsertDeltaStrategy(deltaStrategy, config, lookupPersonInTargetSystemCache);
+    }
+
+    /**
+     * Wrap with StorageThenTargetDeltaStrategy if previous state comes from storage, then the target for the people
+     * storage has no hash for. Direct lookups only: lookupPersonInTargetSystemCache is not given to it.
+     */
+    if (previousStateSource === 'storage-then-target') {
+      console.log('🔄  Previous state from storage, then the target for people with no stored hash - wrapping strategy with StorageThenTargetDeltaStrategy');
+      deltaStrategy = new StorageThenTargetDeltaStrategy(deltaStrategy, config);
     }
 
     /**

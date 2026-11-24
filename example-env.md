@@ -258,8 +258,8 @@ SYNC_PERSON_SYNC_CRUD=update
 SYNC_PERSON_SYNC_PREVIEW=false
 SYNC_PERSON_SYNC_UPDATE_HASH=false
 SYNC_PERSON_DRY_RUN=false
-# Where a person's previous state comes from: storage (their stored hash decides if they are in sync; DynamoDB storage
-# only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
+# Where a person's previous state comes from: storage or storage-then-target (their stored hash decides if they are in
+# sync; DynamoDB storage only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
 SYNC_PERSON_SYNC_PREVIOUS_STATE_SOURCE=target
 # Select DynamoDB hash storage (overrides storage in the config file)
 SYNC_PERSON_PREVIOUS_STORAGE_TYPE=dynamodb
@@ -272,8 +272,8 @@ SYNC_PERSON_BATCH_HURON_PERSON_CONFIG_PATH=
 SYNC_PERSON_BATCH_SYNC_BUIDS=U13061973,U74538490,U27857128
 SYNC_PERSON_BATCH_SYNC_PREVIEW=false
 SYNC_PERSON_BATCH_SYNC_UPDATE_HASH=false
-# Where a person's previous state comes from: storage (their stored hash decides if they are in sync; DynamoDB storage
-# only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
+# Where a person's previous state comes from: storage or storage-then-target (their stored hash decides if they are in
+# sync; DynamoDB storage only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
 SYNC_PERSON_BATCH_SYNC_PREVIOUS_STATE_SOURCE=target
 # Select DynamoDB hash storage (overrides storage in the config file)
 SYNC_PERSON_BATCH_PREVIOUS_STORAGE_TYPE=dynamodb

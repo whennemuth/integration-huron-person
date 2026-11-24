@@ -196,9 +196,9 @@ export async function main(params?: MainParams): Promise<void> {
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
     const previousStateSource = previousStateSourceFromEnvironment(SYNC_PREVIOUS_STATE_SOURCE, 'SYNC_PREVIOUS_STATE_SOURCE');
-    if (previousStateSource === 'storage' && !updateHashStorage) {
+    if (previousStateSource !== 'target' && !updateHashStorage) {
       // Deliberate: a manual run reads stored hashes only if it also writes them (the hash storage this creates)
-      console.warn('SYNC_PREVIOUS_STATE_SOURCE=storage has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+      console.warn(`SYNC_PREVIOUS_STATE_SOURCE=${previousStateSource} has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.`);
     }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID

@@ -258,8 +258,9 @@ SYNC_PERSON_SYNC_CRUD=update
 SYNC_PERSON_SYNC_PREVIEW=false
 SYNC_PERSON_SYNC_UPDATE_HASH=false
 SYNC_PERSON_DRY_RUN=false
-# Use the stored hash (DynamoDB storage only) to decide if a person is in sync, unless bulk reset
-SYNC_PERSON_SYNC_TRUST_PREVIOUS_STORAGE=false
+# Where a person's previous state comes from: storage (their stored hash decides if they are in sync; DynamoDB storage
+# only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
+SYNC_PERSON_SYNC_PREVIOUS_STATE_SOURCE=target
 # Select DynamoDB hash storage (overrides storage in the config file)
 SYNC_PERSON_PREVIOUS_STORAGE_TYPE=dynamodb
 SYNC_PERSON_DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME=<person-current-state-table-name>
@@ -271,8 +272,9 @@ SYNC_PERSON_BATCH_HURON_PERSON_CONFIG_PATH=
 SYNC_PERSON_BATCH_SYNC_BUIDS=U13061973,U74538490,U27857128
 SYNC_PERSON_BATCH_SYNC_PREVIEW=false
 SYNC_PERSON_BATCH_SYNC_UPDATE_HASH=false
-# Use the stored hash (DynamoDB storage only) to decide if a person is in sync, unless bulk reset
-SYNC_PERSON_BATCH_SYNC_TRUST_PREVIOUS_STORAGE=false
+# Where a person's previous state comes from: storage (their stored hash decides if they are in sync; DynamoDB storage
+# only, and only with SYNC_UPDATE_HASH=true) or target (the default: compare with the target)
+SYNC_PERSON_BATCH_SYNC_PREVIOUS_STATE_SOURCE=target
 # Select DynamoDB hash storage (overrides storage in the config file)
 SYNC_PERSON_BATCH_PREVIOUS_STORAGE_TYPE=dynamodb
 SYNC_PERSON_BATCH_DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME=<person-current-state-table-name>
@@ -305,7 +307,7 @@ SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_SYNC_PREVIEW=false
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_SYNC_UPDATE_HASH=false
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_INTEGRATED_DELTA_CLIENT_ID=
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_DELTA_STORAGE_BUCKET=
-SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_SYNC_TRUST_PREVIOUS_STORAGE=false
+SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_SYNC_PREVIOUS_STATE_SOURCE=target
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_PREVIOUS_STORAGE_TYPE=dynamodb
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME=<person-current-state-table-name>
 SYNC_PERSON_BATCH_UNASSIGNED_ORG_ENFORCER_DYNAMODB_PERSON_HISTORY_TABLE_NAME=<person-history-table-name>

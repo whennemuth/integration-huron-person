@@ -11,8 +11,21 @@ import {
   isPreviousStateSource,
   previousStateSourceOf
 } from '../bin/index';
+import { previousStateSourceFromEnvironment } from '../src/delta-strategy/PreviousStateSource';
 
 describe('previousStateSource', () => {
+  describe("previousStateSourceFromEnvironment() (manual runs' SYNC_PREVIOUS_STATE_SOURCE)", () => {
+    it.each([[undefined, 'target'], ['', 'target'], ['  ', 'target'], ['storage', 'storage'], [' target ', 'target']])(
+      'reads %p as %p (unset means target, as manual runs always compared with the target)', (value, expected) => {
+        expect(previousStateSourceFromEnvironment(value, 'SYNC_PREVIOUS_STATE_SOURCE')).toBe(expected);
+      });
+
+    it.each(['true', 'false', 'Storage', 'bulk'])('refuses %p, naming the variable', value => {
+      expect(() => previousStateSourceFromEnvironment(value, 'SYNC_PREVIOUS_STATE_SOURCE'))
+        .toThrow(`Invalid SYNC_PREVIOUS_STATE_SOURCE: "${value}"`);
+    });
+  });
+
   describe('isPreviousStateSource()', () => {
     it.each(PREVIOUS_STATE_SOURCES)('accepts %p', value => {
       expect(isPreviousStateSource(value)).toBe(true);

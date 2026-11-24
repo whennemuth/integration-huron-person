@@ -618,12 +618,13 @@ which take precedence over the config file (they opt in with `fromEnvironment({ 
 | `DYNAMODB_PERSON_HISTORY_TABLE_NAME` | PersonHistory table |
 | `REGION` | AWS region of the tables |
 | `SYNC_UPDATE_HASH` | `true` to record each synced person's hash (and deactivations) in storage |
-| `SYNC_TRUST_PREVIOUS_STORAGE` | `true` to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none |
+| `SYNC_PREVIOUS_STATE_SOURCE` | `storage` to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none; `target` (the default) to compare with the target. Takes effect only with `SYNC_UPDATE_HASH=true`: a manual run reads stored hashes only if it also writes them |
 
 In DynamoDB mode each run stamps one `syncRunId` on everything it writes, each person's state and
 history are written right after their push (also in batches), and persons deactivated because they
-are gone from the source are marked deleted (`DELETED:`-prefixed hash). Consolidating the stored-state
-flags into one setting is planned.
+are gone from the source are marked deleted (`DELETED:`-prefixed hash). Where a sync's previous state
+comes from is one setting, `previousStateSource` (`src/delta-strategy/PreviousStateSource.ts`), which manual
+runs read from `SYNC_PREVIOUS_STATE_SOURCE` and pipeline runs receive with each run.
 
 ## Integration Workflow
 

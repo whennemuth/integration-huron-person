@@ -1021,14 +1021,15 @@ describe('SinglePersonSync', () => {
         await sync.sync({ crudOperation: CrudOperation.UPDATE });
       };
 
-      it('compares with the target when trustPreviousStorage is not set', async () => {
-        await syncWithStoredHash({}, 'same');
-        expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
-        expect(liveCheck).toHaveBeenCalled();
-      });
+      it.each([['not set', {}], ['target', { previousStateSource: 'target' }]])(
+        'compares with the target when previousStateSource is %s', async (_label, flags) => {
+          await syncWithStoredHash(flags, 'same');
+          expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+          expect(liveCheck).toHaveBeenCalled();
+        });
 
       it('skips the target comparison and the push when the stored hash matches', async () => {
-        await syncWithStoredHash({ trustPreviousStorage: true }, 'same');
+        await syncWithStoredHash({ previousStateSource: 'storage' }, 'same');
 
         expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(expect.objectContaining({
           limitTo: [{ fieldValues: [{ id: 'U12345678' }] }]
@@ -1052,7 +1053,7 @@ describe('SinglePersonSync', () => {
       });
 
       it('pushes without the target comparison when the stored hash differs', async () => {
-        await syncWithStoredHash({ trustPreviousStorage: true }, 'different');
+        await syncWithStoredHash({ previousStateSource: 'storage' }, 'different');
 
         expect(liveCheck).not.toHaveBeenCalled();
         expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.UPDATE }));
@@ -1062,20 +1063,20 @@ describe('SinglePersonSync', () => {
         (ReadPerson as jest.Mock).mockImplementation(() => ({
           readPersonBySourceIdentifier: jest.fn().mockResolvedValue([])
         }));
-        await syncWithStoredHash({ trustPreviousStorage: true }, 'different');
+        await syncWithStoredHash({ previousStateSource: 'storage' }, 'different');
 
         expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.CREATE }));
       });
 
       it.each(['none', 'deleted'] as const)('falls back to the target comparison when the stored hash is %s', async (stored) => {
-        await syncWithStoredHash({ trustPreviousStorage: true }, stored);
+        await syncWithStoredHash({ previousStateSource: 'storage' }, stored);
 
         expect(mockStorage.fetchPreviousData).toHaveBeenCalled();
         expect(liveCheck).toHaveBeenCalled();
       });
 
       it('compares with the target for S3/file storage', async () => {
-        await syncWithStoredHash({ trustPreviousStorage: true }, 'same', mockConfig);
+        await syncWithStoredHash({ previousStateSource: 'storage' }, 'same', mockConfig);
 
         expect(liveCheck).toHaveBeenCalled();
       });

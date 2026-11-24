@@ -9,6 +9,7 @@ import { DataMapper, getDataMapper } from './data-mapper/DataMapper';
 import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { CreateStrategyParams, DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
+import { previousStateSourceFromEnvironment } from './delta-strategy/PreviousStateSource';
 import { personPrimaryKeyFields, PersonSyncParams, SinglePersonSync } from './SyncPerson';
 import { setFileLogging } from './Utils';
 
@@ -191,12 +192,13 @@ export async function main(params?: MainParams): Promise<void> {
     }
 
     // Get environment variables for batch sync
-    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE } = process.env;
+    const { SYNC_BUIDS_FILE_PATH, SYNC_BUIDS, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_PREVIOUS_STATE_SOURCE } = process.env;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
-    const trustPreviousStorage = `${SYNC_TRUST_PREVIOUS_STORAGE}`.trim().toLowerCase() === 'true';
-    if (trustPreviousStorage && !updateHashStorage) {
-      console.warn('SYNC_TRUST_PREVIOUS_STORAGE=true has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+    const previousStateSource = previousStateSourceFromEnvironment(SYNC_PREVIOUS_STATE_SOURCE, 'SYNC_PREVIOUS_STATE_SOURCE');
+    if (previousStateSource === 'storage' && !updateHashStorage) {
+      // Deliberate: a manual run reads stored hashes only if it also writes them (the hash storage this creates)
+      console.warn('SYNC_PREVIOUS_STATE_SOURCE=storage has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
     }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
@@ -213,9 +215,9 @@ export async function main(params?: MainParams): Promise<void> {
       deltaStrategy: DeltaStrategyFactory.createStrategy({
         config,
         ignoreRemovals: true,
-        trustPreviousStorage
+        previousStateSource
       } satisfies CreateStrategyParams),
-      trustPreviousStorage
+      previousStateSource
     } : undefined;
 
     const buidsFilePath = `${SYNC_BUIDS_FILE_PATH || ''}`.trim();
@@ -290,7 +292,7 @@ if (require.main === module) {
   [
     'SYNC_BUIDS_FILE_PATH',
     'SYNC_BUIDS',
-    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_PREVIOUS_STATE_SOURCE',
     'PREVIOUS_STORAGE_TYPE',
     'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
     'DYNAMODB_PERSON_HISTORY_TABLE_NAME',

@@ -37,17 +37,24 @@ Factory class responsible for creating and configuring delta strategies based on
 - Instantiates base strategies from `integration-core` based on `storage.type` configuration
 - Applies decorators based on runtime conditions:
   - Wraps with `ChunkedDeltaStrategy` when `chunkId` is provided (parallel processing)
-  - Wraps with `UpsertDeltaStrategy` when `bulkReset` flag is enabled
+  - Wraps with `UpsertDeltaStrategy` when `previousStateSource` is `target` (a bulk reset)
 - Handles dry-run mode by wrapping storage to prevent writes
 
 **Usage:**
 ```typescript
 const strategy = DeltaStrategyFactory.createStrategy({ 
   config, 
-  chunkId: '0042',      // Optional: enables chunked processing
-  bulkReset: true       // Optional: enables bulk reset mode
+  chunkId: '0042',               // Optional: enables chunked processing
+  previousStateSource: 'target'  // Optional: 'storage' (the default) or 'target' (a bulk reset)
 });
 ```
+
+**Where previous state comes from** (`PreviousStateSource.ts`): `storage` means the hashes stored at earlier syncs
+decide what changed; `target` means every person is looked up in the target. It replaced the
+`bulkReset` / `trustPreviousStorage` pair, which only ever acted together (`target` when `bulkReset` was true or
+`trustPreviousStorage` false). The pair is no longer accepted: `previousStateSourceOf()` refuses params that carry
+either, rather than quietly ignore them. `HuronPersonIntegration` resolves it the same way, once, when it is
+constructed.
 
 ---
 
@@ -135,7 +142,7 @@ When multiple decorators are applied, they execute in this order:
                                            ▼
                             ┌────────────────────────────────────┐
                             │    UpsertDeltaStrategy             │
-                            │    (if bulkReset=true)             │
+                            │    (if previousStateSource=target) │
                             │    - Queries target API            │
                             └──────────────┬─────────────────────┘
                                            │
@@ -193,7 +200,7 @@ await upsert.computeDelta(params);
 const base = DeltaStrategyFactory.createStrategy({ 
   config, 
   chunkId: '0001', 
-  bulkReset: true 
+  previousStateSource: 'target'
 });
 // Verify both decorators work together correctly
 ```
@@ -212,7 +219,7 @@ const config = buildChunkConfig(bucketName, s3Key, region);
 
 const integration = new HuronPersonIntegration({ 
   config,
-  bulkReset: await getBulkResetFlag(),  // From SSM or env
+  previousStateSource: 'target',  // From the run's flags
   cache: undefined 
 });
 
@@ -220,7 +227,7 @@ const integration = new HuronPersonIntegration({
 const deltaStrategy = DeltaStrategyFactory.createStrategy({ 
   config, 
   chunkId,      // "0042" triggers ChunkedDeltaStrategy
-  bulkReset     // true triggers UpsertDeltaStrategy
+  previousStateSource  // 'target' triggers UpsertDeltaStrategy
 });
 
 // Result: Base strategy wrapped by ChunkedDeltaStrategy, wrapped by UpsertDeltaStrategy

@@ -13,6 +13,7 @@ import { HuronPersonDataTarget } from './data-target/PersonDataTarget';
 import { HashStorageUpdater } from './delta-storage/HashStorageUpdater';
 import { IntegratedDeltaClientIdDeltaStrategy } from './delta-strategy/decorators/IntegratedDeltaClientId';
 import { DeltaStrategyFactory } from './delta-strategy/DeltaStrategyFactory';
+import { PreviousStateSource, previousStateSourceFromEnvironment } from './delta-strategy/PreviousStateSource';
 import { Character, LooneyTunes } from './miscellaneous/LooneyTunes';
 import { SourcePerson, SourcePersonParms, TargetPersonParms } from './delta-storage/SyncEvaluator';
 import { AxiosResponseStreamFilter, ResponseProcessor } from './stream/AxiosResponseStreamFilter';
@@ -31,10 +32,11 @@ type PersonSyncParams = {
     enabled: boolean;
     deltaStrategy?: DeltaStrategy;
     /**
-     * Use the hash in storage, when there is one, to decide whether a person is already in sync,
-     * instead of comparing with the target. DynamoDB storage only. Defaults to false.
+     * Where the person's previous state comes from. `storage`: the hash in storage, when there is one, decides
+     * whether the person is already in sync, instead of comparing with the target (DynamoDB storage only).
+     * `target` (the default): compare with the target.
      */
-    trustPreviousStorage?: boolean;
+    previousStateSource?: PreviousStateSource;
   };
   forceUpdate?: boolean; // Optional flag to force updates even if source and target are in sync
 };
@@ -401,7 +403,7 @@ class SinglePersonSync {
 
   /**
    * Compares the person's source hash with the hash stored for them, when stored state can be
-   * trusted (hashStorage.trustPreviousStorage), so that the comparison with the target can be
+   * trusted (hashStorage.previousStateSource is storage), so that the comparison with the target can be
    * skipped. DynamoDB storage only: other storage would have to read the whole baseline for one
    * person.
    *
@@ -411,8 +413,8 @@ class SinglePersonSync {
    */
   private compareWithStoredHash = async (mappedPerson: Input): Promise<'in-sync' | 'out-of-sync' | 'unavailable'> => {
     const { instanceParams: { config, buid, hashStorage } } = this;
-    const { deltaStrategy, trustPreviousStorage = false } = hashStorage ?? {};
-    if (!deltaStrategy || !isDynamoDbStorage(config) || !trustPreviousStorage) {
+    const { deltaStrategy, previousStateSource = 'target' } = hashStorage ?? {};
+    if (!deltaStrategy || !isDynamoDbStorage(config) || previousStateSource !== 'storage') {
       return 'unavailable';
     }
 
@@ -687,14 +689,15 @@ async function main() {
     const dataMapper = await getDataMapper(config, config.preLoadedMaps ?? { orgMap: false, stateMap: true, countryMap: true });
 
     // Get environment variables for single person sync
-    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_TRUST_PREVIOUS_STORAGE } = process.env;
+    let { SYNC_BUID, SYNC_CRUD, SYNC_PREVIEW, SYNC_UPDATE_HASH, SYNC_PREVIOUS_STATE_SOURCE } = process.env;
     let buid = SYNC_BUID;
     let crudOperation = SYNC_CRUD;
     const preview = `${SYNC_PREVIEW}`.trim().toLowerCase() === 'true';
     const updateHashStorage = `${SYNC_UPDATE_HASH}`.trim().toLowerCase() === 'true';
-    const trustPreviousStorage = `${SYNC_TRUST_PREVIOUS_STORAGE}`.trim().toLowerCase() === 'true';
-    if (trustPreviousStorage && !updateHashStorage) {
-      console.warn('SYNC_TRUST_PREVIOUS_STORAGE=true has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
+    const previousStateSource = previousStateSourceFromEnvironment(SYNC_PREVIOUS_STATE_SOURCE, 'SYNC_PREVIOUS_STATE_SOURCE');
+    if (previousStateSource === 'storage' && !updateHashStorage) {
+      // Deliberate: a manual run reads stored hashes only if it also writes them (the hash storage this creates)
+      console.warn('SYNC_PREVIOUS_STATE_SOURCE=storage has no effect without SYNC_UPDATE_HASH=true: hash storage is neither read nor written, and persons are pushed without an in-sync check.');
     }
 
     // DynamoDB storage is keyed by person, not by a clientId path, so needs no integrated delta client ID
@@ -711,9 +714,9 @@ async function main() {
       deltaStrategy: DeltaStrategyFactory.createStrategy({
         config,
         ignoreRemovals: true,
-        trustPreviousStorage
+        previousStateSource
       }),
-      trustPreviousStorage
+      previousStateSource
     } : undefined;
 
     // Disable source person lookup field filtering for this single sync
@@ -765,7 +768,7 @@ if (require.main === module) {
     'SYNC_CRUD',
     'SYNC_PREVIEW',
     'SYNC_UPDATE_HASH',
-    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_PREVIOUS_STATE_SOURCE',
     'INTEGRATED_DELTA_CLIENT_ID',
     'DELTA_STORAGE_BUCKET',
     'PREVIOUS_STORAGE_TYPE',

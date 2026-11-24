@@ -260,7 +260,7 @@ installed `integration-huron-person` tgz dependency.
 DynamoDB delta storage (integration-core's `DynamoDBDeltaStorage.updatePreviousData()`) writes a person
 history item per changed person, classifying each by comparing its hash with the stored baseline (no stored
 record: NEW; different hash: UPDATED; same: nothing written). That matches the push only when the delta came
-from the baseline. With `UpsertDeltaStrategy` (bulk reset, or previous storage not trusted) the delta comes
+from the baseline. With `UpsertDeltaStrategy` (`previousStateSource: target`, a bulk reset) the delta comes
 from the target: a person already in Huron is updated even when the baseline has no record of them, and a
 person created there may already be in the baseline. History then disagreed with the run's figures (preview's
 bulk reset of 2026-11-06 counted 3 updates; history held none).

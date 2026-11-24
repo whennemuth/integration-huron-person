@@ -364,7 +364,7 @@ if (require.main === module) {
   ].forEach(testEnvironment.getVar);
 
   [
-    'SYNC_TRUST_PREVIOUS_STORAGE',
+    'SYNC_PREVIOUS_STATE_SOURCE',
     'PREVIOUS_STORAGE_TYPE',
     'DYNAMODB_PERSON_CURRENT_STATE_TABLE_NAME',
     'DYNAMODB_PERSON_HISTORY_TABLE_NAME',

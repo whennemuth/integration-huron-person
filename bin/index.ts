@@ -42,6 +42,8 @@ export { UpsertDeltaStrategy } from '../src/delta-strategy/decorators/Upsert';
 export { ChunkedDeltaStrategy } from '../src/delta-strategy/decorators/Chunked';
 export { IgnoreRemovalsDeltaStrategy } from '../src/delta-strategy/decorators/IgnoreRemovals';
 export { IntegratedDeltaClientIdDeltaStrategy } from '../src/delta-strategy/decorators/IntegratedDeltaClientId';
+export { PREVIOUS_STATE_SOURCES, isPreviousStateSource, previousStateSourceOf } from '../src/delta-strategy/PreviousStateSource';
+export type { PreviousStateSource, PreviousStateSourceParams } from '../src/delta-strategy/PreviousStateSource';
 
 // Data synchronization exports
 export { SinglePersonSync } from '../src/SyncPerson';

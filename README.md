@@ -622,8 +622,8 @@ which take precedence over the config file (they opt in with `fromEnvironment({ 
 
 In DynamoDB mode each run stamps one `syncRunId` on everything it writes, each person's state and
 history are written right after their push (also in batches), and persons deactivated because they
-are gone from the source are marked deleted (`DELETED:`-prefixed hash). See
-`src/delta-strategy/TODO.md` for open questions about the stored-state flags.
+are gone from the source are marked deleted (`DELETED:`-prefixed hash). Consolidating the stored-state
+flags into one setting is planned.
 
 ## Integration Workflow
 

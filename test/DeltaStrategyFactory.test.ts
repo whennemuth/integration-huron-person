@@ -659,6 +659,31 @@ describe('DeltaStrategyFactory', () => {
     });
   });
 
+  describe('previousStateSource parameter', () => {
+    let mockStrategy: any;
+
+    beforeEach(() => {
+      mockStrategy = { name: 'MockDeltaStrategy', parms: { clientId: 'test', config: {} }, storage: {}, computeDelta: jest.fn() };
+      require('integration-core').DeltaStrategyForFileSystem = jest.fn().mockReturnValue(mockStrategy);
+    });
+
+    it('wraps with UpsertDeltaStrategy for target', () => {
+      const result = DeltaStrategyFactory.createStrategy({ config: mockConfig, previousStateSource: 'target' });
+      expect(result.constructor.name).toBe('UpsertDeltaStrategy');
+    });
+
+    it('does not wrap for storage', () => {
+      const result = DeltaStrategyFactory.createStrategy({ config: mockConfig, previousStateSource: 'storage' });
+      expect(result).toBe(mockStrategy);
+    });
+
+    it('refuses previousStateSource contradicting the deprecated pair', () => {
+      expect(() => DeltaStrategyFactory.createStrategy({
+        config: mockConfig, previousStateSource: 'storage', trustPreviousStorage: false
+      })).toThrow('contradicts');
+    });
+  });
+
   describe('trustPreviousStorage parameter', () => {
     let mockStrategy: any;
     let mockCreateFileStrategy: jest.Mock;

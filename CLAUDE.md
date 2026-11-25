@@ -275,7 +275,9 @@ the push's own change:
   `changeType` field (and for an update the stored hash as `previousHash`, since storage looks hashes up only for
   records it classifies itself) to each pushed person's FieldSet before delegating `updatePreviousData()`.
   Storage honors those fields over its own classification. Records not pushed, or whose push failed, pass
-  through unchanged.
+  through unchanged. An update of a person whose stored hash is `DELETED:`-marked is `REACTIVATED`, with the
+  unmarked hash as `previousHash`: person history never carries the marker (integration-core's
+  `PersonHistoryChangeType`).
 - Not applied to other storages: their baselines would keep the extra fields.
 
 ## End-of-Records Detection in BuCdmPeopleDataSourceBatch (stopAtFirstPartial)

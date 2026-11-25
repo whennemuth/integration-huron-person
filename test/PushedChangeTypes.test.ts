@@ -76,6 +76,17 @@ describe('PushedChangeTypesStorage', () => {
     });
   });
 
+  it('gives an update of a person marked deleted the change type REACTIVATED, and their unmarked last hash', async () => {
+    const storage = fakeStorage({ U1: 'DELETED:stored-U1' });
+    const pushedStorage = new PushedChangeTypesStorage(storage, pushed(['U1', CrudOperation.UPDATE]));
+
+    await pushedStorage.updatePreviousData({ clientId: 'c', primaryKeyFields: KEY, newPreviousData: [keyAndHash('U1', 'h1')] });
+
+    expect(storage.updatePreviousData).toHaveBeenCalledWith(expect.objectContaining({
+      newPreviousData: [{ fieldValues: [{ sourceIdentifier: 'U1' }, { changeType: 'REACTIVATED' }, { previousHash: 'stored-U1' }], hash: 'h1' }]
+    }));
+  });
+
   it('passes the baseline update on as it is when nothing was pushed, without a lookup', async () => {
     const storage = fakeStorage();
     const params = { clientId: 'c', newPreviousData: [keyAndHash('U1', 'h1')], primaryKeyFields: KEY };
@@ -173,5 +184,14 @@ describe('through DynamoDBDeltaStorage', () => {
       clientId: 'c', primaryKeyFields: KEY, newPreviousData: [keyAndHash('U1', 'h1')]
     });
     expect(written.history).toEqual([expect.objectContaining({ personId: 'U1', changeType: 'UPDATED', hash: 'h1', previousHash: 'old-h1' })]);
+  });
+
+  it('records the reactivation of a person marked deleted, with no DELETED: marker in history, and clears the marker', async () => {
+    const { storage, written } = dynamoStorage({ U1: 'DELETED:old-h1' });
+    await new PushedChangeTypesStorage(storage, pushed(['U1', CrudOperation.UPDATE])).updatePreviousData({
+      clientId: 'c', primaryKeyFields: KEY, newPreviousData: [keyAndHash('U1', 'h1')]
+    });
+    expect(written.history).toEqual([expect.objectContaining({ personId: 'U1', changeType: 'REACTIVATED', hash: 'h1', previousHash: 'old-h1' })]);
+    expect(written.current).toEqual([expect.objectContaining({ personId: 'U1', hash: 'h1' })]);
   });
 });

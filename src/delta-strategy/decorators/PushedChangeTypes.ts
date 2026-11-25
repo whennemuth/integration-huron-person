@@ -1,12 +1,14 @@
-import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, InputUtilsDecorator } from 'integration-core';
+import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, fromDeletedHash, InputUtilsDecorator, isDeletedHash, PersonHistoryChangeType } from 'integration-core';
 import { PushedChanges, PushedChangeType } from '../PushedChanges';
 
 /**
  * Delta storage that, when the baseline is updated after the push, gives each person the push changed their
  * change type as the push made it (NEW for a create, UPDATED for an update), and an update the person's stored
- * hash as its previous hash. DynamoDB delta storage writes a record's own changeType/previousHash to person
- * history in place of the one it would classify by comparing hashes (see PushedChanges for why they differ).
- * Records the push didn't change, or failed to change, are passed on as they are.
+ * hash as its previous hash. An update of a person whose stored hash is DELETED:-marked (soft-deleted, now back)
+ * is REACTIVATED, with their unmarked last hash as its previous hash: person history never carries the marker.
+ * DynamoDB delta storage writes a record's own changeType/previousHash to person history in place of the one it
+ * would classify by comparing hashes (see PushedChanges for why they differ). Records the push didn't change, or
+ * failed to change, are passed on as they are.
  *
  * For DynamoDB storage only: other storages would keep the extra fields in their baseline.
  */
@@ -45,11 +47,15 @@ export class PushedChangeTypesStorage implements DeltaStorage {
     const previousHashes = await this.storedHashesOfUpdates({ clientId, newPreviousData, primaryKeyFields, changeTypes });
     const annotated = newPreviousData.map(fieldSet => {
       const key = PushedChanges.primaryKeyOf(fieldSet, primaryKeyFields);
-      const changeType = key ? changeTypes.get(key.value) : undefined;
-      if (!key || !changeType) {
+      const pushedChangeType = key ? changeTypes.get(key.value) : undefined;
+      if (!key || !pushedChangeType) {
         return fieldSet;
       }
-      const previousHash = changeType === 'UPDATED' ? previousHashes.get(key.value) : undefined;
+      const storedHash = pushedChangeType === 'UPDATED' ? previousHashes.get(key.value) : undefined;
+      const changeType: PersonHistoryChangeType = pushedChangeType === 'UPDATED' && isDeletedHash(storedHash)
+        ? 'REACTIVATED'
+        : pushedChangeType;
+      const previousHash = storedHash === undefined ? undefined : fromDeletedHash(storedHash);
       return {
         ...fieldSet,
         fieldValues: [...fieldSet.fieldValues, { changeType }, ...(previousHash ? [{ previousHash }] : [])]

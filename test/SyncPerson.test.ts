@@ -1028,8 +1028,8 @@ describe('SinglePersonSync', () => {
           expect(liveCheck).toHaveBeenCalled();
         });
 
-      it('skips the target comparison and the push when the stored hash matches', async () => {
-        await syncWithStoredHash({ previousStateSource: 'storage' }, 'same');
+      it.each(['storage', 'storage-then-target'])('skips the target comparison and the push when the stored hash matches (%s)', async previousStateSource => {
+        await syncWithStoredHash({ previousStateSource }, 'same');
 
         expect(mockStorage.fetchPreviousData).toHaveBeenCalledWith(expect.objectContaining({
           limitTo: [{ fieldValues: [{ id: 'U12345678' }] }]

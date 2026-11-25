@@ -618,7 +618,7 @@ which take precedence over the config file (they opt in with `fromEnvironment({ 
 | `DYNAMODB_PERSON_HISTORY_TABLE_NAME` | PersonHistory table |
 | `REGION` | AWS region of the tables |
 | `SYNC_UPDATE_HASH` | `true` to record each synced person's hash (and deactivations) in storage |
-| `SYNC_PREVIOUS_STATE_SOURCE` | `storage` to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none; `target` (the default) to compare with the target. Takes effect only with `SYNC_UPDATE_HASH=true`: a manual run reads stored hashes only if it also writes them |
+| `SYNC_PREVIOUS_STATE_SOURCE` | `storage` (or `storage-then-target`, the same for one person) to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none; `target` (the default) to compare with the target. Takes effect only with `SYNC_UPDATE_HASH=true`: a manual run reads stored hashes only if it also writes them |
 
 In DynamoDB mode each run stamps one `syncRunId` on everything it writes, each person's state and
 history are written right after their push (also in batches), and persons deactivated because they

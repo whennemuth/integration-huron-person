@@ -15,7 +15,7 @@ import { previousStateSourceFromEnvironment } from '../src/delta-strategy/Previo
 
 describe('previousStateSource', () => {
   describe("previousStateSourceFromEnvironment() (manual runs' SYNC_PREVIOUS_STATE_SOURCE)", () => {
-    it.each([[undefined, 'target'], ['', 'target'], ['  ', 'target'], ['storage', 'storage'], [' target ', 'target']])(
+    it.each([[undefined, 'target'], ['', 'target'], ['  ', 'target'], ['storage', 'storage'], [' target ', 'target'], ['storage-then-target', 'storage-then-target']])(
       'reads %p as %p (unset means target, as manual runs always compared with the target)', (value, expected) => {
         expect(previousStateSourceFromEnvironment(value, 'SYNC_PREVIOUS_STATE_SOURCE')).toBe(expected);
       });
@@ -31,7 +31,7 @@ describe('previousStateSource', () => {
       expect(isPreviousStateSource(value)).toBe(true);
     });
 
-    it.each([undefined, null, '', 'Storage', 'TARGET', 'storage-then-target', true, 1])('refuses %p', value => {
+    it.each([undefined, null, '', 'Storage', 'TARGET', 'target-then-storage', true, 1])('refuses %p', value => {
       expect(isPreviousStateSource(value)).toBe(false);
     });
   });

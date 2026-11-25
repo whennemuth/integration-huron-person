@@ -1,7 +1,6 @@
 import { DeltaResult, DeltaStorage, DeltaStrategy, DeltaStrategyParams, FieldSet, Input, InputUtilsDecorator, TestEnvironment } from 'integration-core';
 import { Config } from "../../config/Config";
-import { ReadPerson } from "../../data-target/crud/ReadPerson";
-import { HuronPerson } from "../../data-target/crud/Person";
+import { PersonTargetLookup } from "../PersonTargetLookup";
 import { ConfigManager } from "../../config/ConfigManager";
 import { getDataMapper } from "../../data-mapper/DataMapper";
 import { BasicCache } from "../../Cache";
@@ -27,15 +26,15 @@ import { DeltaStrategyFactory } from "../DeltaStrategyFactory";
  */
 export class UpsertDeltaStrategy implements DeltaStrategy {
   parms: DeltaStrategyParams;
-  private readPerson: ReadPerson;
+  private targetLookup: PersonTargetLookup;
 
   constructor(
     private deltaStrategy: DeltaStrategy,
-    private config: Config,
-    private lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any> // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
+    config: Config,
+    lookupPersonInTargetSystemCache?: (person: FieldSet | string) => Promise<any> // Optional function for looking up person in target system (used by UpsertDeltaStrategy)
   ) {
     this.parms = deltaStrategy.parms;
-    this.readPerson = new ReadPerson({ config });
+    this.targetLookup = new PersonTargetLookup(config, lookupPersonInTargetSystemCache);
   }
 
   get storage(): DeltaStorage {
@@ -47,6 +46,7 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
    * Compute delta by querying target system for each person.
    * This overrides the wrapped strategy's computeDelta to determine add/update/remove
    * based on existence in target system rather than previous delta storage.
+   * A person whose existence is unknown (the lookup failed) is updated, never created (PersonTargetLookup).
    */
   public async computeDelta(params: {
     storage: DeltaStorage;
@@ -55,7 +55,7 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
     clientId: string;
   }): Promise<DeltaResult> {
     const { currentFieldSets } = params;
-    
+
     const added: FieldSet[] = [];
     const updated: FieldSet[] = [];
     const removed: FieldSet[] = []; // In bulk reset mode, we don't identify removed records
@@ -64,46 +64,17 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
 
     // Query target system for each person to determine if they exist
     for (const person of currentFieldSets) {
-      // The cache is only a short cut: a person it doesn't hold, or any error reading it, falls through to a
-      // direct lookup in the target.
-      let existingPerson: any;
-      if (this.lookupPersonInTargetSystemCache) {
-        try {
-          const sourceIdentifier = await this.lookupPersonInTargetSystemCache(person);
-          if (sourceIdentifier) {
-            console.log(`  → Found sourceIdentifier ${sourceIdentifier} in cache for person.`);
-            existingPerson = { sourceIdentifier };
-          }
-        } catch (error) {
-          console.warn(`  → Cache lookup failed for person ${this.getPersonIdentifier(person)}, querying target system directly:`, error);
-        }
-      }
-
-      try {
-        if( ! existingPerson) {
-          console.log(`  → SourceIdentifier not found in cache for person, querying target system directly...`);
-          existingPerson = await this.lookupPersonInTargetSystem(person);
-        }
-      } catch (error) {
-        // Existence unknown. Classify as UPDATE, not CREATE: the update path looks the person up in the target
-        // again to find their HRN (HuronPersonDataTargetUpdate), so a person who exists is updated, and one who
-        // doesn't fails ("Cannot determine HRN") as a push failure, which keeps their hash out of hash storage so a
-        // later run creates them. A wrongly guessed CREATE would instead be rejected as a duplicate (409) at best,
-        // or create a second record for the person at worst.
-        console.warn(`  → Failed to look up person ${this.getPersonIdentifier(person)} in the target; existence ` +
-          `unknown, so will UPDATE (the update re-checks the target, and fails if the person is not there):`, error);
-        updated.push(person);
-        continue;
-      }
-
-      if (existingPerson) {
-        // Person exists - should be updated
-        updated.push(person);
-        console.log(`  → Person ${this.getPersonIdentifier(person)} exists in target (will UPDATE)`);
-      } else {
+      const existence = await this.targetLookup.existenceOf(person);
+      if (existence === 'absent') {
         // Person doesn't exist - should be added
         added.push(person);
-        console.log(`  → Person ${this.getPersonIdentifier(person)} not found in target (will CREATE)`);
+        console.log(`  → Person ${PersonTargetLookup.identifierOf(person)} not found in target (will CREATE)`);
+      } else {
+        // Person exists, or might: should be updated
+        updated.push(person);
+        if (existence === 'exists') {
+          console.log(`  → Person ${PersonTargetLookup.identifierOf(person)} exists in target (will UPDATE)`);
+        }
       }
     }
 
@@ -114,63 +85,6 @@ export class UpsertDeltaStrategy implements DeltaStrategy {
       updated,
       removed
     };
-  }
-
-  /**
-   * Lookup a person in the target system by sourceIdentifier.
-   * Returns the person if found, undefined if not found.
-   */
-  private async lookupPersonInTargetSystem(person: FieldSet): Promise<HuronPerson | undefined> {
-    const sourceIdentifier = this.getSourceIdentifier(person);
-    
-    if (!sourceIdentifier) {
-      console.warn('Person has no sourceIdentifier, cannot lookup in target system');
-      return undefined;
-    }
-
-    try {
-      // Query target system by sourceIdentifier
-      const results = await this.readPerson.readPersonBySourceIdentifier(
-        sourceIdentifier,
-        ['hrn', 'id', 'sourceIdentifier'] // Only fetch minimal fields for existence check
-      );
-      
-      return results.length > 0 ? results[0] : undefined;
-    } catch (error: any) {
-      // If error is 404 or "not found", treat as person not existing
-      if (error.message?.includes('404') || error.message?.toLowerCase().includes('not found')) {
-        return undefined;
-      }
-      // Other errors should bubble up
-      throw error;
-    }
-  }
-
-  /**
-   * Extract sourceIdentifier from a FieldSet.
-   * Tries multiple common field names.
-   */
-  private getSourceIdentifier(person: FieldSet): string | undefined {
-    // FieldSet has fieldValues array of Field objects (each Field is { [key: string]: FieldValue })
-    const fields = person.fieldValues;
-    
-    // Try various common field names
-    const fieldNames = ['sourceIdentifier', 'source_identifier', 'id'];
-    for (const fieldName of fieldNames) {
-      const field = fields.find(fv => Object.keys(fv)[0] === fieldName);
-      if (field) {
-        return Object.values(field)[0] as string;
-      }
-    }
-    
-    return undefined;
-  }
-
-  /**
-   * Get a human-readable identifier for logging
-   */
-  private getPersonIdentifier(person: FieldSet): string {
-    return this.getSourceIdentifier(person) || '(unknown)';
   }
 }
 

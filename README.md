@@ -618,13 +618,19 @@ which take precedence over the config file (they opt in with `fromEnvironment({ 
 | `DYNAMODB_PERSON_HISTORY_TABLE_NAME` | PersonHistory table |
 | `REGION` | AWS region of the tables |
 | `SYNC_UPDATE_HASH` | `true` to record each synced person's hash (and deactivations) in storage |
-| `SYNC_PREVIOUS_STATE_SOURCE` | `storage` (or `storage-then-target`, the same for one person) to decide whether a person is in sync from their stored hash, falling back to comparing with the target when there is none; `target` (the default) to compare with the target. Takes effect only with `SYNC_UPDATE_HASH=true`: a manual run reads stored hashes only if it also writes them |
+| `SYNC_PREVIOUS_STATE_SOURCE` | `storage` (or `storage-then-target`, the same for one person) to decide whether a person is in sync from their stored hash: a matching hash settles them without reading the target at all, and with no stored hash they are compared with the target; `target` (the default) to compare with the target. Takes effect only with `SYNC_UPDATE_HASH=true`: a manual run reads stored hashes only if it also writes them |
 
 In DynamoDB mode each run stamps one `syncRunId` on everything it writes, each person's state and
 history are written right after their push (also in batches), and persons deactivated because they
 are gone from the source are marked deleted (`DELETED:`-prefixed hash). Where a sync's previous state
 comes from is one setting, `previousStateSource` (`src/delta-strategy/PreviousStateSource.ts`), which manual
 runs read from `SYNC_PREVIOUS_STATE_SOURCE` and pipeline runs receive with each run.
+
+A manual run trusting stored hashes doesn't read the target for a person whose stored hash matches, so it
+doesn't see a change made in the target directly (a person deactivated there stays so): `target` compares
+everyone with the target. A person in the source who can't be mapped (a critical validation error, such as an
+organization not found in the target) is reported as a failed sync and left as they are; only a person gone
+from the source, or one the data mapper finds ineligible (a `DEACTIVATE:` skip reason), is deactivated.
 
 ## Integration Workflow
 

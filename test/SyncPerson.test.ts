@@ -1080,6 +1080,138 @@ describe('SinglePersonSync', () => {
 
         expect(liveCheck).toHaveBeenCalled();
       });
+
+      describe('without reading the target', () => {
+        /** The hash the source person maps to, from a sync instance of its own */
+        const sourceHash = async () =>
+          (await buildSync({ config: dynamoConfig }).getMappedPerson({ crudOperation: CrudOperation.UPDATE })).fieldSets[0].hash!;
+
+        const storeHash = (hash: string) =>
+          mockStorage.fetchPreviousData.mockResolvedValue([{ fieldValues: [{ id: 'U12345678' }], hash }]);
+
+        const trustingSync = () => buildSync({
+          config: dynamoConfig,
+          hashStorage: { enabled: true, deltaStrategy: { storage: mockStorage } as any, previousStateSource: 'storage' }
+        });
+
+        it.each([['no operation', undefined], ['UPDATE', CrudOperation.UPDATE]])(
+          'settles a person whose stored hash matches without reading the target (%s supplied)', async (_label, crudOperation) => {
+            storeHash(await sourceHash());
+            (ReadPerson as jest.Mock).mockClear();
+            const sync = trustingSync();
+
+            await sync.sync({ crudOperation });
+
+            expect(ReadPerson).not.toHaveBeenCalled();
+            expect(liveCheck).not.toHaveBeenCalled();
+            expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+            expect(sync.getPushResult()).toEqual(expect.objectContaining({ status: Status.SUCCESS, crud: CrudOperation.UPDATE }));
+            expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+          });
+
+        it('does not check whether an in-sync person is active in the target', async () => {
+          (ReadPerson as jest.Mock).mockImplementation(() => ({
+            readPersonBySourceIdentifier: jest.fn().mockResolvedValue([{ hrn: 'hrn:hrs:persons:U12345678', active: false }])
+          }));
+          storeHash(await sourceHash());
+          (ReadPerson as jest.Mock).mockClear();
+
+          await trustingSync().sync();
+
+          expect(ReadPerson).not.toHaveBeenCalled();
+          expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        });
+
+        it('fetches the person from the source once, and pushes them with their HRN, when the stored hash differs', async () => {
+          storeHash('different-hash');
+
+          await trustingSync().sync();
+
+          expect(mockDataSource.fetchRaw).toHaveBeenCalledTimes(1);
+          expect(mockDataMapper.getMappedData).toHaveBeenNthCalledWith(1, expect.objectContaining({ personHrn: undefined }));
+          expect(mockDataMapper.getMappedData).toHaveBeenLastCalledWith(expect.objectContaining({ personHrn: 'hrn:hrs:persons:U12345678' }));
+          expect(liveCheck).not.toHaveBeenCalled();
+          expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.UPDATE }));
+        });
+
+        it.each([
+          ['a supplied CREATE', { crudOperation: CrudOperation.CREATE }],
+          ['a forced update', { forceUpdate: true }]
+        ])('does not consult the stored hash for %s', async (_label, params) => {
+          storeHash(await sourceHash());
+
+          await trustingSync().sync(params);
+
+          expect(mockStorage.fetchPreviousData).not.toHaveBeenCalled();
+          expect(mockDataTarget.pushOne).toHaveBeenCalled();
+        });
+      });
+    });
+
+    describe('a person in the source who cannot be mapped', () => {
+      const criticalError = 'Person record is missing required organization field: U12345678';
+
+      /** The data mapper flags a critical validation error, with a skip reason for the person if given */
+      const failMapping = (skipReason?: string) => {
+        mockDataMapper.getMappedData.mockReturnValue({
+          fieldDefinitions: mockInput.fieldDefinitions,
+          fieldSets: [{ fieldValues: [{ id: 'U12345678' }, ...(skipReason ? [{ __skipReason: skipReason }] : [])] }]
+        });
+        (mockDataMapper as any).criticalValidationErrorMessage = criticalError;
+      };
+
+      beforeEach(() => {
+        jest.spyOn(console, 'warn').mockImplementation();
+        jest.spyOn(console, 'error').mockImplementation();
+      });
+
+      it.each([['S3/file', mockConfig], ['DynamoDB', dynamoConfig]])(
+        'reports a failure, and neither deactivates nor marks the person (%s storage)', async (_label, config) => {
+          failMapping();
+          const markDeleted = jest.spyOn(DynamoDBDeltaStorage.prototype, 'markDeleted').mockResolvedValue({ marked: [] });
+          const sync = buildSync({ config });
+
+          await sync.sync();
+
+          expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+          expect(sync.wasDeactivated()).toBe(false);
+          expect(sync.getPushResult()).toEqual(expect.objectContaining({
+            status: Status.FAILURE, message: `Mapping failed for BUID: U12345678: ${criticalError}`
+          }));
+          expect(markDeleted).not.toHaveBeenCalled();
+          expect(mockStorage.updatePreviousData).not.toHaveBeenCalled();
+          expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Not pushed, and not deactivated'));
+        });
+
+      it('reports a failure when mapping produces no field set', async () => {
+        mockDataMapper.getMappedData.mockReturnValue({ fieldDefinitions: mockInput.fieldDefinitions, fieldSets: [] });
+        const sync = buildSync();
+
+        await sync.sync();
+
+        expect(mockDataTarget.pushOne).not.toHaveBeenCalled();
+        expect(sync.wasDeactivated()).toBe(false);
+        expect(sync.getPushResult()).toEqual(expect.objectContaining({
+          status: Status.FAILURE, message: 'Mapping failed for BUID: U12345678: no field set was produced'
+        }));
+      });
+
+      it.each([
+        ['S3/file storage', { config: mockConfig }],
+        ['trusted DynamoDB storage', {
+          config: dynamoConfig,
+          hashStorage: { enabled: true, deltaStrategy: { storage: {} } as any, previousStateSource: 'storage' as const }
+        }]
+      ])('still deactivates a person the data mapper finds ineligible for the target (%s)', async (_label, overrides) => {
+        failMapping('DEACTIVATE: Student-only with no current term enrollment (personId: U12345678)');
+        jest.spyOn(DynamoDBDeltaStorage.prototype, 'markDeleted').mockResolvedValue({ marked: ['U12345678'] });
+        const sync = buildSync(overrides);
+
+        await sync.sync();
+
+        expect(mockDataTarget.pushOne).toHaveBeenCalledWith(expect.objectContaining({ crud: CrudOperation.DELETE }));
+        expect(sync.wasDeactivated()).toBe(true);
+      });
     });
   });
 

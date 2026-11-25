@@ -67,6 +67,9 @@ class SinglePersonSync {
   private targetPersonLookupAttempted = false;
   private pushResult: SinglePushResult;
   private rawPersonData: any[] | undefined;
+  private sourceFetched = false;
+  /** The DEACTIVATE: skip reason of a person the data mapper found ineligible for the target (see mapPerson) */
+  private deactivationReason: string | undefined;
   private mappedPerson: Input | undefined;
   private logPrefix: string;
   private dryRun: boolean;
@@ -109,64 +112,92 @@ class SinglePersonSync {
     return new FieldFilter({ fieldSet, stateMappings, countryMappings, orgMappings }).filter();
   }
 
+  /**
+   * The person mapped to integration format, with the HRN they have in the target, and hashed when hash
+   * storage is enabled. Cached once mapped.
+   * @returns the mapped person, or an empty Input when the source has no data for them or they could not be
+   *   mapped (see mapPerson)
+   */
   public getMappedPerson = async (params: { rawData?: any[], crudOperation?: CrudOperation }): Promise<Input> => {
     if( this.mappedPerson ) {
       return this.mappedPerson;
     }
-    const { instanceParams: { dataMapper, buid, hashStorage }, getHrn, getFilteredFields } = this;
-    let { rawData, crudOperation } = params;
-    try { 
-
-      // Fetch person data from source if not provided
-      if (rawData === undefined) {
-        console.log(`SOURCE CHECK: Looking up raw person data for BUID: ${buid} from source...`);
-        rawData = await this.dataSource.fetchRaw();
-      }
-      
-      // Bail out if no data found
-      if (!rawData || rawData.length === 0) {
-        console.log(`Did not find ${buid} in source`);
-        return { } as Input;
-      }
-      else {
-        console.log(`Found ${buid} in source`);
-        this.rawPersonData = rawData;
-      }
-
-      // Convert data to integration format
-      const personHrn = await getHrn();
-      const unparsedInput: Input = dataMapper!.getMappedData({ rawData, personHrn, crudOperation: crudOperation });
-
-      // Bail out if there are critical validation errors
-      if (dataMapper!.criticalValidationErrorMessage) {
-        console.error(`Critical validation error for BUID: ${buid}: ${dataMapper!.criticalValidationErrorMessage}`);
-        // console.log(`Person data that caused the error: ${dataMapper!.personAsJson}`);
-        return { } as Input;
-      }
-      
-      // Bail out if no field sets generated
-      if (!unparsedInput.fieldSets || unparsedInput.fieldSets.length === 0) {
-        console.log(`No valid field sets generated for BUID: ${buid}`);
-        return { } as Input;
-      }
-
-      // Apply hash if hash storage is enabled (for hash storage updates)
-      if (hashStorage?.enabled) {
-        const input = new InputParser({ 
-          _input: unparsedInput, 
-          fieldFilter: (fs) => getFilteredFields(fs)
-        }).parse();
+    const { instanceParams: { buid }, getHrn, mapPerson } = this;
+    const { rawData, crudOperation } = params;
+    try {
+      const input = await mapPerson({ rawData, crudOperation, hrnOf: getHrn });
+      if ( ! isEmpty(input)) {
         this.mappedPerson = input;
-        return input;
       }
-
-      this.mappedPerson = unparsedInput;
-      return unparsedInput;
+      return input;
     } catch (error) {
       console.error(`Single Person Sync failed for BUID: ${buid}:`, error);
       this.mappedPerson = undefined;
       throw error;
     }
+  }
+
+  /**
+   * Maps the person to integration format, hashed when hash storage is enabled. Not cached (getMappedPerson()
+   * caches), but the person is fetched from the source at most once.
+   * @param params.rawData - the person's source data, instead of fetching it
+   * @param params.hrnOf - resolves the person's HRN in the target, once the source is known to have them.
+   *   Omitted, the person is mapped without one: enough to compare hashes, which leave out the HRN.
+   * @returns the mapped person, or an empty Input when the source has no data for them or they could not be
+   *   mapped. A person the data mapper finds ineligible for the target also maps to an empty Input (they fail
+   *   validation), with their DEACTIVATE: skip reason kept in deactivationReason.
+   */
+  private mapPerson = async (params: { rawData?: any[], crudOperation?: CrudOperation, hrnOf?: () => Promise<string | undefined> }): Promise<Input> => {
+    const { instanceParams: { dataMapper, buid, hashStorage }, getFilteredFields } = this;
+    let { rawData, crudOperation, hrnOf } = params;
+
+    // Fetch person data from source if not provided, or already fetched
+    if (rawData === undefined && this.sourceFetched) {
+      rawData = this.rawPersonData ?? [];
+    }
+    if (rawData === undefined) {
+      console.log(`SOURCE CHECK: Looking up raw person data for BUID: ${buid} from source...`);
+      rawData = await this.dataSource.fetchRaw();
+      this.sourceFetched = true;
+    }
+
+    // Bail out if no data found
+    if (!rawData || rawData.length === 0) {
+      console.log(`Did not find ${buid} in source`);
+      return { } as Input;
+    }
+    if (rawData !== this.rawPersonData) {
+      console.log(`Found ${buid} in source`);
+      this.rawPersonData = rawData;
+    }
+
+    // Convert data to integration format
+    this.deactivationReason = undefined;
+    const personHrn = hrnOf ? await hrnOf() : undefined;
+    const unparsedInput: Input = dataMapper!.getMappedData({ rawData, personHrn, crudOperation: crudOperation });
+
+    // Bail out if there are critical validation errors, keeping the skip reason of an ineligible person
+    if (dataMapper!.criticalValidationErrorMessage) {
+      console.error(`Critical validation error for BUID: ${buid}: ${dataMapper!.criticalValidationErrorMessage}`);
+      const skipReason = `${unparsedInput.fieldSets?.[0]?.fieldValues.find(fv => '__skipReason' in fv)?.__skipReason ?? ''}`;
+      this.deactivationReason = skipReason.toUpperCase().startsWith('DEACTIVATE') ? skipReason : undefined;
+      return { } as Input;
+    }
+
+    // Bail out if no field sets generated
+    if (!unparsedInput.fieldSets || unparsedInput.fieldSets.length === 0) {
+      console.log(`No valid field sets generated for BUID: ${buid}`);
+      return { } as Input;
+    }
+
+    // Apply hash if hash storage is enabled (for hash storage updates)
+    if (hashStorage?.enabled) {
+      return new InputParser({
+        _input: unparsedInput,
+        fieldFilter: (fs) => getFilteredFields(fs)
+      }).parse();
+    }
+    return unparsedInput;
   }
 
   public getMappingError = (): string | undefined => {
@@ -402,22 +433,34 @@ class SinglePersonSync {
   }
 
   /**
-   * Compares the person's source hash with the hash stored for them, when stored state can be
-   * trusted (hashStorage.previousStateSource is storage), so that the comparison with the target can be
-   * skipped. DynamoDB storage only: other storage would have to read the whole baseline for one
-   * person.
+   * Whether the hash stored for the person can decide that they are already in sync, so that the target is
+   * not read at all: hash storage is enabled and trusted (hashStorage.previousStateSource is storage or
+   * storage-then-target, the same for one person: with no stored hash, the target is compared anyway), it is
+   * DynamoDB storage (other storage would have to read the whole baseline for one person), the sync is not a
+   * forced update or a preview, and it is not a supplied CREATE.
+   */
+  private mayTrustStoredHash = (params: { crudOperation?: CrudOperation, forceUpdate: boolean }): boolean => {
+    const { instanceParams: { config, hashStorage, preview } } = this;
+    const { crudOperation, forceUpdate } = params;
+    const { enabled, deltaStrategy, previousStateSource = 'target' } = hashStorage ?? {};
+    if (!enabled || !deltaStrategy || previousStateSource === 'target' || !isDynamoDbStorage(config)) {
+      return false;
+    }
+    if (forceUpdate || preview) {
+      return false;
+    }
+    return crudOperation === undefined || crudOperation === CrudOperation.UPDATE;
+  }
+
+  /**
+   * Compares the person's source hash with the hash stored for them (see mayTrustStoredHash).
    *
-   * @returns 'in-sync' or 'out-of-sync', or 'unavailable' when stored state is not trusted or not
-   *   usable (no stored record, a DELETED: marked hash, or a read error) - the caller then compares
-   *   with the target instead.
+   * @returns 'in-sync' or 'out-of-sync', or 'unavailable' when stored state is not usable (no stored
+   *   record, a DELETED: marked hash, or a read error) - the caller then compares with the target instead.
    */
   private compareWithStoredHash = async (mappedPerson: Input): Promise<'in-sync' | 'out-of-sync' | 'unavailable'> => {
     const { instanceParams: { config, buid, hashStorage } } = this;
-    const { deltaStrategy, previousStateSource = 'target' } = hashStorage ?? {};
-    // storage-then-target is the same here: with no stored hash, the caller compares with the target anyway
-    if (!deltaStrategy || !isDynamoDbStorage(config) || previousStateSource === 'target') {
-      return 'unavailable';
-    }
+    const deltaStrategy = hashStorage!.deltaStrategy!;
 
     try {
       const primaryKeyFields = new InputUtilsDecorator(mappedPerson).getPrimaryKeys();
@@ -446,15 +489,30 @@ class SinglePersonSync {
   }
 
   /**
+   * A successful result for a person whose push is skipped because they are already in sync
+   */
+  private inSyncResult = (person: Input, crud: CrudOperation): SinglePushResult => ({
+    status: Status.SUCCESS,
+    message: 'Sync skipped - source and target already in sync',
+    timestamp: new Date(),
+    primaryKey: person.fieldSets[0].fieldValues.filter(fv => {
+      const key = Object.keys(fv)[0];
+      return person.fieldDefinitions?.find(fd => fd.name === key && fd.isPrimaryKey);
+    }),
+    crud
+  });
+
+  /**
    * Execute the single person synchronization
    * @param params - Optional parameters
    * @param params.crudOperation - The CRUD operation to perform
    * @param params.rawData - Raw data to use instead of fetching
    * @param params.suppressHashUpdate - If true, skip individual hash storage update (used in batch operations)
+   * @param params.forceUpdate - If true, push even if source and target are in sync (no in-sync check)
    */
-  public sync = async (params?: { 
+  public sync = async (params?: {
     crudOperation?: CrudOperation,
-    rawData?: any[], 
+    rawData?: any[],
     suppressHashUpdate?: boolean,
     forceUpdate?: boolean
   }): Promise<void> => {
@@ -469,8 +527,30 @@ class SinglePersonSync {
       const { preview } = instanceParams;
       let { crudOperation, rawData, suppressHashUpdate, forceUpdate=false } = params || {};
 
+      /**
+       * When the stored hash can be trusted, compare it first: a match settles the person without reading the
+       * target. The hash leaves out the HRN and userId (the only field the CRUD operation affects), so the person
+       * is mapped without them for this.
+       */
+      let storedHashComparison: 'in-sync' | 'out-of-sync' | 'unavailable' = 'unavailable';
+      if (this.mayTrustStoredHash({ crudOperation, forceUpdate })) {
+        const unresolvedPerson = await this.mapPerson({ rawData, crudOperation: crudOperation ?? CrudOperation.UPDATE });
+        if ( ! isEmpty(unresolvedPerson) && unresolvedPerson.fieldSets?.length) {
+          storedHashComparison = await this.compareWithStoredHash(unresolvedPerson);
+        }
+        if (storedHashComparison === 'in-sync') {
+          // The hash is not written again (it matches), and the target is not read, so not checked for whether the
+          // person is active there: a change made in the target directly waits for a sync that compares with it
+          console.log(`Source matches the hash in storage for BUID: ${buid} - already in sync, so the target is not read and hash storage is left as is.`);
+          this.pushResult = this.inSyncResult(unresolvedPerson, CrudOperation.UPDATE);
+          console.log(`${logPrefix}No push for ${buid}: source and target already in sync`);
+          console.log(`${logPrefix}Single Person Sync completed successfully for BUID: ${buid}`);
+          return;
+        }
+      }
+
       if( ! crudOperation ) {
-        const hrn = await getHrn();       
+        const hrn = await getHrn();
         crudOperation = hrn ? CrudOperation.UPDATE : CrudOperation.CREATE;
       }
       else if (crudOperation === CrudOperation.UPDATE && ! await getHrn()) {
@@ -478,24 +558,20 @@ class SinglePersonSync {
         crudOperation = CrudOperation.CREATE;
         console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
       }
-      
+
       /**
-       * Get the person data mapped to integration format and Apply hashing if hash storage 
-       * is enabled 
+       * Get the person data mapped to integration format and Apply hashing if hash storage
+       * is enabled
        */
       const mappedPerson: Input = await this.getMappedPerson({ rawData, crudOperation });
-      const cdmPerson = this.rawPersonData; // Set in getMappedPerson 
-
-      // Set when the stored hash already equals the source hash, so writing it again would change nothing
-      let storedHashMatched = false;
+      const cdmPerson = this.rawPersonData; // Set in getMappedPerson
 
       /**
        * Update hash storage if enabled and sync was successful (including when push was skipped)
-       * Skip individual update if suppressHashUpdate is true (used in batch operations), or if the
-       * stored hash was found to match already (nothing to write)
+       * Skip individual update if suppressHashUpdate is true (used in batch operations)
        */
       const processHashStorage = async () => {
-        if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate && !storedHashMatched) {
+        if (hashStorage?.enabled && this.pushResult?.status === Status.SUCCESS && !suppressHashUpdate) {
           await this.updateHashStorage(mappedPerson);
         }
       }
@@ -511,16 +587,24 @@ class SinglePersonSync {
         }
       }
 
-      // Bail out if no data to push
-      if(isEmpty(mappedPerson)) {
-        console.log(`No valid data to push for BUID: ${buid}.`);
-        await deactivate();
-        return;
-      }
-
-      // Validate single person sync has exactly one field set
-      if (!mappedPerson.fieldSets || mappedPerson.fieldSets.length === 0) {
-        console.log(`No field sets found for BUID: ${buid}.`);
+      // Bail out if no data to push: deactivate a person gone from the source, or one the data mapper finds
+      // ineligible for the target. A person who is in the source but could not be mapped is left as they are.
+      if(isEmpty(mappedPerson) || !mappedPerson.fieldSets?.length) {
+        if (this.rawPersonData && !this.deactivationReason) {
+          const reason = this.instanceParams.dataMapper?.criticalValidationErrorMessage ?? 'no field set was produced';
+          this.pushResult = {
+            status: Status.FAILURE,
+            message: `Mapping failed for BUID: ${buid}: ${reason}`,
+            timestamp: new Date(),
+            primaryKey: [],
+            crud: crudOperation
+          };
+          console.warn(`${logPrefix}Single Person Sync failed for BUID: ${buid}: the source has the person, but they could not be mapped (${reason}). Not pushed, and not deactivated.`);
+          return;
+        }
+        console.log(this.deactivationReason
+          ? `No valid data to push for BUID: ${buid} (${this.deactivationReason}).`
+          : `No valid data to push for BUID: ${buid}.`);
         await deactivate();
         return;
       }
@@ -530,19 +614,19 @@ class SinglePersonSync {
       }
 
       /**
-       * Determines whether the sync state should be assessed for the current person.
+       * Determines whether to compare the person with the target before pushing.
        * @returns true if sync state should be assessed, false otherwise.
        */
       const mustAssessSyncedState = (): boolean => {
-        // Only assess sync state for UPDATE operations 
+        // Only assess sync state for UPDATE operations
         if(crudOperation != CrudOperation.UPDATE) {
           return false;
-        }        
+        }
         // Only assess sync state if hash storage is enabled (to avoid unnecessary API calls)
         if(!hashStorage?.enabled) {
           return false;
         }
-        // Only assess sync state if forceUpdate is not set (to allow bypassing sync check 
+        // Only assess sync state if forceUpdate is not set (to allow bypassing sync check
         // which could cancel the update if inSync found to be true - ie: for role updates)
         if(forceUpdate) {
           return false;
@@ -551,35 +635,18 @@ class SinglePersonSync {
           console.log(`Preview mode enabled - skipping sync state assessment for BUID: ${buid}.`);
           return false;
         }
+        // The stored hash already showed the person is out of sync
+        if(storedHashComparison === 'out-of-sync') {
+          console.log(`Source differs from the hash in storage for BUID: ${buid} - pushing without comparing with target.`);
+          return false;
+        }
         console.log(`Checking if source and target are already in sync for BUID: ${buid}...`);
         return true;
       };
 
-      // Check if source and target are already in sync (UPDATE operations only), using the hash in
-      // storage when it can be trusted, otherwise comparing with the target
+      // Check if source and target are already in sync (UPDATE operations only), by comparing with the target
       let skipPush = false;
-      const assessSyncedState = mustAssessSyncedState();
-      const storedHashComparison = assessSyncedState ? await this.compareWithStoredHash(mappedPerson) : 'unavailable';
-
-      if (storedHashComparison === 'in-sync') {
-        console.log(`Source matches the hash in storage for BUID: ${buid} - already in sync, hash storage left as is.`);
-        const huronPerson = await this.getTargetPerson();
-        if(huronPerson && !huronPerson.active) {
-          console.log(`For some reason, in-sync person is currently inactive in target. Attempting to activate...`);
-          await this.activateTargetPersonIfExists();
-        }
-        skipPush = true;
-        storedHashMatched = true;
-      }
-      else if (storedHashComparison === 'out-of-sync') {
-        console.log(`Source differs from the hash in storage for BUID: ${buid} - pushing without comparing with target.`);
-        if ( ! await this.getTargetPerson()) {
-          crudOperation = CrudOperation.CREATE;
-          console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
-        }
-      }
-
-      if (assessSyncedState && storedHashComparison === 'unavailable') {
+      if (mustAssessSyncedState()) {
         try {
           const sourcePersonParams: SourcePersonParms = {
             config,
@@ -617,7 +684,7 @@ class SinglePersonSync {
           else if (!huronPerson) {
             crudOperation = CrudOperation.CREATE;
             console.log(`Person with BUID: ${buid} does not exist in target, changing operation to ${CrudOperation.CREATE}.`);
-          }          
+          }
 
         } catch (error) {
           console.warn(`Error checking sync status for BUID: ${buid}:`, error);
@@ -630,16 +697,7 @@ class SinglePersonSync {
         console.log(`Preview mode enabled - skipping push to target for BUID: ${buid}.`);
       } else if (skipPush) {
         // Source and target are already in sync - set success result without actual push
-        this.pushResult = {
-          status: Status.SUCCESS,
-          message: 'Sync skipped - source and target already in sync',
-          timestamp: new Date(),
-          primaryKey: mappedPerson.fieldSets[0].fieldValues.filter(fv => {
-            const key = Object.keys(fv)[0];
-            return mappedPerson.fieldDefinitions?.find(fd => fd.name === key && fd.isPrimaryKey);
-          }),
-          crud: crudOperation!
-        };
+        this.pushResult = this.inSyncResult(mappedPerson, crudOperation!);
         console.log(`${this.logPrefix}No push for ${buid}: source and target already in sync`);
       } else {
         const result = await this.dataTarget.pushOne({
@@ -651,7 +709,7 @@ class SinglePersonSync {
       }
 
       await processHashStorage();
-      
+
       if (this.pushResult?.status === Status.FAILURE) {
         console.warn(`${logPrefix}Single Person Sync completed with a failed push for BUID: ${buid}: ${this.pushResult.message}`);
       }

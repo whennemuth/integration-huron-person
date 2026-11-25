@@ -52,11 +52,12 @@ export const previousStateSourceOf = (
 };
 
 /**
- * A manual run's previous state source from its environment variable (SYNC_PREVIOUS_STATE_SOURCE): `storage` or
- * `target`, and `target` when unset, as manual runs have always looked people up in the target unless told otherwise.
+ * A manual run's previous state source from its environment variable (SYNC_PREVIOUS_STATE_SOURCE): `storage`,
+ * `storage-then-target` or `target`, and `target` when unset, as manual runs have always looked people up in the
+ * target unless told otherwise.
  *
  * @param name The variable's name, for the error
- * @throws if the value is set but is not `storage` or `target` (the old variable's `true` / `false` included)
+ * @throws if the value is set but is not one of PREVIOUS_STATE_SOURCES (the old variable's `true` / `false` included)
  */
 export const previousStateSourceFromEnvironment = (value: string | undefined, name: string): PreviousStateSource => {
   const trimmed = `${value ?? ''}`.trim();

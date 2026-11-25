@@ -26,7 +26,7 @@ This constrains the whole file: no real async work can happen inside
 - `TitleMapper` - resolves title (depends on `orgAssignments.personType`)
 
 **Status/introspection getters** (read the state left behind by the most recent `getMappedData()` call):
-- `criticalValidationErrorMessage` - first critical validation failure encountered in the batch (missing personid/name/organization, unresolvable organization HRN). Read externally by `SyncPerson.ts` to bail out of a single-person sync.
+- `criticalValidationErrorMessage` - first critical validation failure encountered in the batch (missing personid/name/organization, unresolvable organization HRN). Read externally by `SyncPerson.ts` to bail out of a single-person sync: a failed sync, or a deactivation when the person also carries a `DEACTIVATE:` skip reason (`__skipReason`, an ineligible person).
 - `infoValidationErrorMessage` - first non-critical (info-level) issue, e.g. unresolved secondaryUnit/additionalUnit HRN. Also read by `SyncPerson.ts`'s `getMappingError()`.
 - `getMappingErrorCount()` - count of records that threw during mapping and were filtered out of the returned `Input` (marked with `__mappingError`, never sent to target)
 - `mappedPersonRecords: PersonRecordPair[]` - `{raw, mapped?, error?}` entries for **every** record encountered (successfully mapped ones get `mapped`, failed ones get `error` instead), reset on every `getMappedData()`/`map()` call. Enables callers to run custom per-person async logic post-mapping regardless of per-record outcome (see `personRecordProcessor` in the root `CLAUDE.md`) without needing `map()` itself to be async.
